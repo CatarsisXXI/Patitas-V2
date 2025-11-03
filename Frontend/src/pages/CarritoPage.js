@@ -77,11 +77,12 @@ const CarritoPage = () => {
           {cart.items.map((item) => (
             <Card key={item.productoID} sx={{ display: 'flex', mb: 2 }}>
               <CardMedia
-                component="img"
-                sx={{ width: 151 }}
-                image={item.imagenURL || 'https://via.placeholder.com/151'}
-                alt={item.nombreProducto}
-              />
+  component="img"
+  sx={{ width: 151 }}
+  image={`http://localhost:5288/${item.imagenURL}`}
+  alt={item.nombreProducto}
+/>
+
               <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                 <CardContent>
                   <Typography component="div" variant="h6">
