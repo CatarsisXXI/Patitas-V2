@@ -1,0 +1,68 @@
+@MascotaSnacksAPI_HostAddress = http://localhost:5288
+
+GET {{MascotaSnacksAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+# Crear Administrador
+POST {{MascotaSnacksAPI_HostAddress}}/api/auth/register/admin
+Content-Type: application/json
+
+{
+  "usuario": "admin",
+  "password": "Admin123456",
+  "nombreCompleto": "Administrador Principal",
+  "rol": "SuperAdmin"
+}
+
+###
+
+# Login Administrador
+POST {{MascotaSnacksAPI_HostAddress}}/api/auth/login/admin
+Content-Type: application/json
+
+{
+  "usuario": "admin",
+  "password": "Admin123456"
+}
+
+###
+
+# Obtener todos los productos
+GET {{MascotaSnacksAPI_HostAddress}}/api/productos
+Accept: application/json
+
+###
+
+# Crear un producto (requiere token de admin)
+POST {{MascotaSnacksAPI_HostAddress}}/api/productos
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "nombre": "Snack para Perros Premium",
+  "descripcion": "Deliciosos snacks naturales para perros de todas las razas",
+  "precio": 15.99,
+  "stock": 100,
+  "categoriaID": 1,
+  "imagenURL": "https://example.com/snack-perro.jpg"
+}
+
+###
+
+# Obtener categorías
+GET {{MascotaSnacksAPI_HostAddress}}/api/categorias
+Accept: application/json
+
+###
+
+# Crear categoría (requiere token de admin)
+POST {{MascotaSnacksAPI_HostAddress}}/api/categorias
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "nombre": "Snacks para Perros",
+  "descripcion": "Snacks especialmente formulados para perros"
+}

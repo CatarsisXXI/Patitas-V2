@@ -1,0 +1,67 @@
+# ===========================================
+# 🔹 FRONTEND (React / Node)
+# ===========================================
+node_modules/
+.pnp
+.pnp.js
+coverage/
+build/
+dist/
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===========================================
+# 🔹 BACKEND (.NET / C#)
+# ===========================================
+## Compiled source
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+*.dll
+*.exe
+*.pdb
+*.mdb
+
+## User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Visual Studio folders
+.vs/
+
+## Temporary files
+*.tmp
+*.log
+*.cache
+*.diff
+*.patch
+*.swp
+*.bak
+*.orig
+
+## Publish outputs
+**/publish/
+**/out/
+**/Debug/
+**/Release/
+
+## Sensitive files
+Backend/appsettings.json
+Backend/appsettings.Development.json
+
+# ===========================================
+# 🔹 OS-specific
+# ===========================================
+Thumbs.db
+ehthumbs.db
+Icon?
+Desktop.ini
