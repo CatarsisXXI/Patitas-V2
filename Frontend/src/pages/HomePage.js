@@ -24,11 +24,13 @@ import EmailIcon from '@mui/icons-material/Email';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ProductCarousel from '../components/ProductCarousel';
 import FloatingPaws from '../components/FloatingPaws';
+import WelcomeModal from '../components/WelcomeModal';
 
 const HomePage = () => {
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showContent, setShowContent] = useState(false);
+  const [welcomeModalOpen, setWelcomeModalOpen] = useState(false);
 
   // Hero images for the carousel
   const heroImages = [
@@ -56,6 +58,11 @@ const HomePage = () => {
     }, 500);
 
     return () => clearTimeout(timer);
+  }, []);
+
+  // Show welcome modal on every page load
+  useEffect(() => {
+    setWelcomeModalOpen(true);
   }, []);
 
   const features = [
@@ -926,6 +933,12 @@ const HomePage = () => {
           }
         }
       `}</style>
+
+      {/* Welcome Modal */}
+      <WelcomeModal
+        open={welcomeModalOpen}
+        onClose={() => setWelcomeModalOpen(false)}
+      />
     </Box>
   );
 };
