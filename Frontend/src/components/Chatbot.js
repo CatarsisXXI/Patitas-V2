@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Chatbot from 'react-chatbot-kit';
+import { createChatBotMessage } from 'react-chatbot-kit';
 import 'react-chatbot-kit/build/main.css';
 import { Fab, Box } from '@mui/material';
 import ChatIcon from '@mui/icons-material/Chat';
@@ -11,6 +12,7 @@ import productService from '../services/productService';
 const ChatbotComponent = () => {
   const [showChatbot, setShowChatbot] = useState(true);
   const [mascotas, setMascotas] = useState([]);
+  const [products, setProducts] = useState([]);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -33,8 +35,11 @@ const ChatbotComponent = () => {
   const whatsappNumber = '51956550376'; // +51 956550376 -> phone param without + or spaces
 
   const config = useMemo(() => ({
-    // initialMessages will be injected by the ActionProvider using createChatBotMessage
-    initialMessages: [],
+    initialMessages: [
+      createChatBotMessage('¡Hola! Soy Coco, tu asistente de Patitas y Sabores. ¿En qué puedo ayudarte hoy?', {
+        widget: 'mainOptions',
+      }),
+    ],
     botName: 'Coco',
     inputDisabled: true,
     widgets: [
@@ -109,25 +114,74 @@ const ChatbotComponent = () => {
       },
       {
         widgetName: 'productCards',
-        widgetFunc: (props) => {
-          const list = props.widgetProps?.products || [];
+        widgetFunc: ({ payload }) => {
+          console.log('Widget payload received:', payload); // Debug log
+          
+          // Get products directly from payload
+          const list = Array.isArray(payload) ? payload : [];
+          console.log('Product list:', list); // Debug log
+          
+          // If no products, show message
+          if (!list || list.length === 0) {
+            return <div style={{ padding: '8px', color: '#666' }}>No hay productos disponibles en este momento.</div>;
+          }
+          
+          if (!list || list.length === 0) {
+            return <div>No hay productos disponibles</div>;
+          }
+
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8, maxWidth: '100%', overflowX: 'hidden' }}>
               {list.map((p) => {
                 const id = p.productoID || p.ProductoID || p.id || p.productId;
                 const nombre = p.nombre || p.Nombre || p.NombreProducto || 'Sin nombre';
                 const desc = p.descripcion || p.Descripcion || p.DescripcionCorta || '';
                 const precio = (p.precio ?? p.Precio) !== undefined ? (p.precio ?? p.Precio) : null;
+                
+                console.log('Rendering product:', { id, nombre, precio }); // Debug log
+
                 return (
-                  <div key={id || nombre} style={{ borderRadius: 8, padding: 8, border: '1px solid #ddd', background: '#fff' }}>
-                    <div style={{ fontWeight: 'bold' }}>{nombre} {precio ? `- S/${precio}` : ''}</div>
-                    <div style={{ fontSize: 12, color: '#444', marginTop: 6 }}>{desc}</div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <div 
+                    key={id || nombre} 
+                    style={{ 
+                      borderRadius: 8, 
+                      padding: 8, 
+                      border: '1px solid #ddd', 
+                      background: '#fff',
+                      margin: '4px 0',
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <div style={{ fontWeight: 'bold', wordBreak: 'break-word' }}>
+                      {nombre} {precio ? `- S/${precio}` : ''}
+                    </div>
+                    <div style={{ 
+                      fontSize: 12, 
+                      color: '#444', 
+                      marginTop: 6,
+                      wordBreak: 'break-word',
+                      maxHeight: '3em',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {desc}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                       <button
                         onClick={() => {
                           if (id) window.location.href = `/productos/${id}`;
                         }}
-                        style={{ backgroundColor: '#A8B5A0', color: '#000', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer' }}
+                        style={{ 
+                          backgroundColor: '#A8B5A0', 
+                          color: '#000', 
+                          border: 'none', 
+                          borderRadius: 6, 
+                          padding: '6px 10px', 
+                          cursor: 'pointer',
+                          flex: '1 1 auto',
+                          minWidth: 'fit-content'
+                        }}
                       >
                         Ver detalle
                       </button>
@@ -137,7 +191,16 @@ const ChatbotComponent = () => {
                           const url = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(text)}`;
                           window.open(url, '_blank');
                         }}
-                        style={{ backgroundColor: '#D4A574', color: '#000', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer' }}
+                        style={{ 
+                          backgroundColor: '#D4A574', 
+                          color: '#000', 
+                          border: 'none', 
+                          borderRadius: 6, 
+                          padding: '6px 10px', 
+                          cursor: 'pointer',
+                          flex: '1 1 auto',
+                          minWidth: 'fit-content'
+                        }}
                       >
                         Comprar
                       </button>
@@ -228,84 +291,137 @@ const ChatbotComponent = () => {
       handleRecommendationsForMascota(mascotaId);
     };
 
-
     // produce recommendations for a specific mascota with explanations
-    const handleRecommendationsForMascota = async (mascotaId) => {
-  const mascota = mascotas.find(m => String(getMascotaId(m)) === String(mascotaId));
+    const handleRecommendationsForMascota = (mascotaId) => {
+      const mascota = mascotas.find(m => String(getMascotaId(m)) === String(mascotaId));
       if (!mascota) {
-        const msg = createChatBotMessage('No pude encontrar la mascota seleccionada. Intenta de nuevo.', { quickReplies });
-        setState((prev) => ({ ...prev, messages: [...prev.messages, msg] }));
-        sendOptions();
+        const message = createChatBotMessage('No pude encontrar la mascota seleccionada. Intenta de nuevo.');
+        setState((prev) => ({ ...prev, messages: [...prev.messages, message] }));
         return;
       }
 
-      try {
-        const products = await productService.getProductos();
-        let recommendations = [];
+      productService.getProductos()
+        .then(products => {
+          if (!products || products.length === 0) {
+            const message = createChatBotMessage('Lo siento, no hay productos disponibles para recomendar en este momento.');
+            setState((prev) => ({ ...prev, messages: [...prev.messages, message] }));
+            return;
+          }
 
-        const especie = mascota.especie?.toLowerCase();
-        const edad = mascota.edad;
-        const tamano = mascota.tamano?.toLowerCase();
-        const raza = mascota.raza?.toLowerCase();
-        const notas = mascota.notasAdicionales?.toLowerCase();
+          // Get mascota details (handle both camelCase and PascalCase)
+          const calculateAge = (fechaNacimiento) => {
+            if (!fechaNacimiento) return 0;
+            const birthDate = new Date(fechaNacimiento);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+              age--;
+            }
+            return age;
+          };
 
-        products.forEach(product => {
-          const desc = product.descripcion?.toLowerCase() || '';
-          const nombre = product.nombre?.toLowerCase() || '';
-          const reasons = [];
-          let score = 0;
+          const nombre = mascota.nombre || mascota.Nombre || '';
+          const especie = (mascota.especie || mascota.Especie || '').toLowerCase();
+          const raza = (mascota.raza || mascota.Raza || '').toLowerCase();
+          const fechaNacimiento = mascota.fechaNacimiento || mascota.FechaNacimiento;
+          const edad = calculateAge(fechaNacimiento);
+          const tamanio = (mascota.tamanio || mascota.Tamanio || '').toLowerCase();
+          const notas = (mascota.notasAdicionales || mascota.notas || mascota.Notas || '').toLowerCase();
 
-          if (especie === 'perro' && (nombre.includes('perro') || desc.includes('perro'))) { score += 2; reasons.push('Adecuado para perros'); }
-          if (especie === 'gato' && (nombre.includes('gato') || desc.includes('gato'))) { score += 2; reasons.push('Adecuado para gatos'); }
-          if (edad && desc.includes(edad.toString())) { score += 1; reasons.push(`Apto para edad: ${edad}`); }
-          if (tamano && desc.includes(tamano)) { score += 1; reasons.push(`Tamaño compatible: ${tamano}`); }
-          if (raza && desc.includes(raza)) { score += 1; reasons.push(`Raza compatible: ${raza}`); }
-          if (notas && desc.includes(notas)) { score += 1; reasons.push('Coincide con notas adicionales de la mascota'); }
+          // Default product (Fibra Vital)
+          const defaultProduct = products.find(p => 
+            (p.nombre || '').includes('Fibra Vital') || 
+            (p.nombre || '').includes('Algarrobo')
+          );
 
-          if (score > 0) recommendations.push({ product, score, reasons });
+          // Analyze notas for specific conditions and dietary needs
+          const hasAllergies = notas.includes('alergi');
+          const isDiabetic = notas.includes('diabet') || notas.includes('azucar');
+          const hasSkinIssues = notas.includes('piel') || notas.includes('dermat');
+          const hasDigestiveIssues = notas.includes('digestiv') || notas.includes('estomag') || 
+                                    notas.includes('diarrea') || notas.includes('gastri');
+          const needsHypoallergenic = hasAllergies || notas.includes('hipoalergenic');
+          const needsNatural = notas.includes('natural') || notas.includes('organic');
+
+          let recommendedProduct;
+          let recommendationReason;
+
+          // Find best match based on specific conditions
+          if (hasDigestiveIssues) {
+            recommendedProduct = products.find(p => 
+              (p.nombre || '').toLowerCase().includes('digest') || 
+              (p.descripcion || '').toLowerCase().includes('digestiv')
+            );
+            recommendationReason = 'Para ' + nombre + ', que presenta sensibilidad digestiva, recomiendo este producto que ayuda a mantener un sistema digestivo saludable con su contenido de fibra y probioticos naturales.';
+          } else if (hasSkinIssues || needsHypoallergenic) {
+            recommendedProduct = products.find(p => 
+              (p.nombre || '').toLowerCase().includes('piel') || 
+              (p.nombre || '').toLowerCase().includes('dermo')
+            );
+            recommendationReason = 'Considerando la sensibilidad en la piel de ' + nombre + ', este producto es ideal ya que contiene ingredientes que ayudan a mantener una piel saludable y un pelaje brillante.';
+          } else if (isDiabetic) {
+            recommendedProduct = products.find(p => 
+              (p.descripcion || '').toLowerCase().includes('sin azucar')
+            );
+            recommendationReason = 'Como ' + nombre + ' necesita controlar sus niveles de azucar, este producto es perfecto ya que esta formulado sin azucares anadidos y con ingredientes de bajo indice glucemico.';
+          }
+
+          // If no specific match found or no special conditions noted, use default product
+          if (!recommendedProduct) {
+            recommendedProduct = defaultProduct;
+            recommendationReason = 'Para ' + nombre + ', tu ' + especie + (raza ? ' de raza ' + raza : '') + 
+              (edad > 0 ? ' de ' + edad + ' año' + (edad !== 1 ? 's' : '') : '') + 
+              (tamanio ? ' y tamaño ' + tamanio : '') + 
+              ', recomiendo las Galletas Fibra Vital con Algarrobo, Camote y Yacón. Este snack natural proporciona fibra dietética que ayuda al tránsito regular ' +
+              'y contiene minerales esenciales como calcio y hierro, siendo una opción saludable para el consumo diario.' + (needsNatural ? ' Además, está elaborado con ingredientes 100% naturales.' : '');
+          }
+
+          // Create and send messages
+          const introMessage = createChatBotMessage(
+            'Basado en el perfil de ' + nombre + ', tengo una recomendacion especial:'
+          );
+
+          const explanationMessage = createChatBotMessage(recommendationReason);
+
+          // Make sure recommendedProduct exists before creating the message
+          if (recommendedProduct) {
+            console.log('Recommended product to display:', recommendedProduct); // Debug log
+
+            const productMessage = createChatBotMessage(
+              'Aquí tienes el producto recomendado:',
+              {
+                widget: 'productCards',
+                payload: [recommendedProduct]
+              }
+            );
+
+            setState((prev) => ({
+              ...prev,
+              messages: [...prev.messages, introMessage, explanationMessage, productMessage]
+            }));
+          } else {
+            const errorMessage = createChatBotMessage(
+              'Lo siento, no pude encontrar un producto específico para recomendar en este momento.'
+            );
+            setState((prev) => ({
+              ...prev,
+              messages: [...prev.messages, introMessage, explanationMessage, errorMessage]
+            }));
+          }
+
+          setTimeout(() => {
+            sendOptions();
+          }, 1000);
+        })
+        .catch(error => {
+          console.error('Error getting recommendations:', error);
+          const message = createChatBotMessage('Lo siento, hubo un error al obtener las recomendaciones. Intentalo de nuevo.');
+          setState((prev) => ({ ...prev, messages: [...prev.messages, message] }));
+          setTimeout(() => {
+            sendOptions();
+          }, 1000);
         });
-
-        recommendations.sort((a,b) => b.score - a.score);
-        const unique = [];
-        const seen = new Set();
-        recommendations.forEach(r => {
-          const id = r.product.productoID;
-          if (!seen.has(id)) { unique.push(r); seen.add(id); }
-        });
-
-  const top = unique.slice(0,5);
-        if (top.length === 0) {
-          const fallback = createChatBotMessage('No encontré coincidencias específicas para esta mascota. Te muestro algunos productos populares:', { quickReplies });
-          setState((prev) => ({ ...prev, messages: [...prev.messages, fallback] }));
-          // show some products then options
-          const fallbackProducts = products.slice(0,3).map(p => `• ${p.nombre} — ${p.descripcion || ''}`).join('\n');
-          const listMsg = createChatBotMessage(fallbackProducts, { quickReplies });
-          setState((prev) => ({ ...prev, messages: [...prev.messages, listMsg] }));
-          sendOptions();
-          return;
-        }
-
-        // Build detailed explanation message
-        let messageText = `Recomendaciones para ${mascota.nombre} (${mascota.especie}):\n\n`;
-        top.forEach((r, idx) => {
-          messageText += `${idx+1}. ${r.product.nombre} — ${r.product.descripcion || ''}\n`;
-          messageText += `   Por qué lo recomiendo: ${r.reasons.join('; ')}.\n\n`;
-        });
-
-        // send recommendations as product cards widget
-        const productWidgetMsg = createChatBotMessage('', {
-          widget: 'productCards',
-          widgetProps: { products: top.map(r => r.product) }
-        });
-        const header = createChatBotMessage(messageText, { quickReplies });
-        setState((prev) => ({ ...prev, messages: [...prev.messages, header, productWidgetMsg] }));
-        sendOptions();
-      } catch (error) {
-        console.error('Error getting recommendations for mascota:', error);
-        const message = createChatBotMessage('Lo siento, hubo un error al generar recomendaciones. Inténtalo de nuevo.', { quickReplies });
-        setState((prev) => ({ ...prev, messages: [...prev.messages, message] }));
-        sendOptions();
-      }
     };
 
     // Add an initial greeting message with quick replies when the provider mounts
@@ -361,17 +477,17 @@ const ChatbotComponent = () => {
     }, [mascotas]);
 
     const handleHello = () => {
-      const message = createChatBotMessage('¡Hola! ¿Cómo estás?', { quickReplies });
+      const message = createChatBotMessage('¡Hola! Soy Coco, tu asistente de Patitas y Sabores. ¿En qué puedo ayudarte hoy?', { widget: 'mainOptions' });
       setState((prev) => ({
         ...prev,
         messages: [...prev.messages, message],
       }));
     };
 
-    const handleRecommendations = async () => {
+    const handleRecommendations = () => {
       if (!mascotas || mascotas.length === 0) {
         const message = createChatBotMessage(
-          'No tienes mascotas registradas. ¡Registra a tu mascota en la sección de Mascotas para recibir recomendaciones personalizadas!',
+          'No tienes mascotas registradas. ¡Registra a tu mascota en la seccion de Mascotas para recibir recomendaciones personalizadas!',
           { quickReplies }
         );
         setState((prev) => ({ ...prev, messages: [...prev.messages, message] }));
@@ -381,7 +497,7 @@ const ChatbotComponent = () => {
 
       if (mascotas.length > 1) {
         // Ask which mascota to use using the mascotaOptions widget (buttons)
-        const ask = createChatBotMessage('Tienes varias mascotas registradas. ¿Para cuál deseas la recomendación?', {
+        const ask = createChatBotMessage('Tienes varias mascotas registradas. ¿Para cual deseas la recomendacion?', {
           widget: 'mascotaOptions',
           widgetProps: { mascotas, handleSelectMascota },
         });
@@ -394,31 +510,56 @@ const ChatbotComponent = () => {
       handleRecommendationsForMascota(only.mascotaID || only.id || only.idMascota);
     };
 
-    const handleProductos = async () => {
-      try {
-        const products = await productService.getProductos();
+    const handleProductos = () => {
+      productService.getProductos()
+        .then(fetchedProducts => {
+        console.log('Products fetched:', fetchedProducts); // Debug log
 
-        if (!products || products.length === 0) {
+        if (!fetchedProducts || fetchedProducts.length === 0) {
           const message = createChatBotMessage('No hay productos disponibles en este momento.', { quickReplies });
           setState((prev) => ({ ...prev, messages: [...prev.messages, message] }));
           sendOptions();
           return;
         }
 
-        // Prepare data for productCards widget
-        const header = createChatBotMessage('Aquí tienes algunos de nuestros productos:', { quickReplies });
-        const productWidgetMsg = createChatBotMessage('', {
-          widget: 'productCards',
-          widgetProps: { products: products.slice(0, 10) }
+        // Update global products state
+        setProducts(fetchedProducts);
+
+        // Log products for debugging
+        console.log('Fetched products:', fetchedProducts); // Debug log
+
+        // Create the message with the widget and pass products directly
+        const productWidgetMsg = createChatBotMessage(
+          'Aquí tienes algunos de nuestros productos:',
+          {
+            widget: 'productCards',
+            payload: fetchedProducts.slice(0, 10)
+          }
+        );
+
+        console.log('Created message with products:', productWidgetMsg); // Debug log
+
+        // Update state with the new message
+        setState((prev) => {
+          console.log('Updating state with products message'); // Debug log
+          return {
+            ...prev,
+            messages: [...prev.messages, productWidgetMsg]
+          };
         });
-        setState((prev) => ({ ...prev, messages: [...prev.messages, header, productWidgetMsg] }));
-        sendOptions();
-      } catch (error) {
-        console.error('Error getting products:', error);
-        const message = createChatBotMessage('Lo siento, hubo un error al obtener la lista de productos. Inténtalo de nuevo.', { quickReplies });
-        setState((prev) => ({ ...prev, messages: [...prev.messages, message] }));
-        sendOptions();
-      }
+
+        // Wait a moment before showing options to ensure products are displayed
+          setTimeout(() => {
+            sendOptions();
+          }, 1000);
+        })
+        .catch(error => {
+          console.error('Error getting products:', error);
+          console.error('Detailed error:', error.response?.data || error.message);
+          const message = createChatBotMessage('Lo siento, hubo un error al obtener la lista de productos. Intentalo de nuevo.', { quickReplies });
+          setState((prev) => ({ ...prev, messages: [...prev.messages, message] }));
+          sendOptions();
+        });
     };
 
     const handleSobre = () => {

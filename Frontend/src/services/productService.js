@@ -23,11 +23,19 @@ const getProductos = async (searchTerm = '', categoriaId = null) => {
     const params = {};
     if (searchTerm) params.searchTerm = searchTerm;
     if (categoriaId) params.categoriaId = categoriaId;
-    const response = await axios.get(API_URL, { params });
+    const config = {
+      params,
+      ...getAuthHeaders()
+    };
+    const response = await axios.get(API_URL, config);
     return response.data;
   } catch (error) {
     console.error("Error fetching productos:", error);
-    // In a real app, you'd want to handle this error more gracefully
+    // Log additional error details to help with debugging
+    if (error.response) {
+      console.error("Response data:", error.response.data);
+      console.error("Response status:", error.response.status);
+    }
     return [];
   }
 };
