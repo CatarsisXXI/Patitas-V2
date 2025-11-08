@@ -45,7 +45,7 @@ const getDashboardStats = async () => {
 
 const updateOrderStatus = async (orderId, newStatus) => {
     try {
-        const response = await axios.put(`${API_URL}/pedidos/${orderId}/estado`, JSON.stringify(newStatus), {
+        const response = await axios.put(`${API_URL}/pedidos/${orderId}/estado`, { nuevoEstado: newStatus }, {
             ...getAuthHeaders(),
             headers: {
                 ...getAuthHeaders().headers,

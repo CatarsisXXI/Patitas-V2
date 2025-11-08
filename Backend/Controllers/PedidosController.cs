@@ -151,7 +151,7 @@ namespace MascotaSnacksAPI.Controllers
                     ClienteID = clienteId,
                     FechaPedido = DateTime.UtcNow,
                     EstadoPedido = "Pendiente",
-                    DireccionEnvio = "Dirección por definir",
+                    DireccionEnvio = "",
                     TotalPedido = carrito.Items.Sum(i => i.Cantidad * i.Producto.Precio)
                 };
                 _context.Pedidos.Add(pedido);

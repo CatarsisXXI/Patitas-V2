@@ -12,6 +12,14 @@
 
 ## Admin Interface Changes
 - [x] Modify OrderManagementPage.js: Add buttons to change order status and edit shipping address.
+- [x] Update order statuses to only include: Pendiente, Pagado, Cancelado.
+- [x] Add colors: yellow for Pendiente, green for Pagado, red for Cancelado.
+- [x] Show "Dirección" button for Pagado status and "Motivos" button for Cancelado status.
+- [x] Update dialog titles and labels based on status.
+
+## Additional Changes
+- [x] Add WhatsApp icon to the "Comprar" button.
+- [x] Set DireccionEnvio to empty string for pending orders.
 
 ## Testing
 - [ ] Test the complete flow: Add to cart, click "Comprar", redirect to WhatsApp, order created as pending, admin can change status, stock decreases, sales update.

@@ -8,6 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
+public class UpdateEstadoDto
+{
+    public string NuevoEstado { get; set; }
+}
+
 namespace MascotaSnacksAPI.Controllers
 {
     [Route("api/[controller]")]
@@ -92,7 +97,7 @@ namespace MascotaSnacksAPI.Controllers
         }
 
         [HttpPut("pedidos/{id}/estado")]
-        public async Task<IActionResult> UpdatePedidoEstado(int id, [FromBody] string nuevoEstado)
+        public async Task<IActionResult> UpdatePedidoEstado(int id, [FromBody] UpdateEstadoDto updateEstadoDto)
         {
             var pedido = await _context.Pedidos.FindAsync(id);
             if (pedido == null)
@@ -100,16 +105,16 @@ namespace MascotaSnacksAPI.Controllers
                 return NotFound("Pedido no encontrado.");
             }
 
-            var estadosValidos = new[] { "Pendiente", "Pagado", "Enviado", "Entregado", "Cancelado" };
-            if (!estadosValidos.Contains(nuevoEstado))
+            var estadosValidos = new[] { "Pendiente", "Pagado", "Cancelado" };
+            if (!estadosValidos.Contains(updateEstadoDto.NuevoEstado))
             {
                 return BadRequest("Estado no válido.");
             }
 
             var estadoAnterior = pedido.EstadoPedido;
-            pedido.EstadoPedido = nuevoEstado;
+            pedido.EstadoPedido = updateEstadoDto.NuevoEstado;
 
-            if (nuevoEstado == "Pagado" && estadoAnterior != "Pagado")
+            if (updateEstadoDto.NuevoEstado == "Pagado" && estadoAnterior != "Pagado")
             {
                 // Decrease stock when status changes to Pagado
                 var detalles = await _context.DetallesPedidos

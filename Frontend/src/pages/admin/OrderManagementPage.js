@@ -141,13 +141,39 @@ const OrderManagementPage = () => {
                       value={order.estadoPedido}
                       onChange={(e) => handleStatusChange(order.pedidoID, e.target.value)}
                       size="small"
+                      sx={{
+                        backgroundColor: order.estadoPedido === 'Pendiente' ? '#fff3cd' :
+                                         order.estadoPedido === 'Pagado' ? '#d4edda' :
+                                         order.estadoPedido === 'Cancelado' ? '#f8d7da' : 'transparent',
+                        color: order.estadoPedido === 'Pendiente' ? '#856404' :
+                               order.estadoPedido === 'Pagado' ? '#155724' :
+                               order.estadoPedido === 'Cancelado' ? '#721c24' : 'inherit'
+                      }}
                     >
                       <MenuItem value="Pendiente">Pendiente</MenuItem>
                       <MenuItem value="Pagado">Pagado</MenuItem>
-                      <MenuItem value="Enviado">Enviado</MenuItem>
-                      <MenuItem value="Entregado">Entregado</MenuItem>
                       <MenuItem value="Cancelado">Cancelado</MenuItem>
                     </Select>
+                    {order.estadoPedido === 'Pagado' && (
+                      <Button
+                        size="small"
+                        startIcon={<EditIcon />}
+                        onClick={() => handleEditAddress(order)}
+                        sx={{ ml: 1 }}
+                      >
+                        Dirección
+                      </Button>
+                    )}
+                    {order.estadoPedido === 'Cancelado' && (
+                      <Button
+                        size="small"
+                        startIcon={<EditIcon />}
+                        onClick={() => handleEditAddress(order)}
+                        sx={{ ml: 1 }}
+                      >
+                        Motivos
+                      </Button>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Accordion>
@@ -176,16 +202,20 @@ const OrderManagementPage = () => {
 
       {/* Edit Dialog */}
       <Dialog open={editDialog.open} onClose={handleCloseDialog}>
-        <DialogTitle>Editar {editDialog.field === 'direccion' ? 'Dirección de Envío' : ''}</DialogTitle>
+        <DialogTitle>
+          Editar {editDialog.order?.estadoPedido === 'Pagado' ? 'Dirección de Envío' : editDialog.order?.estadoPedido === 'Cancelado' ? 'Motivos de Cancelación' : ''}
+        </DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             margin="dense"
-            label={editDialog.field === 'direccion' ? 'Dirección de Envío' : ''}
+            label={editDialog.order?.estadoPedido === 'Pagado' ? 'Dirección de Envío' : editDialog.order?.estadoPedido === 'Cancelado' ? 'Motivos de Cancelación' : ''}
             fullWidth
             variant="outlined"
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
+            multiline={editDialog.order?.estadoPedido === 'Cancelado'}
+            rows={editDialog.order?.estadoPedido === 'Cancelado' ? 4 : 1}
           />
         </DialogContent>
         <DialogActions>

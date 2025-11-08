@@ -7,6 +7,7 @@ import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { formatCurrency } from '../utils/formatCurrency';
 import pedidoService from '../services/pedidoService';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 
 const CarritoPage = () => {
   const { cart, removeProductFromCart, updateProductQuantity, loading } = useCart();
@@ -180,6 +181,7 @@ const CarritoPage = () => {
                 fullWidth
                 sx={{ mt: 2 }}
                 onClick={handleComprar}
+                startIcon={<WhatsAppIcon />}
               >
                 Comprar
               </Button>
