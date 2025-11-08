@@ -6,6 +6,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { formatCurrency } from '../utils/formatCurrency';
+import pedidoService from '../services/pedidoService';
 
 const CarritoPage = () => {
   const { cart, removeProductFromCart, updateProductQuantity, loading } = useCart();
@@ -14,8 +15,35 @@ const CarritoPage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [openSnackbar, setOpenSnackbar] = useState(false);
 
-  const handleCheckout = () => {
-    navigate('/checkout');
+  const handleComprar = async () => {
+    // Generate WhatsApp message
+    const message = generateWhatsAppMessage();
+    const whatsappUrl = `https://wa.me/51956550376?text=${encodeURIComponent(message)}`;
+
+    // Create pending order and clear cart
+    try {
+      await createPendingOrder();
+      // Redirect to WhatsApp
+      window.open(whatsappUrl, '_blank');
+      // Optionally navigate to home or show success message
+      navigate('/');
+    } catch (error) {
+      setErrorMessage('Error al procesar la compra.');
+      setOpenSnackbar(true);
+    }
+  };
+
+  const generateWhatsAppMessage = () => {
+    let message = 'Hola, quiero comprar los siguientes productos:\n\n';
+    cart.items.forEach(item => {
+      message += `${item.nombreProducto} - Cantidad: ${item.cantidad} - Precio: ${formatCurrency(item.precioUnitario * item.cantidad)}\n`;
+    });
+    message += `\nTotal: ${formatCurrency(cart.total)}\n\nPor favor, confirma la disponibilidad y procederemos con el pago.`;
+    return message;
+  };
+
+  const createPendingOrder = async () => {
+    await pedidoService.createPendingOrder();
   };
 
   const handleQuantityChange = async (productoID, newQuantity) => {
@@ -151,9 +179,9 @@ const CarritoPage = () => {
                 variant="contained"
                 fullWidth
                 sx={{ mt: 2 }}
-                onClick={handleCheckout}
+                onClick={handleComprar}
               >
-                Proceder al Pago
+                Comprar
               </Button>
             </CardContent>
           </Card>

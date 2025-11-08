@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\PC\\Desktop\\Patitas Y Sabores\\Backend\\MascotaSnacksAPI.csproj": {}
+    "C:\\Users\\PC\\Desktop\\Patitas Y Sabores\\backend\\MascotaSnacksAPI.csproj": {}
   },
   "projects": {
-    "C:\\Users\\PC\\Desktop\\Patitas Y Sabores\\Backend\\MascotaSnacksAPI.csproj": {
+    "C:\\Users\\PC\\Desktop\\Patitas Y Sabores\\backend\\MascotaSnacksAPI.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\PC\\Desktop\\Patitas Y Sabores\\Backend\\MascotaSnacksAPI.csproj",
+        "projectUniqueName": "C:\\Users\\PC\\Desktop\\Patitas Y Sabores\\backend\\MascotaSnacksAPI.csproj",
         "projectName": "MascotaSnacksAPI",
-        "projectPath": "C:\\Users\\PC\\Desktop\\Patitas Y Sabores\\Backend\\MascotaSnacksAPI.csproj",
+        "projectPath": "C:\\Users\\PC\\Desktop\\Patitas Y Sabores\\backend\\MascotaSnacksAPI.csproj",
         "packagesPath": "C:\\Users\\PC\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\PC\\Desktop\\Patitas Y Sabores\\Backend\\obj\\",
+        "outputPath": "C:\\Users\\PC\\Desktop\\Patitas Y Sabores\\backend\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\PC\\AppData\\Roaming\\NuGet\\NuGet.Config"

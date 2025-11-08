@@ -77,7 +77,7 @@ namespace MascotaSnacksAPI.Controllers
             var totalPedidos = await _context.Pedidos.CountAsync();
             var totalUsuarios = await _context.Clientes.CountAsync();
             var ventasTotales = await _context.Pedidos
-                                        .Where(p => p.EstadoPedido == "Entregado")
+                                        .Where(p => p.EstadoPedido == "Pagado")
                                         .SumAsync(p => p.TotalPedido);
 
             var stats = new DashboardStatsDto
@@ -89,6 +89,60 @@ namespace MascotaSnacksAPI.Controllers
             };
 
             return Ok(stats);
+        }
+
+        [HttpPut("pedidos/{id}/estado")]
+        public async Task<IActionResult> UpdatePedidoEstado(int id, [FromBody] string nuevoEstado)
+        {
+            var pedido = await _context.Pedidos.FindAsync(id);
+            if (pedido == null)
+            {
+                return NotFound("Pedido no encontrado.");
+            }
+
+            var estadosValidos = new[] { "Pendiente", "Pagado", "Enviado", "Entregado", "Cancelado" };
+            if (!estadosValidos.Contains(nuevoEstado))
+            {
+                return BadRequest("Estado no válido.");
+            }
+
+            var estadoAnterior = pedido.EstadoPedido;
+            pedido.EstadoPedido = nuevoEstado;
+
+            if (nuevoEstado == "Pagado" && estadoAnterior != "Pagado")
+            {
+                // Decrease stock when status changes to Pagado
+                var detalles = await _context.DetallesPedidos
+                    .Include(d => d.Producto)
+                    .Where(d => d.PedidoID == id)
+                    .ToListAsync();
+
+                foreach (var detalle in detalles)
+                {
+                    if (detalle.Producto.Stock < detalle.Cantidad)
+                    {
+                        return BadRequest($"No hay suficiente stock para el producto: {detalle.Producto.Nombre}.");
+                    }
+                    detalle.Producto.Stock -= detalle.Cantidad;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Estado del pedido actualizado exitosamente." });
+        }
+
+        [HttpPut("pedidos/{id}/direccion")]
+        public async Task<IActionResult> UpdatePedidoDireccion(int id, [FromBody] string nuevaDireccion)
+        {
+            var pedido = await _context.Pedidos.FindAsync(id);
+            if (pedido == null)
+            {
+                return NotFound("Pedido no encontrado.");
+            }
+
+            pedido.DireccionEnvio = nuevaDireccion;
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Dirección de envío actualizada exitosamente." });
         }
     }
 }

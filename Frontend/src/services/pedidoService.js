@@ -43,10 +43,21 @@ const getPedidos = async () => {
     }
 };
 
+const createPendingOrder = async () => {
+    try {
+        const response = await axios.post(`${API_URL}/pending`, {}, getAuthHeaders());
+        return response.data;
+    } catch (error) {
+        console.error('Error creating pending order:', error);
+        throw error;
+    }
+};
+
 const pedidoService = {
     crearPedido,
     getPedidoById,
     getPedidos,
+    createPendingOrder,
 };
 
 export default pedidoService;

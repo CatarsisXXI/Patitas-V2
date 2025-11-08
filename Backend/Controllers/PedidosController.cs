@@ -113,6 +113,78 @@ namespace MascotaSnacksAPI.Controllers
             }
         }
 
+        // POST: api/Pedidos/pending
+        [HttpPost("pending")]
+        public async Task<IActionResult> CrearPedidoPendiente()
+        {
+            var clienteIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(clienteIdStr, out var clienteId))
+            {
+                return Unauthorized();
+            }
+
+            var carrito = await _context.Carritos
+                .Include(c => c.Items)
+                .ThenInclude(i => i.Producto)
+                .FirstOrDefaultAsync(c => c.ClienteID == clienteId);
+
+            if (carrito == null || !carrito.Items.Any())
+            {
+                return BadRequest("El carrito está vacío.");
+            }
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                foreach (var item in carrito.Items)
+                {
+                    if (item.Producto.Stock < item.Cantidad)
+                    {
+                        await transaction.RollbackAsync();
+                        return BadRequest($"No hay suficiente stock para el producto: {item.Producto.Nombre}. Disponible: {item.Producto.Stock}, Solicitado: {item.Cantidad}.");
+                    }
+                }
+
+                var pedido = new Pedido
+                {
+                    ClienteID = clienteId,
+                    FechaPedido = DateTime.UtcNow,
+                    EstadoPedido = "Pendiente",
+                    DireccionEnvio = "Dirección por definir",
+                    TotalPedido = carrito.Items.Sum(i => i.Cantidad * i.Producto.Precio)
+                };
+                _context.Pedidos.Add(pedido);
+                await _context.SaveChangesAsync();
+
+                foreach (var item in carrito.Items)
+                {
+                    var detallePedido = new DetallePedido
+                    {
+                        PedidoID = pedido.PedidoID,
+                        ProductoID = item.ProductoID,
+                        Cantidad = item.Cantidad,
+                        PrecioUnitario = item.Producto.Precio
+                    };
+                    _context.DetallesPedidos.Add(detallePedido);
+                }
+
+                // Clear the cart
+                _context.ItemsCarritos.RemoveRange(carrito.Items);
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Ok(new { message = "Pedido pendiente creado exitosamente!", pedidoId = pedido.PedidoID });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Ocurrió un error al crear el pedido pendiente.");
+                return StatusCode(500, "Ocurrió un error interno al procesar el pedido.");
+            }
+        }
+
         private bool IsPaymentValid(MetodoPagoDto metodoPago)
         {
             // Lógica de simulación de pago

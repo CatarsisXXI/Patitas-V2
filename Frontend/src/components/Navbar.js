@@ -64,11 +64,7 @@ const Navbar = () => {
               {/* User-specific buttons - Only show for non-admin users */}
               {user.role !== 'Admin' && (
                 <>
-                  <Grow in={true} timeout={1600}>
-                    <Button color="inherit" component={Link} to="/mis-compras" sx={{ mr: 1, fontWeight: 'bold' }}>
-                      Mis Compras
-                    </Button>
-                  </Grow>
+                  {/* Mis Compras hidden as per requirement */}
 
                   <Grow in={true} timeout={1900}>
                     <Button color="inherit" component={Link} to="/mascotas" sx={{ mr: 1, fontWeight: 'bold' }}>

@@ -1,27 +1,17 @@
-# Mejora del Chatbot para Responder a Todas las Consultas Considerando Productos
+# TODO List for Project Changes
 
-## Información Recopilada
-- **Chatbot Actual**: Usa react-chatbot-kit en frontend con acciones básicas (saludo, recomendaciones basadas en mascotas) y OpenAI para mensajes generales.
-- **Backend**: ChatbotController.cs llama a OpenAI con prompt que incluye mascotas del usuario, pero no productos.
-- **Productos**: Disponibles vía ProductosController.cs, con categorías, nombres, descripciones, precios, stock, etc.
-- **Necesidad**: El chatbot debe responder a todas las consultas del cliente considerando los productos disponibles en la página, incluyendo descripciones para recomendaciones, explicaciones, sexo de la mascota, y preguntar por cuál mascota si hay múltiples.
+## Frontend Changes
+- [x] Modify CarritoPage.js: Change "Proceder al Pago" button to "Comprar", generate WhatsApp message with cart items, redirect to WhatsApp, and call new API to create pending order and clear cart.
+- [x] Modify Navbar.js: Hide "Mis Compras" option for non-admin users.
 
-## Plan de Mejora
-- Modificar ChatbotController.cs para incluir información de productos activos (nombres, descripciones, precios, categorías) en el prompt del sistema.
-- Incluir categorías de productos para mejor contexto.
-- Instruir al AI en el prompt para basar respuestas en productos reales, explicar recomendaciones basadas en descripciones, considerar sexo y otras características de la mascota, y preguntar por cuál mascota si hay múltiples.
-- Esto permitirá al chatbot responder preguntas como "¿Qué snacks tienes para perros?", "Recomienda algo para gatos", "¿Cuál es el precio de X producto?", explicar por qué recomienda algo, y personalizar por mascota específica.
+## Backend Changes
+- [x] Modify PedidosController.cs: Add new endpoint for creating pending order without payment validation, set status to "Pendiente", clear cart after creation.
+- [x] Modify AdminController.cs: Add endpoints to update order status and shipping address.
+- [x] Update statistics logic: When order status changes to "Pagado", decrease product stock and add to total sales.
+- [x] Create/Update DTOs if necessary for admin actions.
 
-## Pasos a Realizar
-- [x] Modificar ChatbotController.cs para obtener productos activos y categorías.
-- [x] Actualizar el systemContent en ChatbotController.cs para incluir lista detallada de productos (nombre, descripción, precio, categoría).
-- [x] Ajustar el prompt para que el AI responda basado en productos reales, explique recomendaciones detalladamente, responda a preguntas sobre por qué recomienda ciertos productos, y entienda variaciones informales, errores de tipeo y mayúsculas/minúsculas.
-- [x] Probar la funcionalidad del chatbot con consultas sobre productos.
+## Admin Interface Changes
+- [x] Modify OrderManagementPage.js: Add buttons to change order status and edit shipping address.
 
-## Archivos a Editar
-- Backend/Controllers/ChatbotController.cs
-
-## Pasos de Seguimiento
-- [ ] Verificar que el chatbot responda correctamente a consultas sobre productos.
-- [ ] Probar con diferentes tipos de preguntas (precios, recomendaciones, disponibilidad).
-- [ ] Asegurar que las respuestas sean personalizadas con las mascotas del usuario y productos disponibles, explicando recomendaciones.
+## Testing
+- [ ] Test the complete flow: Add to cart, click "Comprar", redirect to WhatsApp, order created as pending, admin can change status, stock decreases, sales update.

@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "29d3C4P81B4=",
+  "dgSpecHash": "O7sw75r9be8=",
   "success": true,
-  "projectFilePath": "C:\\Users\\PC\\Desktop\\Patitas Y Sabores\\Backend\\MascotaSnacksAPI.csproj",
+  "projectFilePath": "C:\\Users\\PC\\Desktop\\Patitas Y Sabores\\backend\\MascotaSnacksAPI.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\PC\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\PC\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",

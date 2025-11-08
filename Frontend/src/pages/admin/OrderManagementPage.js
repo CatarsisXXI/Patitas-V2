@@ -14,9 +14,19 @@ import {
   Paper,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  Select,
+  MenuItem,
+  TextField,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import EditIcon from '@mui/icons-material/Edit';
 import adminService from '../../services/adminService';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { format } from 'date-fns';
@@ -25,6 +35,49 @@ const OrderManagementPage = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [editDialog, setEditDialog] = useState({ open: false, order: null, field: '' });
+  const [newValue, setNewValue] = useState('');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      await adminService.updateOrderStatus(orderId, newStatus);
+      setOrders(orders.map(order =>
+        order.pedidoID === orderId ? { ...order, estadoPedido: newStatus } : order
+      ));
+      setSnackbar({ open: true, message: 'Estado actualizado exitosamente', severity: 'success' });
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Error al actualizar estado', severity: 'error' });
+    }
+  };
+
+  const handleEditAddress = (order) => {
+    setEditDialog({ open: true, order, field: 'direccion' });
+    setNewValue(order.direccionEnvio);
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      if (editDialog.field === 'direccion') {
+        await adminService.updateOrderAddress(editDialog.order.pedidoID, newValue);
+        setOrders(orders.map(order =>
+          order.pedidoID === editDialog.order.pedidoID ? { ...order, direccionEnvio: newValue } : order
+        ));
+        setSnackbar({ open: true, message: 'Dirección actualizada exitosamente', severity: 'success' });
+      }
+      setEditDialog({ open: false, order: null, field: '' });
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Error al actualizar', severity: 'error' });
+    }
+  };
+
+  const handleCloseDialog = () => {
+    setEditDialog({ open: false, order: null, field: '' });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ open: false, message: '', severity: 'success' });
+  };
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -83,7 +136,19 @@ const OrderManagementPage = () => {
                   <TableCell>{order.nombreCliente}</TableCell>
                   <TableCell>{format(new Date(order.fechaPedido), 'dd/MM/yyyy HH:mm')}</TableCell>
                   <TableCell>{formatCurrency(order.totalPedido)}</TableCell>
-                  <TableCell>{order.estadoPedido}</TableCell>
+                  <TableCell>
+                    <Select
+                      value={order.estadoPedido}
+                      onChange={(e) => handleStatusChange(order.pedidoID, e.target.value)}
+                      size="small"
+                    >
+                      <MenuItem value="Pendiente">Pendiente</MenuItem>
+                      <MenuItem value="Pagado">Pagado</MenuItem>
+                      <MenuItem value="Enviado">Enviado</MenuItem>
+                      <MenuItem value="Entregado">Entregado</MenuItem>
+                      <MenuItem value="Cancelado">Cancelado</MenuItem>
+                    </Select>
+                  </TableCell>
                   <TableCell>
                     <Accordion>
                       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -108,6 +173,38 @@ const OrderManagementPage = () => {
           </Table>
         </TableContainer>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialog.open} onClose={handleCloseDialog}>
+        <DialogTitle>Editar {editDialog.field === 'direccion' ? 'Dirección de Envío' : ''}</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label={editDialog.field === 'direccion' ? 'Dirección de Envío' : ''}
+            fullWidth
+            variant="outlined"
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancelar</Button>
+          <Button onClick={handleSaveEdit}>Guardar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

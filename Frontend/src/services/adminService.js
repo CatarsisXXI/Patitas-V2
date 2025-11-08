@@ -43,10 +43,44 @@ const getDashboardStats = async () => {
     }
 };
 
+const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+        const response = await axios.put(`${API_URL}/pedidos/${orderId}/estado`, JSON.stringify(newStatus), {
+            ...getAuthHeaders(),
+            headers: {
+                ...getAuthHeaders().headers,
+                'Content-Type': 'application/json'
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error updating order status:", error);
+        throw error;
+    }
+};
+
+const updateOrderAddress = async (orderId, newAddress) => {
+    try {
+        const response = await axios.put(`${API_URL}/pedidos/${orderId}/direccion`, JSON.stringify(newAddress), {
+            ...getAuthHeaders(),
+            headers: {
+                ...getAuthHeaders().headers,
+                'Content-Type': 'application/json'
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error updating order address:", error);
+        throw error;
+    }
+};
+
 const adminService = {
     getPedidos,
     getUsers,
     getDashboardStats,
+    updateOrderStatus,
+    updateOrderAddress,
 };
 
 
