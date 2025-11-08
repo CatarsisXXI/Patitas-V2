@@ -10,7 +10,7 @@ import pedidoService from '../services/pedidoService';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 
 const CarritoPage = () => {
-  const { cart, removeProductFromCart, updateProductQuantity, loading } = useCart();
+  const { cart, removeProductFromCart, updateProductQuantity, loading, clearCart } = useCart();
   const navigate = useNavigate();
 
   const [errorMessage, setErrorMessage] = useState('');
@@ -24,6 +24,7 @@ const CarritoPage = () => {
     // Create pending order and clear cart
     try {
       await createPendingOrder();
+      clearCart(); // Clear cart after creating order
       // Redirect to WhatsApp
       window.open(whatsappUrl, '_blank');
       // Optionally navigate to home or show success message

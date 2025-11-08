@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Typography,
@@ -27,17 +27,22 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import EditIcon from '@mui/icons-material/Edit';
+import DownloadIcon from '@mui/icons-material/Download';
 import adminService from '../../services/adminService';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { format } from 'date-fns';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const OrderManagementPage = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editDialog, setEditDialog] = useState({ open: false, order: null, field: '' });
+  const [boletaDialog, setBoletaDialog] = useState({ open: false, order: null });
   const [newValue, setNewValue] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const boletaRef = useRef();
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
@@ -69,6 +74,49 @@ const OrderManagementPage = () => {
     } catch (error) {
       setSnackbar({ open: true, message: 'Error al actualizar', severity: 'error' });
     }
+  };
+
+  const handleViewBoleta = (order) => {
+    setBoletaDialog({ open: true, order });
+  };
+
+  const handleDownloadBoleta = async () => {
+    if (boletaRef.current) {
+      try {
+        const canvas = await html2canvas(boletaRef.current, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210;
+        const pageHeight = 295;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+
+        pdf.save(`boleta_pedido_${boletaDialog.order?.pedidoID}.pdf`);
+        setSnackbar({ open: true, message: 'Boleta descargada exitosamente', severity: 'success' });
+      } catch (error) {
+        console.error('Error al generar PDF:', error);
+        setSnackbar({ open: true, message: 'Error al descargar la boleta', severity: 'error' });
+      }
+    }
+  };
+
+  const handleCloseBoletaDialog = () => {
+    setBoletaDialog({ open: false, order: null });
   };
 
   const handleCloseDialog = () => {
@@ -155,14 +203,23 @@ const OrderManagementPage = () => {
                       <MenuItem value="Cancelado">Cancelado</MenuItem>
                     </Select>
                     {order.estadoPedido === 'Pagado' && (
-                      <Button
-                        size="small"
-                        startIcon={<EditIcon />}
-                        onClick={() => handleEditAddress(order)}
-                        sx={{ ml: 1 }}
-                      >
-                        Dirección
-                      </Button>
+                      <>
+                        <Button
+                          size="small"
+                          startIcon={<EditIcon />}
+                          onClick={() => handleEditAddress(order)}
+                          sx={{ ml: 1 }}
+                        >
+                          Dirección
+                        </Button>
+                        <Button
+                          size="small"
+                          onClick={() => handleViewBoleta(order)}
+                          sx={{ ml: 1 }}
+                        >
+                          Ver Boleta
+                        </Button>
+                      </>
                     )}
                     {order.estadoPedido === 'Cancelado' && (
                       <Button
@@ -221,6 +278,61 @@ const OrderManagementPage = () => {
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancelar</Button>
           <Button onClick={handleSaveEdit}>Guardar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Boleta Dialog */}
+      <Dialog open={boletaDialog.open} onClose={handleCloseBoletaDialog} maxWidth="md" fullWidth>
+        <DialogTitle>Boleta de Venta - Pedido #{boletaDialog.order?.pedidoID}</DialogTitle>
+        <DialogContent>
+          <Box ref={boletaRef} sx={{ p: 2, backgroundColor: 'white' }}>
+            <Typography variant="h4" align="center" gutterBottom sx={{ mb: 3 }}>
+              BOLETA DE VENTA
+            </Typography>
+            <Typography variant="h6" gutterBottom>Información del Cliente</Typography>
+            <Typography>Cliente: {boletaDialog.order?.nombreCliente}</Typography>
+            <Typography>Fecha: {boletaDialog.order ? format(new Date(boletaDialog.order.fechaPedido), 'dd/MM/yyyy HH:mm') : ''}</Typography>
+            <Typography>Dirección de Envío: {boletaDialog.order?.direccionEnvio}</Typography>
+
+            <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>Productos</Typography>
+            <TableContainer component={Paper} sx={{ mb: 2 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Producto</TableCell>
+                    <TableCell align="right">Cantidad</TableCell>
+                    <TableCell align="right">Precio Unitario</TableCell>
+                    <TableCell align="right">Subtotal</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {boletaDialog.order?.detalles.map((item) => (
+                    <TableRow key={item.productoID}>
+                      <TableCell>{item.nombreProducto}</TableCell>
+                      <TableCell align="right">{item.cantidad}</TableCell>
+                      <TableCell align="right">{formatCurrency(item.precioUnitario)}</TableCell>
+                      <TableCell align="right">{formatCurrency(item.cantidad * item.precioUnitario)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+              <Typography variant="h6">Total: {formatCurrency(boletaDialog.order?.totalPedido || 0)}</Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            startIcon={<DownloadIcon />}
+            onClick={handleDownloadBoleta}
+            variant="contained"
+            color="primary"
+          >
+            Descargar PDF
+          </Button>
+          <Button onClick={handleCloseBoletaDialog}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 
