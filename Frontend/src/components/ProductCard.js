@@ -1,8 +1,15 @@
 import React from 'react';
-import { Card, CardContent, CardMedia, Typography, Button, CardActions, IconButton, Box } from '@mui/material';
-
+import {
+  Card,
+  CardContent,
+  CardMedia,
+  Typography,
+  Button,
+  CardActions,
+  IconButton,
+  Box,
+} from '@mui/material';
 import { Link } from 'react-router-dom';
-
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -11,9 +18,7 @@ import PetsIcon from '@mui/icons-material/Pets';
 const ProductCard = ({ product }) => {
   const { addProductToCart } = useCart();
   const { user } = useAuth();
-
   const { isFavorite, toggleFavorite } = useFavorites();
-
   const isProdFavorite = isFavorite(product.productoID);
 
   const handleFavoriteClick = (e) => {
@@ -22,95 +27,138 @@ const ProductCard = ({ product }) => {
     toggleFavorite(product.productoID);
   };
 
-
-
-  // A placeholder image in case the product doesn't have one
   const imageUrl = product.imagenURL
-  ? `http://localhost:5288${product.imagenURL}`
-  : 'https://via.placeholder.com/300x200.png?text=Patitas+y+Sabores';
+    ? `http://localhost:5288${product.imagenURL}`
+    : 'https://via.placeholder.com/400x300.png?text=Patitas+y+Sabores';
 
   return (
-    <Card sx={{
-      maxWidth: 345,
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      position: 'relative',
-      transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
-      '&:hover': {
-        transform: 'translateY(-5px)',
-        boxShadow: 6,
-      },
-      '&:hover .product-card-image': {
-        transform: 'scale(1.1)',
-      }
-    }}>
-       {user && (
-          <IconButton
-            aria-label="add to favorites"
-            onClick={handleFavoriteClick}
-            sx={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              backgroundColor: 'rgba(255, 255, 255, 0.7)',
-              zIndex: 1, // Ensure icon is above the image
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 1)',
-              }
-            }}
-          >
+    <Card
+      sx={{
+        maxWidth: 345,
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+        overflow: 'hidden',
+        borderRadius: 3,
+        boxShadow: 3,
+        transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+        '&:hover': {
+          transform: 'translateY(-5px)',
+          boxShadow: 6,
+        },
+        '&:hover .product-card-image': {
+          transform: 'scale(1.05)',
+        },
+      }}
+    >
+      {/* Icono de favoritos */}
+      {user && (
+        <IconButton
+          aria-label="add to favorites"
+          onClick={handleFavoriteClick}
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            zIndex: 2,
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 1)',
+            },
+          }}
+        >
+          <PetsIcon color={isProdFavorite ? 'error' : 'inherit'} />
+        </IconButton>
+      )}
 
-            <PetsIcon color={isProdFavorite ? "error" : "inherit"} />
-          </IconButton>
-        )}
-      <Box sx={{ height: 140, overflow: 'hidden' }}>
+      {/* Imagen del producto */}
+      <Box
+        sx={{
+          height: 220,
+          backgroundColor: '#f8f7f4',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          overflow: 'hidden',
+        }}
+      >
         <CardMedia
           className="product-card-image"
           component="img"
-          height="140"
           image={imageUrl}
           alt={product.nombre}
           sx={{
-            transition: 'transform 0.5s ease'
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+            transition: 'transform 0.5s ease',
           }}
         />
       </Box>
 
-      <CardContent sx={{ flexGrow: 1 }}>
-        <Typography gutterBottom variant="h5" component="div">
+      {/* Contenido más compacto */}
+      <CardContent
+        sx={{
+          flexGrow: 1,
+          textAlign: 'center',
+          py: 1, // reduce padding vertical
+          px: 2, // un poco menos de padding lateral
+        }}
+      >
+        <Typography
+          gutterBottom
+          variant="subtitle1"
+          component="div"
+          sx={{ fontWeight: 600, mb: 0.5 }}
+        >
           {product.nombre}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {product.descripcion.substring(0, 100)}{product.descripcion.length > 100 ? '...' : ''}
-        </Typography>
-        <Typography variant="h6" color="primary" sx={{ mt: 2 }}>
+
+        <Typography variant="body1" color="primary" sx={{ fontWeight: 500 }}>
           S/{product.precio}
-          {product.stock > 0 ? (
-            <Typography variant="body2" color="text.secondary" sx={{ display: 'inline', ml: 1 }}>
-              (Stock: {product.stock})
-            </Typography>
-          ) : (
-            <Typography variant="body2" color="error" sx={{ display: 'inline', ml: 1, fontWeight: 'bold' }}>
-              Sin Stock
-            </Typography>
-          )}
         </Typography>
+
+        {product.stock > 0 ? (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ display: 'block', mt: 0.2 }}
+          >
+            (Stock: {product.stock})
+          </Typography>
+        ) : (
+          <Typography
+            variant="body2"
+            color="error"
+            sx={{ display: 'block', mt: 0.2, fontWeight: 'bold' }}
+          >
+            Sin Stock
+          </Typography>
+        )}
       </CardContent>
-      <CardActions>
-        <Button component={Link} to={`/productos/${product.productoID}`} size="small">Ver Detalles</Button>
+
+      {/* Botones más compactos */}
+      <CardActions sx={{ justifyContent: 'center', pb: 1, pt: 0 }}>
+        <Button
+          component={Link}
+          to={`/productos/${product.productoID}`}
+          size="small"
+          sx={{ textTransform: 'none', minWidth: 0 }}
+        >
+          Ver Detalles
+        </Button>
         <Button
           size="small"
           onClick={() => addProductToCart(product.productoID, 1)}
           disabled={!user || product.stock === 0}
+          sx={{ textTransform: 'none', minWidth: 0 }}
         >
-
-          Agregar al Carrito
+          Agregar
         </Button>
       </CardActions>
-
     </Card>
-
   );
 };
 
