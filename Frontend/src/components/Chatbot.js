@@ -292,137 +292,177 @@ const ChatbotComponent = () => {
     };
 
     // produce recommendations for a specific mascota with explanations
-    const handleRecommendationsForMascota = (mascotaId) => {
-      const mascota = mascotas.find(m => String(getMascotaId(m)) === String(mascotaId));
-      if (!mascota) {
-        const message = createChatBotMessage('No pude encontrar la mascota seleccionada. Intenta de nuevo.');
-        setState((prev) => ({ ...prev, messages: [...prev.messages, message] }));
-        return;
-      }
+const handleRecommendationsForMascota = async (mascotaId) => {
+  const mascota = mascotas.find(m => String(getMascotaId(m)) === String(mascotaId));
+  if (!mascota) {
+    const message = createChatBotMessage('No pude encontrar la mascota seleccionada. Intenta de nuevo.');
+    setState(prev => ({ ...prev, messages: [...prev.messages, message] }));
+    return;
+  }
 
-      productService.getProductos()
-        .then(products => {
-          if (!products || products.length === 0) {
-            const message = createChatBotMessage('Lo siento, no hay productos disponibles para recomendar en este momento.');
-            setState((prev) => ({ ...prev, messages: [...prev.messages, message] }));
-            return;
-          }
+  try {
+    const productos = await productService.getProductos();
+    if (!productos || productos.length === 0) {
+      const message = createChatBotMessage('Lo siento, no hay productos disponibles para recomendar en este momento.');
+      setState(prev => ({ ...prev, messages: [...prev.messages, message] }));
+      return;
+    }
 
-          // Get mascota details (handle both camelCase and PascalCase)
-          const calculateAge = (fechaNacimiento) => {
-            if (!fechaNacimiento) return 0;
-            const birthDate = new Date(fechaNacimiento);
-            const today = new Date();
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const m = today.getMonth() - birthDate.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-              age--;
-            }
-            return age;
-          };
+    const nombre = mascota.nombre || 'tu mascota';
+    const notas = mascota.notasAdicionales?.toLowerCase() || '';
 
-          const nombre = mascota.nombre || mascota.Nombre || '';
-          const especie = (mascota.especie || mascota.Especie || '').toLowerCase();
-          const raza = (mascota.raza || mascota.Raza || '').toLowerCase();
-          const fechaNacimiento = mascota.fechaNacimiento || mascota.FechaNacimiento;
-          const edad = calculateAge(fechaNacimiento);
-          const tamanio = (mascota.tamanio || mascota.Tamanio || '').toLowerCase();
-          const notas = (mascota.notasAdicionales || mascota.notas || mascota.Notas || '').toLowerCase();
-
-          // Default product (Fibra Vital)
-          const defaultProduct = products.find(p => 
-            (p.nombre || '').includes('Fibra Vital') || 
-            (p.nombre || '').includes('Algarrobo')
-          );
-
-          // Analyze notas for specific conditions and dietary needs
-          const hasAllergies = notas.includes('alergi');
-          const isDiabetic = notas.includes('diabet') || notas.includes('azucar');
-          const hasSkinIssues = notas.includes('piel') || notas.includes('dermat');
-          const hasDigestiveIssues = notas.includes('digestiv') || notas.includes('estomag') || 
-                                    notas.includes('diarrea') || notas.includes('gastri');
-          const needsHypoallergenic = hasAllergies || notas.includes('hipoalergenic');
-          const needsNatural = notas.includes('natural') || notas.includes('organic');
-
-          let recommendedProduct;
-          let recommendationReason;
-
-          // Find best match based on specific conditions
-          if (hasDigestiveIssues) {
-            recommendedProduct = products.find(p => 
-              (p.nombre || '').toLowerCase().includes('digest') || 
-              (p.descripcion || '').toLowerCase().includes('digestiv')
-            );
-            recommendationReason = 'Para ' + nombre + ', que presenta sensibilidad digestiva, recomiendo este producto que ayuda a mantener un sistema digestivo saludable con su contenido de fibra y probioticos naturales.';
-          } else if (hasSkinIssues || needsHypoallergenic) {
-            recommendedProduct = products.find(p => 
-              (p.nombre || '').toLowerCase().includes('piel') || 
-              (p.nombre || '').toLowerCase().includes('dermo')
-            );
-            recommendationReason = 'Considerando la sensibilidad en la piel de ' + nombre + ', este producto es ideal ya que contiene ingredientes que ayudan a mantener una piel saludable y un pelaje brillante.';
-          } else if (isDiabetic) {
-            recommendedProduct = products.find(p => 
-              (p.descripcion || '').toLowerCase().includes('sin azucar')
-            );
-            recommendationReason = 'Como ' + nombre + ' necesita controlar sus niveles de azucar, este producto es perfecto ya que esta formulado sin azucares anadidos y con ingredientes de bajo indice glucemico.';
-          }
-
-          // If no specific match found or no special conditions noted, use default product
-          if (!recommendedProduct) {
-            recommendedProduct = defaultProduct;
-            recommendationReason = 'Para ' + nombre + ', tu ' + especie + (raza ? ' de raza ' + raza : '') + 
-              (edad > 0 ? ' de ' + edad + ' año' + (edad !== 1 ? 's' : '') : '') + 
-              (tamanio ? ' y tamaño ' + tamanio : '') + 
-              ', recomiendo las Galletas Fibra Vital con Algarrobo, Camote y Yacón. Este snack natural proporciona fibra dietética que ayuda al tránsito regular ' +
-              'y contiene minerales esenciales como calcio y hierro, siendo una opción saludable para el consumo diario.' + (needsNatural ? ' Además, está elaborado con ingredientes 100% naturales.' : '');
-          }
-
-          // Create and send messages
-          const introMessage = createChatBotMessage(
-            'Basado en el perfil de ' + nombre + ', tengo una recomendacion especial:'
-          );
-
-          const explanationMessage = createChatBotMessage(recommendationReason);
-
-          // Make sure recommendedProduct exists before creating the message
-          if (recommendedProduct) {
-            console.log('Recommended product to display:', recommendedProduct); // Debug log
-
-            const productMessage = createChatBotMessage(
-              'Aquí tienes el producto recomendado:',
-              {
-                widget: 'productCards',
-                payload: [recommendedProduct]
-              }
-            );
-
-            setState((prev) => ({
-              ...prev,
-              messages: [...prev.messages, introMessage, explanationMessage, productMessage]
-            }));
-          } else {
-            const errorMessage = createChatBotMessage(
-              'Lo siento, no pude encontrar un producto específico para recomendar en este momento.'
-            );
-            setState((prev) => ({
-              ...prev,
-              messages: [...prev.messages, introMessage, explanationMessage, errorMessage]
-            }));
-          }
-
-          setTimeout(() => {
-            sendOptions();
-          }, 1000);
-        })
-        .catch(error => {
-          console.error('Error getting recommendations:', error);
-          const message = createChatBotMessage('Lo siento, hubo un error al obtener las recomendaciones. Intentalo de nuevo.');
-          setState((prev) => ({ ...prev, messages: [...prev.messages, message] }));
-          setTimeout(() => {
-            sendOptions();
-          }, 1000);
-        });
+    // ------------------------------
+    // 🔍 Extraer secciones limpias
+    // ------------------------------
+    const getSection = (label) => {
+      const regex = new RegExp(`${label}:([^|]+)`, 'i');
+      const match = notas.match(regex);
+      return match ? match[1].split(',').map(s => s.trim().toLowerCase()) : [];
     };
+
+    const alergias = getSection('Alergias');
+    const objetivos = getSection('Objetivo nutricional');
+    const objetivoPrincipal = (objetivos[0] || 'mantenimiento general').trim().toLowerCase();
+
+    // ------------------------------
+    // 🧩 Relaciones: Objetivo → Productos
+    // ------------------------------
+    const relaciones = {
+      'control de peso': ['Galletas Fibra Vital'],
+      'aumento de energía o masa muscular': ['Bites NutriCamote & Grillo'],
+      'digestión sensible': ['Bocaditos Digest Fit'],
+      'piel y pelaje saludables': ['Galletas Piel & Pelaje', 'Crunch Dermosalud'],
+      'soporte articular o movilidad': ['Bocaditos Digest Fit', 'Galletas Fibra Vital'],
+      'reducción de alergias o intolerancias': ['Galletas Piel & Pelaje', 'Crunch Dermosalud'],
+      'soporte inmunológico': ['Bocaditos Digest Fit', 'Galletas Fibra Vital'],
+      'vitalidad y longevidad': ['Bites NutriCamote & Grillo'],
+      'mantenimiento general': ['Galletas Fibra Vital']
+    };
+
+    // ------------------------------
+    // 🚫 Diccionario de alergias
+    // ------------------------------
+    const alergiasMap = {
+      insectos: ['grillo', 'insecto'],
+      avena: ['avena', 'cereal', 'gluten'],
+      coco: ['coco'],
+      plátano: ['plátano', 'banana'],
+      aceite: ['aceite de oliva', 'oliva'],
+      tubérculo: ['camote', 'papa', 'yacón'],
+      linaza: ['linaza'],
+      calabaza: ['calabaza']
+    };
+
+    // Detectar alergias mencionadas
+    const detectedAllergies = Object.entries(alergiasMap)
+      .filter(([key, terms]) => alergias.some(a => terms.some(t => a.includes(t))))
+      .map(([key]) => key);
+
+    // ------------------------------
+    // ⚠️ Filtro de productos seguros
+    // ------------------------------
+    const seguros = productos.filter(p => {
+      const texto = `${p.descripcion || ''} ${p.nombre || ''}`.toLowerCase();
+      return !detectedAllergies.some(allergy =>
+        texto.includes(allergy) ||
+        alergiasMap[allergy]?.some(t => texto.includes(t))
+      );
+    });
+
+    if (detectedAllergies.length > 0 && seguros.length === 0) {
+      const warning = createChatBotMessage(
+        `He detectado que ${nombre} tiene alergias a (${detectedAllergies.join(', ')}). 
+         Sin embargo, no hay productos seguros disponibles actualmente. 
+         Te recomiendo consultar con un veterinario para una dieta especializada.`
+      );
+      setState(prev => ({ ...prev, messages: [...prev.messages, warning] }));
+      return;
+    }
+
+    // ------------------------------
+    // 🎯 Selección basada SOLO en objetivo nutricional
+    // ------------------------------
+    const key = Object.keys(relaciones).find(k => objetivoPrincipal.includes(k)) || 'mantenimiento general';
+    const posibles = relaciones[key] || ['Galletas Fibra Vital'];
+
+    // Buscar coincidencias flexibles entre productos seguros
+    const candidatos = seguros.filter(p =>
+      posibles.some(pos =>
+        (p.nombre || '').toLowerCase().includes(pos.toLowerCase()) ||
+        (p.descripcion || '').toLowerCase().includes(pos.toLowerCase())
+      )
+    );
+
+    const recomendado = candidatos[0] || seguros[0] || productos[0];
+
+    // ------------------------------
+    // 💬 Generar mensaje personalizado
+    // ------------------------------
+    const reason = (() => {
+      if (key.includes('piel')) {
+        return `Este snack está formulado para mejorar la piel y el brillo del pelaje de ${nombre}, gracias a ingredientes como aceite de oliva, linaza y antioxidantes naturales.`;
+      }
+      if (key.includes('digestión')) {
+        return `Este snack con plátano y avena favorece la digestión y el equilibrio intestinal de ${nombre}, ideal para estómagos sensibles.`;
+      }
+      if (key.includes('energía') || key.includes('masa')) {
+        return `${nombre} necesita energía sostenida y proteínas funcionales. Este snack con grillo y camote ayuda al desarrollo muscular y la recuperación.`;
+      }
+      if (key.includes('peso')) {
+        return `Este snack ayuda a mantener un peso saludable en ${nombre}, con alta fibra, baja grasa y un perfil natural.`;
+      }
+      if (key.includes('inmunológico')) {
+        return `Este snack refuerza el sistema inmune de ${nombre} gracias a sus antioxidantes naturales y minerales esenciales.`;
+      }
+      if (key.includes('articular') || key.includes('movilidad')) {
+        return `Este snack ayuda a mantener la movilidad y el confort articular de ${nombre}, gracias a sus nutrientes funcionales.`;
+      }
+      if (key.includes('alergias')) {
+        return `Este snack tiene un perfil limpio y natural, ideal para ${nombre} si busca reducir alergias o intolerancias leves.`;
+      }
+      if (key.includes('vitalidad')) {
+        return `Este snack aporta vitalidad y longevidad a ${nombre}, con proteínas de alta digestibilidad y antioxidantes.`;
+      }
+      return `Este snack natural es ideal para el mantenimiento general y bienestar diario de ${nombre}.`;
+    })();
+
+    const allergyNote = detectedAllergies.length > 0
+      ? `⚠️ Se evitó recomendar productos con: ${detectedAllergies.join(', ')}.`
+      : '';
+
+    // ------------------------------
+    // 💬 Mensajes del chatbot
+    // ------------------------------
+    const intro = createChatBotMessage(`Basado en el objetivo nutricional de ${nombre}, tengo una recomendación personalizada:`);
+    const explanation = createChatBotMessage(`${reason}\n${allergyNote}`);
+    const productCard = createChatBotMessage('Aquí tienes el producto recomendado:', {
+      widget: 'productCards',
+      payload: [recomendado],
+    });
+
+    setState(prev => ({
+      ...prev,
+      messages: [...prev.messages, intro, explanation, productCard],
+    }));
+    // 🕐 Después de mostrar la recomendación, volver a ofrecer opciones
+    setTimeout(() => {
+      const optionsMsg = createChatBotMessage('¿En qué más puedo ayudarte?', {
+        widget: 'mainOptions',
+        widgetProps: {
+          handleRecommendations: () => handleRecommendations(),
+          handleProductos: () => handleProductos(),
+          handleSobre: () => handleSobre(),
+        },
+      });
+      setState(prev => ({ ...prev, messages: [...prev.messages, optionsMsg] }));
+    }, 1500); // espera 1.5 segundos antes de mostrar las opciones
+
+  } catch (error) {
+    console.error('Error al generar la recomendación:', error);
+    const message = createChatBotMessage('Ocurrió un error al generar la recomendación. Inténtalo de nuevo.');
+    setState(prev => ({ ...prev, messages: [...prev.messages, message] }));
+  }
+};
 
     // Add an initial greeting message with quick replies when the provider mounts
     useEffect(() => {

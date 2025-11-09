@@ -20,7 +20,11 @@ import {
   DialogActions,
   Avatar,
   Chip,
-  IconButton
+  IconButton,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Divider
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -29,7 +33,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 
-// Avatar options for cats and dogs
+// Avatares (gato/perro)
 const catAvatars = [
   { id: 'cat1', src: 'https://images.vexels.com/media/users/3/154255/isolated/preview/9afaf910583333c167e40ee094e12cfa-avatar-animal-gato.png', alt: 'Gato Animado 1' },
   { id: 'cat2', src: 'https://images.vexels.com/media/users/3/155407/isolated/preview/84d636131360b843e427a4ff7061ae0a-gato-rayado-avatar.png', alt: 'Gato Animado 2' },
@@ -47,6 +51,7 @@ const MascotasPage = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingMascota, setEditingMascota] = useState(null);
+
   const [formData, setFormData] = useState({
     nombre: '',
     especie: '',
@@ -55,8 +60,12 @@ const MascotasPage = () => {
     fechaNacimiento: '',
     tamaño: '',
     notasAdicionales: '',
-    avatar: ''
+    avatar: '',
+    alergias: [],
+    objetivo: [],
+    actividad: ''
   });
+
   const { user } = useAuth();
 
   useEffect(() => {
@@ -73,7 +82,7 @@ const MascotasPage = () => {
       const data = await mascotaService.getMascotas();
       setMascotas(data);
     } catch (error) {
-      console.error("Error fetching mascotas:", error);
+      console.error('Error fetching mascotas:', error);
     } finally {
       setLoading(false);
     }
@@ -82,6 +91,14 @@ const MascotasPage = () => {
   const handleOpen = (mascota = null) => {
     if (mascota) {
       setEditingMascota(mascota);
+      const notas = mascota.notasAdicionales || '';
+
+      const getSection = (label) => {
+        const regex = new RegExp(`${label}:([^|]+)`, 'i');
+        const match = notas.match(regex);
+        return match ? match[1].split(',').map(s => s.trim()).filter(Boolean) : [];
+      };
+
       setFormData({
         nombre: mascota.nombre,
         especie: mascota.especie,
@@ -90,7 +107,10 @@ const MascotasPage = () => {
         fechaNacimiento: mascota.fechaNacimiento ? mascota.fechaNacimiento.split('T')[0] : '',
         tamaño: mascota.tamaño || '',
         notasAdicionales: mascota.notasAdicionales || '',
-        avatar: mascota.avatar || ''
+        avatar: mascota.avatar || '',
+        alergias: getSection('Alergias'),
+        objetivo: getSection('Objetivo nutricional'),
+        actividad: (notas.match(/Nivel de actividad:([^|]+)/i)?.[1]?.trim()) || ''
       });
     } else {
       setEditingMascota(null);
@@ -102,7 +122,10 @@ const MascotasPage = () => {
         fechaNacimiento: '',
         tamaño: '',
         notasAdicionales: '',
-        avatar: ''
+        avatar: '',
+        alergias: [],
+        objetivo: [],
+        actividad: ''
       });
     }
     setOpen(true);
@@ -113,27 +136,40 @@ const MascotasPage = () => {
     setEditingMascota(null);
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleAvatarSelect = (avatarSrc) => {
-    setFormData(prev => ({ ...prev, avatar: avatarSrc }));
+  const handleCheckboxChange = (field, option) => {
+    setFormData(prev => {
+      const current = prev[field];
+      const updated = current.includes(option)
+        ? current.filter(o => o !== option)
+        : [...current, option];
+      return { ...prev, [field]: updated };
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const notasTexto = `
+Alergias: ${formData.alergias?.join(', ') || 'Ninguna'} | 
+Objetivo nutricional: ${formData.objetivo?.join(', ') || 'No especificado'} | 
+Nivel de actividad: ${formData.actividad || 'No especificado'}
+`.trim();
+
+    const mascotaPayload = {
+      ...formData,
+      notasAdicionales: notasTexto
+    };
+
     try {
       if (editingMascota) {
-        await mascotaService.updateMascota(editingMascota.mascotaID, formData);
+        await mascotaService.updateMascota(editingMascota.mascotaID, mascotaPayload);
       } else {
-        await mascotaService.createMascota(formData);
+        await mascotaService.createMascota(mascotaPayload);
       }
       fetchMascotas();
       handleClose();
     } catch (error) {
-      console.error("Error saving mascota:", error);
+      console.error('Error saving mascota:', error);
     }
   };
 
@@ -143,7 +179,7 @@ const MascotasPage = () => {
         await mascotaService.deleteMascota(id);
         fetchMascotas();
       } catch (error) {
-        console.error("Error deleting mascota:", error);
+        console.error('Error deleting mascota:', error);
       }
     }
   };
@@ -163,7 +199,9 @@ const MascotasPage = () => {
   if (!user) {
     return (
       <Container sx={{ py: 4, textAlign: 'center' }}>
-        <Typography variant="h4" gutterBottom>Inicia sesión para gestionar tus mascotas</Typography>
+        <Typography variant="h4" gutterBottom>
+          Inicia sesión para gestionar tus mascotas
+        </Typography>
         <Button component={Link} to="/login" variant="contained" sx={{ mt: 2 }}>
           Iniciar Sesión
         </Button>
@@ -208,10 +246,7 @@ const MascotasPage = () => {
             <Grid item key={mascota.mascotaID} xs={12} sm={6} md={4}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <CardContent sx={{ flexGrow: 1, textAlign: 'center' }}>
-                  <Avatar
-                    src={mascota.avatar}
-                    sx={{ width: 80, height: 80, mx: 'auto', mb: 2 }}
-                  />
+                  <Avatar src={mascota.avatar} sx={{ width: 80, height: 80, mx: 'auto', mb: 2 }} />
                   <Typography variant="h6" gutterBottom>{mascota.nombre}</Typography>
                   <Chip label={mascota.especie} color="primary" size="small" sx={{ mb: 1 }} />
                   {mascota.raza && <Typography variant="body2">Raza: {mascota.raza}</Typography>}
@@ -223,12 +258,8 @@ const MascotasPage = () => {
                   {mascota.tamaño && <Typography variant="body2">Tamaño: {mascota.tamaño}</Typography>}
                 </CardContent>
                 <CardActions sx={{ justifyContent: 'space-between' }}>
-                  <IconButton onClick={() => handleOpen(mascota)} color="primary">
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton onClick={() => handleDelete(mascota.mascotaID)} color="error">
-                    <DeleteIcon />
-                  </IconButton>
+                  <IconButton onClick={() => handleOpen(mascota)} color="primary"><EditIcon /></IconButton>
+                  <IconButton onClick={() => handleDelete(mascota.mascotaID)} color="error"><DeleteIcon /></IconButton>
                 </CardActions>
               </Card>
             </Grid>
@@ -236,29 +267,42 @@ const MascotasPage = () => {
         </Grid>
       )}
 
-      {/* Dialog for Add/Edit Mascota */}
+      {/* Dialogo de alta/edición */}
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
         <DialogTitle>{editingMascota ? 'Editar Mascota' : 'Agregar Nueva Mascota'}</DialogTitle>
         <DialogContent>
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              {/* Datos básicos */}
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="Nombre"
                   name="nombre"
                   value={formData.nombre}
-                  onChange={handleChange}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required sx={{ minWidth: 120 }}>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Raza"
+                  name="raza"
+                  value={formData.raza}
+                  onChange={(e) => setFormData(prev => ({ ...prev, raza: e.target.value }))}
+                />
+              </Grid>
+
+              {/* 🔹 Especie (ancho completo) */}
+              <Grid item xs={12}>
+                <FormControl fullWidth required>
                   <InputLabel>Especie</InputLabel>
                   <Select
                     name="especie"
                     value={formData.especie}
-                    onChange={handleChange}
+                    onChange={(e) => setFormData(prev => ({ ...prev, especie: e.target.value }))}
                     label="Especie"
                   >
                     <MenuItem value="Perro">Perro</MenuItem>
@@ -266,13 +310,15 @@ const MascotasPage = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth sx={{ minWidth: 120 }}>
+
+              {/* 🔹 Sexo (ancho completo) */}
+              <Grid item xs={12}>
+                <FormControl fullWidth>
                   <InputLabel>Sexo</InputLabel>
                   <Select
                     name="sexo"
                     value={formData.sexo}
-                    onChange={handleChange}
+                    onChange={(e) => setFormData(prev => ({ ...prev, sexo: e.target.value }))}
                     label="Sexo"
                   >
                     <MenuItem value="Hembra">Hembra</MenuItem>
@@ -280,33 +326,15 @@ const MascotasPage = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Raza"
-                  name="raza"
-                  value={formData.raza}
-                  onChange={handleChange}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Fecha de Nacimiento"
-                  name="fechaNacimiento"
-                  type="date"
-                  value={formData.fechaNacimiento}
-                  onChange={handleChange}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth sx={{ minWidth: 120 }}>
+
+              {/* 🔹 Tamaño (ancho completo) */}
+              <Grid item xs={12}>
+                <FormControl fullWidth>
                   <InputLabel>Tamaño</InputLabel>
                   <Select
                     name="tamaño"
                     value={formData.tamaño}
-                    onChange={handleChange}
+                    onChange={(e) => setFormData(prev => ({ ...prev, tamaño: e.target.value }))}
                     label="Tamaño"
                   >
                     <MenuItem value="Pequeño">Pequeño</MenuItem>
@@ -315,25 +343,100 @@ const MascotasPage = () => {
                   </Select>
                 </FormControl>
               </Grid>
+
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Notas Adicionales"
-                  name="notasAdicionales"
-                  value={formData.notasAdicionales}
-                  onChange={handleChange}
-                  multiline
-                  rows={3}
+                  label="Fecha de Nacimiento"
+                  name="fechaNacimiento"
+                  type="date"
+                  value={formData.fechaNacimiento}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fechaNacimiento: e.target.value }))}
+                  InputLabelProps={{ shrink: true }}
                 />
               </Grid>
+
+              {/* Notas adicionales con checkboxes */}
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="h6" gutterBottom>Notas Adicionales</Typography>
+
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="subtitle1">Alergias o Intolerancias</Typography>
+                  <FormGroup row>
+                    {['Pollo', 'Res', 'Cerdo', 'Pescado', 'Cordero', 'Lácteos', 'Cereales', 'Gluten', 'Soya', 'Papas o legumbres', 'Insectos'].map(option => (
+                      <FormControlLabel
+                        key={option}
+                        control={
+                          <Checkbox
+                            checked={formData.alergias.includes(option)}
+                            onChange={() => handleCheckboxChange('alergias', option)}
+                          />
+                        }
+                        label={option}
+                      />
+                    ))}
+                  </FormGroup>
+                </Box>
+
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle1">Objetivo Nutricional</Typography>
+                  <FormGroup row>
+                    {[
+                      'Control de peso',
+                      'Aumento de energía o masa muscular',
+                      'Digestión sensible',
+                      'Piel y pelaje saludables',
+                      'Soporte articular o movilidad',
+                      'Soporte renal o cardíaco',
+                      'Reducción de alergias o intolerancias',
+                      'Soporte inmunológico',
+                      'Vitalidad y longevidad',
+                      'Mantenimiento general'
+                    ].map(option => (
+                      <FormControlLabel
+                        key={option}
+                        control={
+                          <Checkbox
+                            checked={formData.objetivo.includes(option)}
+                            onChange={() => handleCheckboxChange('objetivo', option)}
+                          />
+                        }
+                        label={option}
+                      />
+                    ))}
+                  </FormGroup>
+                </Box>
+
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle1">Nivel de Actividad</Typography>
+                  <FormGroup row>
+                    {['Sedentario', 'Moderadamente activo', 'Muy activo'].map(option => (
+                      <FormControlLabel
+                        key={option}
+                        control={
+                          <Checkbox
+                            checked={formData.actividad === option}
+                            onChange={() => setFormData(prev => ({ ...prev, actividad: option }))}
+                          />
+                        }
+                        label={option}
+                      />
+                    ))}
+                  </FormGroup>
+                </Box>
+              </Grid>
+
+              {/* Avatares */}
               {formData.especie && (
                 <Grid item xs={12}>
+                  <Divider sx={{ my: 2 }} />
                   <Typography variant="h6" gutterBottom>Selecciona un Avatar</Typography>
                   <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                    {getAvatarOptions().map((avatar) => (
+                    {getAvatarOptions().map(avatar => (
                       <Box
                         key={avatar.id}
-                        onClick={() => handleAvatarSelect(avatar.src)}
+                        onClick={() => setFormData(prev => ({ ...prev, avatar: avatar.src }))}
                         sx={{
                           cursor: 'pointer',
                           border: formData.avatar === avatar.src ? '3px solid #A8B5A0' : '1px solid #ddd',
@@ -351,9 +454,14 @@ const MascotasPage = () => {
             </Grid>
           </Box>
         </DialogContent>
+
         <DialogActions>
           <Button onClick={handleClose}>Cancelar</Button>
-          <Button onClick={handleSubmit} variant="contained" sx={{ backgroundColor: '#A8B5A0', '&:hover': { backgroundColor: '#8FA68E' } }}>
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            sx={{ backgroundColor: '#A8B5A0', '&:hover': { backgroundColor: '#8FA68E' } }}
+          >
             {editingMascota ? 'Actualizar' : 'Agregar'}
           </Button>
         </DialogActions>
