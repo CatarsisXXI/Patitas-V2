@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { Container, Typography, Box, Grid, Card, CardContent, CardMedia, IconButton, Button, CircularProgress, TextField, Snackbar, Alert } from '@mui/material';
+import { Container, Typography, Box, Grid, Card, CardContent, CardMedia, IconButton, Button, CircularProgress, TextField, Snackbar, Alert, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -150,15 +150,17 @@ const CarritoPage = () => {
                   </Typography>
                 </CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', pl: 1, pb: 1 }}>
-                  <IconButton aria-label="delete" onClick={() => removeProductFromCart(item.productoID)}>
-                    <DeleteIcon />
-                  </IconButton>
+                  <Tooltip title="Eliminar del carrito">
+                    <IconButton aria-label="delete" onClick={() => removeProductFromCart(item.productoID)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
                 </Box>
               </Box>
             </Card>
           ))}
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={4} sx={{ order: { xs: 1, md: 2 } }}>
           <Card>
             <CardContent>
               <Typography variant="h5" gutterBottom>

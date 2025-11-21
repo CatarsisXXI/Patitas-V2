@@ -22,6 +22,10 @@ import SecurityIcon from '@mui/icons-material/Security';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import EmailIcon from '@mui/icons-material/Email';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import FacebookIcon from '@mui/icons-material/Facebook';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import InstagramIcon from '@mui/icons-material/Instagram';
+import TikTokIcon from '@mui/icons-material/MusicNote';
 import ProductCarousel from '../components/ProductCarousel';
 import FloatingPaws from '../components/FloatingPaws';
 import WelcomeModal from '../components/WelcomeModal';
@@ -91,7 +95,7 @@ const HomePage = () => {
         sx={{
 
           position: 'relative',
-          height: '80vh',
+          height: '90vh',
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
@@ -131,10 +135,10 @@ const HomePage = () => {
         <Box
           sx={{
             position: 'absolute',
-            bottom: 20,
-            right: 20,
-            width: { xs: '150px', sm: '250px', md: '350px' },
-            height: { xs: '150px', sm: '250px', md: '350px' },
+            bottom: 40,
+            right: 40,
+            width: { xs: '200px', sm: '300px', md: '450px' },
+            height: { xs: '200px', sm: '300px', md: '450px' },
             borderRadius: '20px',
             overflow: 'hidden',
             boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
@@ -658,6 +662,99 @@ const HomePage = () => {
         </Container>
       </Box>
 
+      {/* Nosotros Section */}
+      <Box sx={{ py: 10, backgroundColor: '#FAF9F6' }}>
+        <Container maxWidth="lg">
+          <Typography
+            variant="h3"
+            textAlign="center"
+            sx={{
+              mb: 6,
+              fontWeight: 700,
+              color: '#5D4E37',
+              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              position: 'relative',
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                bottom: -10,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: 80,
+                height: 4,
+                background: 'linear-gradient(90deg, #D4A574, #A8B5A0)',
+                borderRadius: '2px'
+              }
+            }}
+          >
+            Sobre Nosotros
+          </Typography>
+          <Grid container spacing={6} alignItems="center" justifyContent="center">
+            <Grid item xs={12} md={6}>
+              <Typography
+                variant="h5"
+                sx={{
+                  mb: 3,
+                  fontWeight: 600,
+                  color: '#5D4E37',
+                  lineHeight: 1.6
+                }}
+              >
+                Nuestra Misión
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  mb: 4,
+                  color: '#7D6B5D',
+                  lineHeight: 1.8,
+                  fontSize: '1.1rem'
+                }}
+              >
+                En Patitas y Sabores, nos dedicamos a proporcionar snacks premium de alta calidad para mascotas,
+                elaborados con ingredientes naturales y nutritivos. Creemos que cada mascota merece lo mejor,
+                y trabajamos incansablemente para ofrecer productos que promuevan la salud y el bienestar de tus compañeros peludos.
+              </Typography>
+              <Typography
+                variant="h5"
+                sx={{
+                  mb: 3,
+                  fontWeight: 600,
+                  color: '#5D4E37',
+                  lineHeight: 1.6
+                }}
+              >
+                Nuestra Historia
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  color: '#7D6B5D',
+                  lineHeight: 1.8,
+                  fontSize: '1.1rem'
+                }}
+              >
+                Fundada por amantes de los animales, Patitas y Sabores nació de la pasión por cuidar a nuestras mascotas
+                de manera natural y saludable. Desde nuestros inicios, hemos crecido gracias a la confianza de miles de dueños
+                que buscan lo mejor para sus amigos de cuatro patas.
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Box
+                sx={{
+                  height: 400,
+                  backgroundImage: 'url(https://images.unsplash.com/photo-1551717743-49959800b1f6?w=600&q=80)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  borderRadius: '20px',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+                }}
+              />
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
       {/* Trust Badges Section */}
       <Container maxWidth="lg" sx={{ py: 6, backgroundColor: '#FAF9F6' }}>
         <Grid container spacing={4} justifyContent="center">
@@ -719,6 +816,120 @@ const HomePage = () => {
           ))}
         </Grid>
       </Container>
+
+      {/* Social Media Section */}
+      <Box sx={{ py: 8, backgroundColor: '#FFFFFF' }}>
+        <Container maxWidth="md">
+          <Typography
+            variant="h3"
+            textAlign="center"
+            sx={{
+              mb: 6,
+              fontWeight: 700,
+              color: '#5D4E37',
+              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              position: 'relative',
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                bottom: -10,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: 80,
+                height: 4,
+                background: 'linear-gradient(90deg, #D4A574, #A8B5A0)',
+                borderRadius: '2px'
+              }
+            }}
+          >
+            Síguenos en Redes Sociales
+          </Typography>
+          <Typography
+            variant="h6"
+            textAlign="center"
+            sx={{
+              mb: 6,
+              color: '#7D6B5D',
+              maxWidth: '600px',
+              mx: 'auto',
+              lineHeight: 1.6
+            }}
+          >
+            Conecta con nosotros y mantente al día con las últimas novedades,
+            consejos para mascotas y ofertas exclusivas.
+          </Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 4,
+              flexWrap: 'wrap'
+            }}
+          >
+            {[
+              {
+                icon: <FacebookIcon sx={{ fontSize: 48, color: '#1877F2' }} />,
+                name: 'Facebook',
+                url: 'https://facebook.com/patitasySabores'
+              },
+              {
+                icon: <WhatsAppIcon sx={{ fontSize: 48, color: '#25D366' }} />,
+                name: 'WhatsApp',
+                url: 'https://wa.me/1234567890'
+              },
+              {
+                icon: <InstagramIcon sx={{ fontSize: 48, color: '#E4405F' }} />,
+                name: 'Instagram',
+                url: 'https://instagram.com/patitasySabores'
+              },
+              {
+                icon: <TikTokIcon sx={{ fontSize: 48, color: '#000000' }} />,
+                name: 'TikTok',
+                url: 'https://tiktok.com/@patitasySabores'
+              }
+            ].map((social, index) => (
+              <Box
+                key={index}
+                component="a"
+                href={social.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  p: 3,
+                  borderRadius: '20px',
+                  background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F6F0 100%)',
+                  boxShadow: '0 8px 32px rgba(93, 78, 55, 0.1)',
+                  border: '1px solid rgba(212, 165, 116, 0.2)',
+                  transition: 'all 0.3s ease-in-out',
+                  textDecoration: 'none',
+                  '&:hover': {
+                    transform: 'translateY(-8px) scale(1.05)',
+                    boxShadow: '0 15px 45px rgba(93, 78, 55, 0.15)',
+                    border: '1px solid rgba(212, 165, 116, 0.4)'
+                  }
+                }}
+              >
+                <Box sx={{ mb: 2 }}>
+                  {social.icon}
+                </Box>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 600,
+                    color: '#5D4E37',
+                    fontSize: '1rem'
+                  }}
+                >
+                  {social.name}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </Container>
+      </Box>
 
       {/* Newsletter Section */}
       <Box

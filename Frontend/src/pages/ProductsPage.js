@@ -193,7 +193,7 @@ const ProductsPage = () => {
           </Fade>
 
           {/* Filters Section */}
-          <Paper sx={{ p: 3, mb: 4, borderRadius: 3, boxShadow: 3, backgroundColor: 'rgba(255, 255, 255, 0.9)' }}>
+          <Paper sx={{ p: 2, mb: 4, borderRadius: 2, boxShadow: 2, border: '1px solid rgba(212, 165, 116, 0.2)', backgroundColor: 'rgba(255, 255, 255, 0.9)' }}>
             <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', textAlign: 'center', mb: 3 }}>
               Filtros
             </Typography>

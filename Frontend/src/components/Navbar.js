@@ -1,9 +1,8 @@
 import React from 'react';
-import { AppBar, Toolbar, Typography, Button, Box, IconButton, Badge, Grow } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, Box, IconButton, Badge, Grow, Tooltip } from '@mui/material';
 import { Link } from 'react-router-dom';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import PetsIcon from '@mui/icons-material/Pets';
-
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -72,18 +71,22 @@ const Navbar = () => {
                     </Button>
                   </Grow>
                   <Grow in={true} timeout={2000}>
-                    <IconButton component={Link} to="/favoritos" color="inherit" aria-label="favoritos">
-                      <Badge badgeContent={favoritesCount} color="error">
-                        <PetsIcon />
-                      </Badge>
-                    </IconButton>
+                    <Tooltip title="Favoritos">
+                      <IconButton component={Link} to="/favoritos" color="inherit" aria-label="favoritos">
+                        <Badge badgeContent={favoritesCount} color="error">
+                          <PetsIcon />
+                        </Badge>
+                      </IconButton>
+                    </Tooltip>
                   </Grow>
                   <Grow in={true} timeout={2200}>
-                    <IconButton component={Link} to="/carrito" color="inherit" aria-label="carrito">
-                      <Badge badgeContent={itemCount} color="error">
-                        <ShoppingCartIcon />
-                      </Badge>
-                    </IconButton>
+                    <Tooltip title="Carrito">
+                      <IconButton component={Link} to="/carrito" color="inherit" aria-label="carrito">
+                        <Badge badgeContent={itemCount} color="error">
+                          <ShoppingCartIcon />
+                        </Badge>
+                      </IconButton>
+                    </Tooltip>
                   </Grow>
                 </>
               )}
