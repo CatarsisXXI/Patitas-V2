@@ -49,7 +49,7 @@ const ProductCard = ({ product }) => {
     <Card
       sx={{
         maxWidth: 345,
-        height: '100%',
+        height: 400,
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
@@ -105,7 +105,7 @@ const ProductCard = ({ product }) => {
           sx={{
             width: '100%',
             height: '100%',
-            objectFit: 'cover',
+            objectFit: 'contain',
             objectPosition: 'center',
             transition: 'transform 0.5s ease',
           }}
@@ -187,8 +187,9 @@ const ProductCard = ({ product }) => {
           {product.nombre}
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
-            <Box sx={{ flex: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
+            {/* Lado izquierdo: Imagen + información básica */}
+            <Box sx={{ flex: 1, maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <CardMedia
                 component="img"
                 image={imageUrl}
@@ -196,21 +197,70 @@ const ProductCard = ({ product }) => {
                 sx={{
                   width: '100%',
                   height: 300,
-                  objectFit: 'cover',
+                  objectFit: 'contain',
                   borderRadius: 2,
+                  backgroundColor: '#f8f7f4',
                 }}
               />
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h5" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  {product.nombre}
+                </Typography>
+                <Typography variant="h6" color="primary" sx={{ mb: 1 }}>
+                  S/{product.precio}
+                </Typography>
+                <Typography variant="body2" color={product.stock > 0 ? 'text.secondary' : 'error'}>
+                  {product.stock > 0 ? `Stock disponible: ${product.stock}` : 'Sin stock disponible'}
+                </Typography>
+              </Box>
             </Box>
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                Precio: S/{product.precio}
-              </Typography>
-              <Typography variant="body1" sx={{ mb: 2 }}>
-                {product.descripcion}
-              </Typography>
-              <Typography variant="body2" color={product.stock > 0 ? 'text.secondary' : 'error'}>
-                {product.stock > 0 ? `Stock disponible: ${product.stock}` : 'Sin stock disponible'}
-              </Typography>
+
+            {/* Lado derecho: Información detallada */}
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box>
+                <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                  Perfil del producto:
+                </Typography>
+                <Typography variant="body1" sx={{ lineHeight: 1.6, textAlign: 'justify' }}>
+                  {product.descripcion}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                  Composición funcional:
+                </Typography>
+                <Typography variant="body1" sx={{ lineHeight: 1.6, textAlign: 'justify' }}>
+                  Elaborado con ingredientes naturales de alta calidad, seleccionados específicamente para el bienestar de tu mascota.
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                  Beneficios principales:
+                </Typography>
+                <Typography variant="body1" sx={{ lineHeight: 1.6, textAlign: 'justify' }}>
+                  Promueve la salud digestiva, fortalece el sistema inmunológico y proporciona nutrición balanceada para un pelaje brillante y energía vital.
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                  Recomendado para:
+                </Typography>
+                <Typography variant="body1" sx={{ lineHeight: 1.6, textAlign: 'justify' }}>
+                  Perros y gatos de todas las edades, especialmente aquellos con necesidades nutricionales específicas o que requieren suplementación natural.
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                  Evitar en:
+                </Typography>
+                <Typography variant="body1" sx={{ lineHeight: 1.6, textAlign: 'justify' }}>
+                  Animales con alergias conocidas a alguno de los ingredientes. Consultar con veterinario en caso de embarazo, lactancia o condiciones médicas especiales.
+                </Typography>
+              </Box>
             </Box>
           </Box>
         </DialogContent>
