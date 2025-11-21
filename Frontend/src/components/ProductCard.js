@@ -14,11 +14,29 @@ import {
   DialogActions,
   Backdrop,
 } from '@mui/material';
-import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoritesContext';
 import PetsIcon from '@mui/icons-material/Pets';
+
+// Función auxiliar para extraer cada sección
+const extractSection = (text, startLabel, endLabel) => {
+  const startIndex = text.indexOf(startLabel);
+  if (startIndex === -1) return '';
+
+  const fromStart = text.slice(startIndex + startLabel.length);
+
+  if (!endLabel) {
+    return fromStart.trim();
+  }
+
+  const endIndex = fromStart.indexOf(endLabel);
+  if (endIndex === -1) {
+    return fromStart.trim();
+  }
+
+  return fromStart.slice(0, endIndex).trim();
+};
 
 const ProductCard = ({ product }) => {
   const { addProductToCart } = useCart();
@@ -45,6 +63,35 @@ const ProductCard = ({ product }) => {
     ? `http://localhost:5288${product.imagenURL}`
     : 'https://via.placeholder.com/400x300.png?text=Patitas+y+Sabores';
 
+  // --- Aquí procesamos la descripción original ---
+  const rawDesc = product.descripcion || '';
+
+  const perfilText = extractSection(
+    rawDesc,
+    'Perfil del producto:',
+    'Composición funcional:'
+  );
+  const composicionText = extractSection(
+    rawDesc,
+    'Composición funcional:',
+    'Beneficios principales:'
+  );
+  const beneficiosText = extractSection(
+    rawDesc,
+    'Beneficios principales:',
+    'Recomendado para:'
+  );
+  const recomendadoText = extractSection(
+    rawDesc,
+    'Recomendado para:',
+    'Evitar en:'
+  );
+  const evitarText = extractSection(
+    rawDesc,
+    'Evitar en:',
+    null
+  );
+
   return (
     <Card
       sx={{
@@ -66,7 +113,6 @@ const ProductCard = ({ product }) => {
         },
       }}
     >
-      {/* Icono de favoritos */}
       {user && (
         <IconButton
           aria-label="add to favorites"
@@ -86,7 +132,6 @@ const ProductCard = ({ product }) => {
         </IconButton>
       )}
 
-      {/* Imagen del producto */}
       <Box
         sx={{
           height: 220,
@@ -112,13 +157,12 @@ const ProductCard = ({ product }) => {
         />
       </Box>
 
-      {/* Contenido más compacto */}
       <CardContent
         sx={{
           flexGrow: 1,
           textAlign: 'center',
-          py: 1, // reduce padding vertical
-          px: 2, // un poco menos de padding lateral
+          py: 1,
+          px: 2,
         }}
       >
         <Typography
@@ -153,12 +197,17 @@ const ProductCard = ({ product }) => {
         )}
       </CardContent>
 
-      {/* Botones más compactos */}
       <CardActions sx={{ justifyContent: 'center', pb: 1, pt: 0 }}>
         <Button
           size="small"
           onClick={handleOpenModal}
-          sx={{ textTransform: 'none', minWidth: 0, backgroundColor: '#d4a574', color: 'white', '&:hover': { backgroundColor: '#b8955e' } }}
+          sx={{
+            textTransform: 'none',
+            minWidth: 0,
+            backgroundColor: '#d4a574',
+            color: 'white',
+            '&:hover': { backgroundColor: '#b8955e' },
+          }}
         >
           Ver Detalles
         </Button>
@@ -166,13 +215,18 @@ const ProductCard = ({ product }) => {
           size="small"
           onClick={() => addProductToCart(product.productoID, 1)}
           disabled={!user || product.stock === 0}
-          sx={{ textTransform: 'none', minWidth: 0, backgroundColor: '#d4a574', color: 'white', '&:hover': { backgroundColor: '#b8955e' } }}
+          sx={{
+            textTransform: 'none',
+            minWidth: 0,
+            backgroundColor: '#d4a574',
+            color: 'white',
+            '&:hover': { backgroundColor: '#b8955e' },
+          }}
         >
           Agregar
         </Button>
       </CardActions>
 
-      {/* Modal de detalles del producto */}
       <Dialog
         open={modalOpen}
         onClose={handleCloseModal}
@@ -188,78 +242,112 @@ const ProductCard = ({ product }) => {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
-            {/* Lado izquierdo: Imagen + información básica */}
-            <Box sx={{ flex: 1, maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ flex: 1, maxWidth: 400 }}>
               <CardMedia
                 component="img"
                 image={imageUrl}
                 alt={product.nombre}
                 sx={{
                   width: '100%',
-                  height: 300,
+                  height: 400,
                   objectFit: 'contain',
                   borderRadius: 2,
                   backgroundColor: '#f8f7f4',
                 }}
               />
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" sx={{ mb: 1, fontWeight: 'bold' }}>
+            </Box>
+
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ textAlign: 'center', pb: 2, borderBottom: '1px solid #e0e0e0' }}>
+                <Typography variant="h4" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
                   {product.nombre}
                 </Typography>
-                <Typography variant="h6" color="primary" sx={{ mb: 1 }}>
+                <Typography variant="h5" color="primary" sx={{ mb: 1, fontWeight: 'bold' }}>
                   S/{product.precio}
                 </Typography>
-                <Typography variant="body2" color={product.stock > 0 ? 'text.secondary' : 'error'}>
+                <Typography
+                  variant="body1"
+                  color={product.stock > 0 ? 'text.secondary' : 'error'}
+                  sx={{ fontWeight: 'medium' }}
+                >
                   {product.stock > 0 ? `Stock disponible: ${product.stock}` : 'Sin stock disponible'}
                 </Typography>
               </Box>
-            </Box>
 
-            {/* Lado derecho: Información detallada */}
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Box>
-                <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
-                  Perfil del producto:
-                </Typography>
-                <Typography variant="body1" sx={{ lineHeight: 1.6, textAlign: 'justify' }}>
-                  {product.descripcion}
-                </Typography>
-              </Box>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {perfilText && (
+                    <Box>
+                      <Typography
+                        variant="h6"
+                        sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}
+                      >
+                        Perfil del producto:
+                      </Typography>
+                      <Typography variant="body2" sx={{ lineHeight: 1.5, textAlign: 'justify' }}>
+                        {perfilText}
+                      </Typography>
+                    </Box>
+                  )}
 
-              <Box>
-                <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
-                  Composición funcional:
-                </Typography>
-                <Typography variant="body1" sx={{ lineHeight: 1.6, textAlign: 'justify' }}>
-                  Elaborado con ingredientes naturales de alta calidad, seleccionados específicamente para el bienestar de tu mascota.
-                </Typography>
-              </Box>
+                  {composicionText && (
+                    <Box>
+                      <Typography
+                        variant="h6"
+                        sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}
+                      >
+                        Composición funcional:
+                      </Typography>
+                      <Typography variant="body2" sx={{ lineHeight: 1.5, textAlign: 'justify' }}>
+                        {composicionText}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
 
-              <Box>
-                <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
-                  Beneficios principales:
-                </Typography>
-                <Typography variant="body1" sx={{ lineHeight: 1.6, textAlign: 'justify' }}>
-                  Promueve la salud digestiva, fortalece el sistema inmunológico y proporciona nutrición balanceada para un pelaje brillante y energía vital.
-                </Typography>
-              </Box>
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {beneficiosText && (
+                    <Box>
+                      <Typography
+                        variant="h6"
+                        sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}
+                      >
+                        Beneficios principales:
+                      </Typography>
+                      <Typography variant="body2" sx={{ lineHeight: 1.5, textAlign: 'justify' }}>
+                        {beneficiosText}
+                      </Typography>
+                    </Box>
+                  )}
 
-              <Box>
-                <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
-                  Recomendado para:
-                </Typography>
-                <Typography variant="body1" sx={{ lineHeight: 1.6, textAlign: 'justify' }}>
-                  Perros y gatos de todas las edades, especialmente aquellos con necesidades nutricionales específicas o que requieren suplementación natural.
-                </Typography>
-              </Box>
+                  {recomendadoText && (
+                    <Box>
+                      <Typography
+                        variant="h6"
+                        sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}
+                      >
+                        Recomendado para:
+                      </Typography>
+                      <Typography variant="body2" sx={{ lineHeight: 1.5, textAlign: 'justify' }}>
+                        {recomendadoText}
+                      </Typography>
+                    </Box>
+                  )}
 
-              <Box>
-                <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
-                  Evitar en:
-                </Typography>
-                <Typography variant="body1" sx={{ lineHeight: 1.6, textAlign: 'justify' }}>
-                  Animales con alergias conocidas a alguno de los ingredientes. Consultar con veterinario en caso de embarazo, lactancia o condiciones médicas especiales.
-                </Typography>
+                  {evitarText && (
+                    <Box>
+                      <Typography
+                        variant="h6"
+                        sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}
+                      >
+                        Evitar en:
+                      </Typography>
+                      <Typography variant="body2" sx={{ lineHeight: 1.5, textAlign: 'justify' }}>
+                        {evitarText}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
               </Box>
             </Box>
           </Box>
