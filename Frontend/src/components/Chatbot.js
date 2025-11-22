@@ -69,16 +69,7 @@ const ChatbotComponent = () => {
             >
               Productos
             </button>
-            <button
-              onClick={() => {
-                if (props.onQuickReply) return props.onQuickReply('sobre');
-                if (props.widgetProps && props.widgetProps.handleSobre) return props.widgetProps.handleSobre();
-                window.dispatchEvent(new CustomEvent('chatbot-option', { detail: 'sobre' }));
-              }}
-              style={{ backgroundColor: '#A8B5A0', color: '#000', border: 'none', borderRadius: 20, padding: '8px 12px', cursor: 'pointer', fontWeight: 'bold' }}
-            >
-              Sobre Patitas y Sabores
-            </button>
+
           </div>
         ),
       }
@@ -268,8 +259,7 @@ const ChatbotComponent = () => {
     // (getMascotaId and whatsappNumber are declared in the outer scope and reused here)
     const quickReplies = [
       { label: 'Recomendaciones', value: 'recomendaciones' },
-      { label: 'Productos', value: 'productos' },
-      { label: 'Sobre Patitas y Sabores', value: 'sobre' }
+      { label: 'Productos', value: 'productos' }
     ];
 
     // helper to send the main options widget (used after each response)
@@ -476,7 +466,6 @@ const handleRecommendationsForMascota = async (mascotaId) => {
         widgetProps: {
           handleRecommendations: () => handleRecommendations(),
           handleProductos: () => handleProductos(),
-          handleSobre: () => handleSobre(),
         },
       });
 
@@ -641,8 +630,6 @@ const handleRecommendationsForMascota = async (mascotaId) => {
         actions.handleRecommendations();
       } else if (m === 'productos') {
         actions.handleProductos();
-      } else if (m === 'sobre' || m === 'sobre patitas y sabores' || m === 'sobre patitas y sabores') {
-        actions.handleSobre();
       } else if (m.startsWith('seleccionar_mascota_')) {
         const id = m.replace('seleccionar_mascota_', '');
         if (actions.handleSelectMascota) actions.handleSelectMascota(id);

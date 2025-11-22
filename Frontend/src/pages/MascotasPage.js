@@ -24,7 +24,8 @@ import {
   FormGroup,
   FormControlLabel,
   Checkbox,
-  Divider
+  Divider,
+  Tooltip
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -188,6 +189,14 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
     return formData.especie === 'Gato' ? catAvatars : dogAvatars;
   };
 
+  const getAgeRange = (age) => {
+    if (age >= 0 && age <= 1) return 'Cachorro';
+    if (age > 1 && age <= 3) return 'Joven Adulto';
+    if (age > 3 && age <= 6) return 'Adulto';
+    if (age > 6) return 'Senior';
+    return '';
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -252,14 +261,22 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
                   {mascota.raza && <Typography variant="body2">Raza: {mascota.raza}</Typography>}
                   {mascota.fechaNacimiento && (
                     <Typography variant="body2">
-                      Edad: {new Date().getFullYear() - new Date(mascota.fechaNacimiento).getFullYear()} años
+                      Edad: {(() => {
+                        const age = new Date().getFullYear() - new Date(mascota.fechaNacimiento).getFullYear();
+                        const range = getAgeRange(age);
+                        return `${age} años (${range})`;
+                      })()}
                     </Typography>
                   )}
                   {mascota.tamaño && <Typography variant="body2">Tamaño: {mascota.tamaño}</Typography>}
                 </CardContent>
                 <CardActions sx={{ justifyContent: 'space-between' }}>
-                  <IconButton onClick={() => handleOpen(mascota)} color="primary"><EditIcon /></IconButton>
-                  <IconButton onClick={() => handleDelete(mascota.mascotaID)} color="error"><DeleteIcon /></IconButton>
+                  <Tooltip title="Editar mascota">
+                    <IconButton onClick={() => handleOpen(mascota)} color="primary"><EditIcon /></IconButton>
+                  </Tooltip>
+                  <Tooltip title="Eliminar mascota">
+                    <IconButton onClick={() => handleDelete(mascota.mascotaID)} color="error"><DeleteIcon /></IconButton>
+                  </Tooltip>
                 </CardActions>
               </Card>
             </Grid>

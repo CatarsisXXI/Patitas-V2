@@ -20,7 +20,7 @@ import StarIcon from '@mui/icons-material/Star';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import SecurityIcon from '@mui/icons-material/Security';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-import EmailIcon from '@mui/icons-material/Email';
+
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
@@ -522,82 +522,7 @@ const HomePage = () => {
         </Container>
       </Box>
 
-      {/* STATISTICS SECTION */}
-      <Container
-        maxWidth="lg"
-        sx={{ py: { xs: 6, md: 8 }, backgroundColor: '#FAF9F6' }}
-      >
-        <Typography
-          variant="h3"
-          textAlign="center"
-          sx={{
-            mb: 4, // antes 6
-            fontWeight: 700,
-            color: '#5D4E37',
-            textShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}
-        >
-          Nuestros Números Hablan por Sí Solos
-        </Typography>
 
-        <Grid container spacing={4} justifyContent="center">
-          {[
-            {
-              number: '500+',
-              label: 'Mascotas Felices',
-              icon: <PetsIcon sx={{ fontSize: 40, color: '#D4A574' }} />
-            },
-            {
-              number: '1000+',
-              label: 'Productos Vendidos',
-              icon: (
-                <ShoppingCartIcon sx={{ fontSize: 40, color: '#A8B5A0' }} />
-              )
-            },
-            {
-              number: '50+',
-              label: 'Productos Premium',
-              icon: <StarIcon sx={{ fontSize: 40, color: '#8A7B5D' }} />
-            },
-            {
-              number: '98%',
-              label: 'Clientes Satisfechos',
-              icon: (
-                <CheckCircleIcon sx={{ fontSize: 40, color: '#D4A574' }} />
-              )
-            }
-          ].map((stat, index) => (
-            <Grid item xs={6} md={3} key={index}>
-              <Fade in={showContent} timeout={1000 + index * 200}>
-                <Box textAlign="center">
-                  <Box sx={{ mb: 2 }}>{stat.icon}</Box>
-                  <Typography
-                    variant="h2"
-                    sx={{
-                      fontWeight: 800,
-                      color: '#5D4E37',
-                      fontSize: { xs: '2rem', md: '2.5rem' },
-                      mb: 1
-                    }}
-                  >
-                    {stat.number}
-                  </Typography>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      color: '#7D6B5D',
-                      fontWeight: 600,
-                      fontSize: '1rem'
-                    }}
-                  >
-                    {stat.label}
-                  </Typography>
-                </Box>
-              </Fade>
-            </Grid>
-          ))}
-        </Grid>
-      </Container>
 
       {/* TESTIMONIALS SECTION */}
       <Box sx={{ py: { xs: 6, md: 8 }, backgroundColor: '#FFFFFF' }}>
@@ -831,81 +756,7 @@ const HomePage = () => {
         </Container>
       </Box>
 
-      {/* TRUST BADGES SECTION */}
-      <Container
-        maxWidth="lg"
-        sx={{ py: { xs: 5, md: 6 }, backgroundColor: '#FAF9F6' }}
-      >
-        <Grid container spacing={4} justifyContent="center">
-          {[
-            {
-              icon: (
-                <SecurityIcon sx={{ fontSize: 48, color: '#D4A574' }} />
-              ),
-              title: 'Pago Seguro',
-              description: 'Transacciones protegidas con encriptación SSL'
-            },
-            {
-              icon: (
-                <VerifiedIcon sx={{ fontSize: 48, color: '#A8B5A0' }} />
-              ),
-              title: 'Productos Certificados',
-              description:
-                'Ingredientes naturales y calidad garantizada'
-            },
-            {
-              icon: (
-                <LocalShippingIcon
-                  sx={{ fontSize: 48, color: '#8A7B5D' }}
-                />
-              ),
-              title: 'Envío Rápido',
-              description:
-                'Entrega en 24-48 horas en toda la ciudad'
-            }
-          ].map((badge, index) => (
-            <Grid item xs={12} md={4} key={index}>
-              <Fade in={showContent} timeout={1400 + index * 200}>
-                <Box textAlign="center">
-                  <Box
-                    sx={{
-                      mb: 3,
-                      p: 3,
-                      borderRadius: '50%',
-                      background:
-                        'linear-gradient(135deg, rgba(212, 165, 116, 0.1), rgba(168, 181, 160, 0.1))',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    {badge.icon}
-                  </Box>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      mb: 2,
-                      fontWeight: 600,
-                      color: '#5D4E37'
-                    }}
-                  >
-                    {badge.title}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: '#7D6B5D',
-                      lineHeight: 1.5
-                    }}
-                  >
-                    {badge.description}
-                  </Typography>
-                </Box>
-              </Fade>
-            </Grid>
-          ))}
-        </Grid>
-      </Container>
+
 
       {/* SOCIAL MEDIA SECTION */}
       <Box sx={{ py: { xs: 6, md: 8 }, backgroundColor: '#FFFFFF' }}>
@@ -1029,100 +880,7 @@ const HomePage = () => {
         </Container>
       </Box>
 
-      {/* NEWSLETTER SECTION */}
-      <Box
-        sx={{
-          py: { xs: 6, md: 8 },
-          background: 'linear-gradient(135deg, #E8D5B7 0%, #F8F6F0 100%)',
-          textAlign: 'center'
-        }}
-      >
-        <Container maxWidth="md">
-          <Typography
-            variant="h3"
-            sx={{
-              mb: 3,
-              fontWeight: 700,
-              color: '#5D4E37'
-            }}
-          >
-            Mantente Conectado
-          </Typography>
-          <Typography
-            variant="h6"
-            sx={{
-              mb: 4,
-              color: '#7D6B5D',
-              maxWidth: '600px',
-              mx: 'auto',
-              lineHeight: 1.6
-            }}
-          >
-            Suscríbete a nuestro newsletter y recibe consejos para el cuidado
-            de tu mascota, ofertas exclusivas y novedades sobre nuestros
-            productos.
-          </Typography>
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: { xs: 'column', sm: 'row' },
-              gap: 2,
-              maxWidth: '500px',
-              mx: 'auto',
-              alignItems: 'center'
-            }}
-          >
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                backgroundColor: '#FFFFFF',
-                borderRadius: '50px',
-                px: 3,
-                py: 1.5,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                flex: 1,
-                minWidth: { xs: '250px', sm: 'auto' }
-              }}
-            >
-              <EmailIcon sx={{ color: '#A8B5A0', mr: 1 }} />
-              <Typography
-                sx={{
-                  color: '#7D6B5D',
-                  flex: 1,
-                  fontSize: '0.9rem'
-                }}
-              >
-                Tu correo electrónico
-              </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              size="large"
-              sx={{
-                px: 4,
-                py: 1.5,
-                borderRadius: '50px',
-                background:
-                  'linear-gradient(135deg, #D4A574 0%, #A8B5A0 50%, #8A7B5D 100%)',
-                color: '#FFFFFF',
-                fontWeight: 600,
-                boxShadow: '0 4px 15px rgba(212, 165, 116, 0.3)',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow:
-                    '0 6px 20px rgba(212, 165, 116, 0.4)',
-                  background:
-                    'linear-gradient(135deg, #B8955D 0%, #8A9683 50%, #6B5D4A 100%)'
-                }
-              }}
-            >
-              Suscribirse
-            </Button>
-          </Box>
-        </Container>
-      </Box>
+
 
       {/* CTA FINAL SECTION */}
       <Box
