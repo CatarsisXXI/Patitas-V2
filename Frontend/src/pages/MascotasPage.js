@@ -285,7 +285,7 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
       )}
 
       {/* Dialogo de alta/edición */}
-      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+      <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
         <DialogTitle>{editingMascota ? 'Editar Mascota' : 'Agregar Nueva Mascota'}</DialogTitle>
         <DialogContent>
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
@@ -302,18 +302,8 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
                 />
               </Grid>
 
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Raza"
-                  name="raza"
-                  value={formData.raza}
-                  onChange={(e) => setFormData(prev => ({ ...prev, raza: e.target.value }))}
-                />
-              </Grid>
-
-              {/* 🔹 Especie (ancho completo) */}
-              <Grid item xs={12}>
+              {/* 🔹 Especie, Sexo, Tamaño en fila */}
+              <Grid item xs={4}>
                 <FormControl fullWidth required>
                   <InputLabel>Especie</InputLabel>
                   <Select
@@ -328,8 +318,7 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
                 </FormControl>
               </Grid>
 
-              {/* 🔹 Sexo (ancho completo) */}
-              <Grid item xs={12}>
+              <Grid item xs={4}>
                 <FormControl fullWidth>
                   <InputLabel>Sexo</InputLabel>
                   <Select
@@ -344,8 +333,7 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
                 </FormControl>
               </Grid>
 
-              {/* 🔹 Tamaño (ancho completo) */}
-              <Grid item xs={12}>
+              <Grid item xs={4}>
                 <FormControl fullWidth>
                   <InputLabel>Tamaño</InputLabel>
                   <Select
@@ -359,6 +347,45 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
                     <MenuItem value="Grande">Grande</MenuItem>
                   </Select>
                 </FormControl>
+              </Grid>
+
+              {/* Avatares - siempre visible */}
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="h6" gutterBottom>Selecciona un Avatar</Typography>
+                {formData.especie ? (
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    {getAvatarOptions().map(avatar => (
+                      <Box
+                        key={avatar.id}
+                        onClick={() => setFormData(prev => ({ ...prev, avatar: avatar.src }))}
+                        sx={{
+                          cursor: 'pointer',
+                          border: formData.avatar === avatar.src ? '3px solid #A8B5A0' : '1px solid #ddd',
+                          borderRadius: 2,
+                          p: 1,
+                          '&:hover': { borderColor: '#A8B5A0' }
+                        }}
+                      >
+                        <Avatar src={avatar.src} sx={{ width: 60, height: 60 }} />
+                      </Box>
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography variant="body2" color="textSecondary">
+                    Selecciona una especie para ver los avatares disponibles.
+                  </Typography>
+                )}
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Raza"
+                  name="raza"
+                  value={formData.raza}
+                  onChange={(e) => setFormData(prev => ({ ...prev, raza: e.target.value }))}
+                />
               </Grid>
 
               <Grid item xs={12}>
@@ -380,8 +407,8 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
 
                 <Box sx={{ mt: 1 }}>
                   <Typography variant="subtitle1">Alergias o Intolerancias</Typography>
-                  <FormGroup row>
-                    {['Pollo', 'Res', 'Cerdo', 'Pescado', 'Cordero', 'Lácteos', 'Cereales', 'Gluten', 'Soya', 'Papas o legumbres', 'Insectos'].map(option => (
+                  <FormGroup>
+                    {['Pollo', 'Cereales', 'Soya', 'Papas o legumbres'].map(option => (
                       <FormControlLabel
                         key={option}
                         control={
@@ -405,11 +432,8 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
                       'Digestión sensible',
                       'Piel y pelaje saludables',
                       'Soporte articular o movilidad',
-                      'Soporte renal o cardíaco',
-                      'Reducción de alergias o intolerancias',
                       'Soporte inmunológico',
                       'Vitalidad y longevidad',
-                      'Mantenimiento general'
                     ].map(option => (
                       <FormControlLabel
                         key={option}
@@ -443,31 +467,6 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
                   </FormGroup>
                 </Box>
               </Grid>
-
-              {/* Avatares */}
-              {formData.especie && (
-                <Grid item xs={12}>
-                  <Divider sx={{ my: 2 }} />
-                  <Typography variant="h6" gutterBottom>Selecciona un Avatar</Typography>
-                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                    {getAvatarOptions().map(avatar => (
-                      <Box
-                        key={avatar.id}
-                        onClick={() => setFormData(prev => ({ ...prev, avatar: avatar.src }))}
-                        sx={{
-                          cursor: 'pointer',
-                          border: formData.avatar === avatar.src ? '3px solid #A8B5A0' : '1px solid #ddd',
-                          borderRadius: 2,
-                          p: 1,
-                          '&:hover': { borderColor: '#A8B5A0' }
-                        }}
-                      >
-                        <Avatar src={avatar.src} sx={{ width: 60, height: 60 }} />
-                      </Box>
-                    ))}
-                  </Box>
-                </Grid>
-              )}
             </Grid>
           </Box>
         </DialogContent>
