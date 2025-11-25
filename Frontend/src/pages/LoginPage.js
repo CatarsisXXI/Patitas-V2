@@ -73,7 +73,7 @@ const LoginPage = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #F8F6F0 0%, #FAF9F6 50%, #FFFFFF 100%)',
+        background: '#e6e5c9',
         position: 'relative',
         overflow: 'hidden',
         '&::before': {
@@ -83,7 +83,7 @@ const LoginPage = () => {
           right: '-50%',
           width: '100%',
           height: '100%',
-          background: 'radial-gradient(circle, rgba(212, 165, 116, 0.1) 0%, transparent 70%)',
+          background: '#e6e5c9',
           borderRadius: '50%'
         },
         '&::after': {
@@ -93,7 +93,7 @@ const LoginPage = () => {
           left: '-50%',
           width: '100%',
           height: '100%',
-          background: 'radial-gradient(circle, rgba(168, 181, 160, 0.1) 0%, transparent 70%)',
+          background: '#e6e5c9',
           borderRadius: '50%'
         }
       }}
