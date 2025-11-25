@@ -505,21 +505,7 @@ const ProductsPage = () => {
               )}
             </Box>
           </Fade>
-
-          {/* Results Summary */}
-          <Fade in={!loading} timeout={1600}>
-            <Box sx={{ mb: 3, textAlign: 'center' }}>
-              <Typography variant="h6" sx={{ color: '#5D4E37', fontWeight: 600 }}>
-                {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''} encontrado{filteredProducts.length !== 1 ? 's' : ''}
-              </Typography>
-              {filteredProducts.length > 0 && (
-                <Typography variant="body2" sx={{ color: '#7D6B5D' }}>
-                  {filteredProducts.filter(p => p.stock > 0).length} en stock, {filteredProducts.filter(p => p.stock === 0).length} agotados
-                </Typography>
-              )}
-            </Box>
-          </Fade>
-
+          
           {/* Products Grid */}
           {filteredProducts.length === 0 ? (
             <Zoom in={true}>
