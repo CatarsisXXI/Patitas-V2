@@ -221,7 +221,7 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
   return (
     <Container sx={{ py: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" component="h1">
+        <Typography variant="h4" component="h1" sx={{ color: '#886137' }}>
           Mis Mascotas
         </Typography>
         <Button
@@ -236,7 +236,7 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
 
       {mascotas.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
-          <Typography variant="h5" gutterBottom>No tienes mascotas registradas</Typography>
+          <Typography variant="h5" gutterBottom sx={{ color: '#886137' }}>No tienes mascotas registradas</Typography>
           <Typography variant="body1" sx={{ mb: 3 }}>
             ¡Registra a tu primera mascota para comenzar!
           </Typography>
@@ -286,7 +286,7 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
 
       {/* Dialogo de alta/edición */}
       <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
-        <DialogTitle>{editingMascota ? 'Editar Mascota' : 'Agregar Nueva Mascota'}</DialogTitle>
+        <DialogTitle sx={{ color: '#886137' }}>{editingMascota ? 'Editar Mascota' : 'Agregar Nueva Mascota'}</DialogTitle>
         <DialogContent>
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
             <Grid container spacing={2}>

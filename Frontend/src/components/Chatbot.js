@@ -516,7 +516,9 @@ const handleRecommendationsForMascota = async (mascotaId) => {
     const handleRecommendations = () => {
       if (!mascotas || mascotas.length === 0) {
         const message = createChatBotMessage(
-          'No tienes mascotas registradas. ¡Registra a tu mascota en la seccion de Mascotas para recibir recomendaciones personalizadas!',
+          <span style={{ color: '#886137', fontWeight: 'bold' }}>
+            No tienes mascotas registradas. ¡Registra a tu mascota en la seccion de Mascotas para recibir recomendaciones personalizadas!
+          </span>,
           { quickReplies }
         );
         setState((prev) => ({ ...prev, messages: [...prev.messages, message] }));

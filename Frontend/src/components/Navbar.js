@@ -30,82 +30,168 @@ const Navbar = () => {
   };
 
   return (
-    <AppBar position="fixed" sx={{ background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', color: '#333', boxShadow: 'none', borderBottom: '1px solid rgba(0, 0, 0, 0.12)' }}>
-      <Toolbar>
-        <Grow in={true} timeout={1000}>
-          <Typography variant="h6" component={Link} to="/" sx={{ flexGrow: 1, textDecoration: 'none', color: 'inherit', fontWeight: 'bold' }}>
-            Patitas y Sabores
+    <AppBar
+  position="fixed"
+  sx={{
+    background: '#7f814d',
+    color: '#fff',
+    boxShadow: 'none',
+    borderBottom: '1px solid rgba(0, 0, 0, 0.12)'
+  }}
+>
+<Toolbar
+  sx={{
+    minHeight: 80,
+    px: 2,                 // un poquito de padding interno (opcional)
+    display: 'flex',
+    alignItems: 'center',
+  }}
+>
+  {/* IZQUIERDA: Nombre + eslogan */}
+  <Box
+    sx={{
+      flex: 1,
+      display: 'flex',
+      justifyContent: 'flex-start',
+    }}
+  >
+    <Grow in={true} timeout={1000}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Typography
+          variant="h6" // más grande
+          sx={{
+            fontWeight: 'bold',
+            lineHeight: 1,
+            fontFamily: '"Anicon Slab", serif',
+            color: '#3d210a',
+          }}
+        >
+          Patitas y Sabores
+        </Typography>
+        <Typography
+          variant="subtitle2" // más pequeño que h6
+          sx={{
+            fontWeight: 'bold',
+            lineHeight: 1.1,
+            fontFamily: '"Chewy", cursive',
+            color: '#3d210a',
+          }}
+        >
+          Amor Natural
+        </Typography>
+      </Box>
+    </Grow>
+  </Box>
+
+  {/* CENTRO: Logo */}
+  <Box
+    sx={{
+      flexShrink: 0,
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+    }}
+  >
+    <Grow in={true} timeout={1100}>
+      <Box
+        component={Link}
+        to="/"
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          textDecoration: 'none',
+        }}
+      >
+        <img src="/assets/logo.png" alt="Logo" style={{ height: 80 }} />
+      </Box>
+    </Grow>
+  </Box>
+
+  {/* DERECHA: menú / usuario / iconos */}
+  <Box
+    sx={{
+      flex: 1,
+      display: 'flex',
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+    }}
+  >
+    <Grow in={true} timeout={1200}>
+      <Button color="inherit" component={Link} to="/productos" sx={{ fontWeight: 'bold' }}>
+        Productos
+      </Button>
+    </Grow>
+
+    {user ? (
+      <>
+        <Grow in={true} timeout={1400}>
+          <Typography component="span" sx={{ p: 2 }}>
+            Hola, {getDisplayName(user.name, user.role)}
           </Typography>
         </Grow>
-        <Box>
-          <Grow in={true} timeout={1200}>
-            <Button color="inherit" component={Link} to="/productos" sx={{ fontWeight: 'bold' }}>
-              Productos
+
+        {user.role === 'Admin' && (
+          <Grow in={true} timeout={1600}>
+            <Button
+              color="inherit"
+              component={Link}
+              to="/admin"
+              sx={{ mr: 1, fontWeight: 'bold' }}
+            >
+              Admin
             </Button>
           </Grow>
-          {user ? (
-            <>
-              <Grow in={true} timeout={1400}>
-                <Typography component="span" sx={{ p: 2 }}>
-                  Hola, {getDisplayName(user.name, user.role)}
-                </Typography>
-              </Grow>
+        )}
 
-              {/* Admin Button - Only show for admin users */}
-              {user.role === 'Admin' && (
-                <Grow in={true} timeout={1600}>
-                  <Button color="inherit" component={Link} to="/admin" sx={{ mr: 1, fontWeight: 'bold' }}>
-                    Admin
-                  </Button>
-                </Grow>
-              )}
-
-              {/* User-specific buttons - Only show for non-admin users */}
-              {user.role !== 'Admin' && (
-                <>
-                  {/* Mis Compras hidden as per requirement */}
-
-                  <Grow in={true} timeout={1900}>
-                    <Button color="inherit" component={Link} to="/mascotas" sx={{ mr: 1, fontWeight: 'bold' }}>
-                      Mascotas
-                    </Button>
-                  </Grow>
-                  <Grow in={true} timeout={2000}>
-                    <Tooltip title="Favoritos">
-                      <IconButton component={Link} to="/favoritos" color="inherit" aria-label="favoritos">
-                        <Badge badgeContent={favoritesCount} color="error">
-                          <PetsIcon />
-                        </Badge>
-                      </IconButton>
-                    </Tooltip>
-                  </Grow>
-                  <Grow in={true} timeout={2200}>
-                    <Tooltip title="Carrito">
-                      <IconButton component={Link} to="/carrito" color="inherit" aria-label="carrito">
-                        <Badge badgeContent={itemCount} color="error">
-                          <ShoppingCartIcon />
-                        </Badge>
-                      </IconButton>
-                    </Tooltip>
-                  </Grow>
-                </>
-              )}
-
-              <Grow in={true} timeout={2400}>
-                <Button color="inherit" onClick={logout} sx={{ fontWeight: 'bold' }}>
-                  Cerrar Sesión
-                </Button>
-              </Grow>
-            </>
-          ) : (
-            <Grow in={true} timeout={1400}>
-              <Button color="inherit" component={Link} to="/login" sx={{ fontWeight: 'bold' }}>
-                Iniciar Sesión
+        {user.role !== 'Admin' && (
+          <>
+            <Grow in={true} timeout={1900}>
+              <Button
+                color="inherit"
+                component={Link}
+                to="/mascotas"
+                sx={{ mr: 1, fontWeight: 'bold' }}
+              >
+                Mascotas
               </Button>
             </Grow>
-          )}
-        </Box>
-      </Toolbar>
+            <Grow in={true} timeout={2000}>
+              <Tooltip title="Favoritos">
+                <IconButton component={Link} to="/favoritos" color="inherit" aria-label="favoritos">
+                  <Badge badgeContent={favoritesCount} color="error">
+                    <PetsIcon />
+                  </Badge>
+                </IconButton>
+              </Tooltip>
+            </Grow>
+            <Grow in={true} timeout={2200}>
+              <Tooltip title="Carrito">
+                <IconButton component={Link} to="/carrito" color="inherit" aria-label="carrito">
+                  <Badge badgeContent={itemCount} color="error">
+                    <ShoppingCartIcon />
+                  </Badge>
+                </IconButton>
+              </Tooltip>
+            </Grow>
+          </>
+        )}
+
+        <Grow in={true} timeout={2400}>
+          <Button color="inherit" onClick={logout} sx={{ fontWeight: 'bold' }}>
+            Cerrar Sesión
+          </Button>
+        </Grow>
+      </>
+    ) : (
+      <Grow in={true} timeout={1400}>
+        <Button color="inherit" component={Link} to="/login" sx={{ fontWeight: 'bold' }}>
+          Iniciar Sesión
+        </Button>
+      </Grow>
+    )}
+  </Box>
+</Toolbar>
     </AppBar>
   );
 };

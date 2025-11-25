@@ -10,18 +10,15 @@ import {
   Fade,
   Slide,
   Zoom,
-  CardMedia
+  CardMedia,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import PetsIcon from '@mui/icons-material/Pets';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import StarIcon from '@mui/icons-material/Star';
-import VerifiedIcon from '@mui/icons-material/Verified';
-import SecurityIcon from '@mui/icons-material/Security';
-import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import InstagramIcon from '@mui/icons-material/Instagram';
@@ -34,13 +31,14 @@ const HomePage = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showContent, setShowContent] = useState(false);
   const [welcomeModalOpen, setWelcomeModalOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  // Imágenes del hero
+  // Imágenes del hero optimizadas
   const heroImages = [
-    'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=1200&h=800&fit=crop',
-    'https://images.unsplash.com/photo-1544568100-847a948585b9?w=1200&h=800&fit=crop',
-    'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=1200&h=800&fit=crop',
-    'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=1200&h=800&fit=crop'
+    'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=1200&h=600&fit=crop',
+    'https://images.unsplash.com/photo-1544568100-847a948585b9?w=1200&h=600&fit=crop',
+    'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=1200&h=600&fit=crop'
   ];
 
   // Cambiar imagen cada 5 segundos
@@ -57,42 +55,95 @@ const HomePage = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowContent(true);
-    }, 500);
+    }, 300);
     return () => clearTimeout(timer);
   }, []);
 
   // Modal de bienvenida al cargar
   useEffect(() => {
-    setWelcomeModalOpen(true);
+    const timer = setTimeout(() => {
+      setWelcomeModalOpen(true);
+    }, 1000);
+    return () => clearTimeout(timer);
   }, []);
 
   const features = [
     {
-      icon: <PetsIcon sx={{ fontSize: 48, color: 'primary.main' }} />,
+      icon: <PetsIcon sx={{ fontSize: 40 }} />,
       title: 'Productos Premium',
-      description: 'Snacks de alta calidad especialmente formulados para mascotas'
+      description: 'Snacks de alta calidad para mascotas'
     },
     {
-      icon: <ShoppingCartIcon sx={{ fontSize: 48, color: 'secondary.main' }} />,
+      icon: <ShoppingCartIcon sx={{ fontSize: 40 }} />,
       title: 'Compra Fácil',
-      description: 'Proceso de compra simple y seguro desde la comodidad de tu hogar'
+      description: 'Proceso simple y seguro desde tu hogar'
     },
     {
-      icon: <FavoriteIcon sx={{ fontSize: 48, color: 'error.main' }} />,
-      title: 'Amor por las Mascotas',
-      description: 'Cada producto está hecho pensando en el bienestar de tu compañero'
+      icon: <FavoriteIcon sx={{ fontSize: 40 }} />,
+      title: 'Hecho con Amor',
+      description: 'Pensando en el bienestar de tu compañero'
     }
+  ];
+
+  const testimonials = [
+    {
+      name: 'María González',
+      pet: 'Luna (Golden Retriever)',
+      rating: 5,
+      comment: 'Mis hijos aman estos snacks tanto como Luna. Son 100% naturales y de excelente calidad.',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop&crop=face'
+    },
+    {
+      name: 'Carlos Rodríguez',
+      pet: 'Milo (Gato Siamés)',
+      rating: 5,
+      comment: 'Milo es muy exigente pero estos snacks son su favorito. Calidad excepcional y entrega rápida.',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face'
+    },
+    {
+      name: 'Ana López',
+      pet: 'Bella (Bulldog Francés)',
+      rating: 5,
+      comment: 'Bella tiene problemas digestivos y estos snacks naturales han sido una bendición.',
+      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop&crop=face'
+    }
+  ];
+
+  const inspirationItems = [
+    {
+      image: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=400&h=300&fit=crop',
+      quote: 'El amor por todas las criaturas vivientes es el más noble atributo del hombre.'
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1533743983669-94fa5c4338ec?w=400&h=300&fit=crop',
+      quote: 'Hasta que no hayas amado a un animal, una parte de tu alma permanecerá dormida.'
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1560807707-8cc77767d783?w=400&h=300&fit=crop',
+      quote: 'Los animales son amigos tan agradables: no hacen preguntas, no critican.'
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1518717758536-85ae29035b6d?w=400&h=300&fit=crop',
+      quote: 'La grandeza de una nación se puede juzgar por la forma en que trata a sus animales.'
+    }
+  ];
+
+  const socialMedia = [
+    { icon: <FacebookIcon />, name: 'Facebook', url: 'https://facebook.com/patitasySabores' },
+    { icon: <WhatsAppIcon />, name: 'WhatsApp', url: 'https://wa.me/1234567890' },
+    { icon: <InstagramIcon />, name: 'Instagram', url: 'https://instagram.com/patitasySabores' },
+    { icon: <TikTokIcon />, name: 'TikTok', url: 'https://tiktok.com/@patitasySabores' }
   ];
 
   return (
     <Box sx={{ position: 'relative' }}>
       <FloatingPaws />
 
-      {/* HERO SECTION */}
+      {/* HERO SECTION - Más compacto */}
       <Box
         sx={{
           position: 'relative',
-          height: '80vh', // antes 90vh -> más compacto
+          height: isMobile ? '70vh' : '75vh',
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
@@ -113,7 +164,7 @@ const HomePage = () => {
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               opacity: currentImageIndex === index ? 1 : 0,
-              transition: 'opacity 1.5s ease-in-out',
+              transition: 'opacity 1.2s ease-in-out',
               '&::before': {
                 content: '""',
                 position: 'absolute',
@@ -128,69 +179,33 @@ const HomePage = () => {
           />
         ))}
 
-        {/* Card flotante con carrusel de productos */}
-        <Box
-          sx={{
-            position: 'absolute',
-            bottom: 40,
-            right: 40,
-            width: { xs: '200px', sm: '300px', md: '450px' },
-            height: { xs: '200px', sm: '300px', md: '450px' },
-            borderRadius: '20px',
-            overflow: 'hidden',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-            backgroundColor: 'rgba(255,255,255,0.9)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            animation: 'float 6s ease-in-out infinite',
-            zIndex: 3
-          }}
-        >
-          <ProductCarousel />
-        </Box>
-
-        <style jsx>{`
-          @keyframes float {
-            0%, 100% {
-              transform: translateY(0);
-            }
-            50% {
-              transform: translateY(-15px);
-            }
-          }
-        `}</style>
-
-        {/* Texto principal hero */}
+        {/* Contenido principal */}
         <Container maxWidth="md" sx={{ position: 'relative', zIndex: 2 }}>
-          <Fade in={showContent} timeout={1000}>
-            <Box textAlign="center">
-              <Slide direction="down" in={showContent} timeout={800}>
+          <Fade in={showContent} timeout={800}>
+            <Box textAlign="center" sx={{ px: 2 }}>
+              <Slide direction="down" in={showContent} timeout={600}>
                 <Typography
                   variant="h1"
-                  component="h1"
                   sx={{
-                    fontSize: { xs: '2.5rem', md: '4rem' },
+                    fontSize: { xs: '2.2rem', sm: '3rem', md: '3.5rem' },
                     fontWeight: 700,
                     mb: 2,
                     color: '#FFFFFF',
-                    textShadow:
-                      '3px 3px 6px rgba(0,0,0,0.7), 0 0 20px rgba(248, 246, 240, 0.3)',
-                    animation: 'bounce 2s ease-in-out',
-                    WebkitTextStroke: '1px rgba(212, 165, 116, 0.3)'
+                    textShadow: '2px 2px 8px rgba(0,0,0,0.8)',
+                    lineHeight: 1.1
                   }}
                 >
                   Patitas y Sabores
                 </Typography>
               </Slide>
 
-              <Slide direction="up" in={showContent} timeout={1000}>
+              <Slide direction="up" in={showContent} timeout={800}>
                 <Typography
-                  variant="h4"
+                  variant="h6"
                   sx={{
-                    mb: 3, // antes 4 -> más compacto
+                    mb: 3,
                     color: '#F8F6F0',
-                    textShadow: '2px 2px 4px rgba(0,0,0,0.6)',
+                    textShadow: '1px 1px 3px rgba(0,0,0,0.6)',
                     fontWeight: 400,
                     lineHeight: 1.4
                   }}
@@ -199,35 +214,24 @@ const HomePage = () => {
                 </Typography>
               </Slide>
 
-              <Zoom in={showContent} timeout={1200}>
+              <Zoom in={showContent} timeout={1000}>
                 <Button
                   variant="contained"
                   size="large"
                   component={Link}
                   to="/productos"
                   sx={{
-                    px: 8,
-                    py: 2.5,
-                    fontSize: '1.3rem',
+                    px: 6,
+                    py: 1.8,
+                    fontSize: '1.1rem',
                     fontWeight: 600,
-                    borderRadius: '50px',
-                    background:
-                      'linear-gradient(135deg, #D4A574 0%, #A8B5A0 50%, #8A7B5D 100%)',
+                    borderRadius: '25px',
+                    background: 'linear-gradient(135deg, #D4A574 0%, #A8B5A0 100%)',
                     color: '#FFFFFF',
-                    boxShadow: '0 10px 30px rgba(212, 165, 116, 0.4)',
-                    border: '2px solid rgba(255, 255, 255, 0.2)',
-                    transition:
-                      'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                    textTransform: 'none',
+                    boxShadow: '0 8px 25px rgba(212, 165, 116, 0.4)',
                     '&:hover': {
-                      transform: 'translateY(-4px) scale(1.05)',
-                      boxShadow: '0 20px 40px rgba(212, 165, 116, 0.5)',
-                      background:
-                        'linear-gradient(135deg, #B8955D 0%, #8A9683 50%, #6B5D4A 100%)',
-                      border: '2px solid rgba(255, 255, 255, 0.4)'
-                    },
-                    '&:active': {
-                      transform: 'translateY(-2px) scale(1.02)'
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 12px 30px rgba(212, 165, 116, 0.6)',
                     }
                   }}
                 >
@@ -238,7 +242,7 @@ const HomePage = () => {
           </Fade>
         </Container>
 
-        {/* Indicadores del carrusel de fondo */}
+        {/* Indicadores */}
         <Box
           sx={{
             position: 'absolute',
@@ -254,18 +258,13 @@ const HomePage = () => {
             <Box
               key={index}
               sx={{
-                width: 12,
-                height: 12,
+                width: 10,
+                height: 10,
                 borderRadius: '50%',
-                backgroundColor:
-                  currentImageIndex === index
-                    ? 'white'
-                    : 'rgba(255,255,255,0.5)',
+                backgroundColor: currentImageIndex === index ? 'white' : 'rgba(255,255,255,0.5)',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
-                '&:hover': {
-                  backgroundColor: 'white'
-                }
+                '&:hover': { backgroundColor: 'white' }
               }}
               onClick={() => setCurrentImageIndex(index)}
             />
@@ -273,123 +272,85 @@ const HomePage = () => {
         </Box>
       </Box>
 
-      {/* FEATURES SECTION */}
-      <Container
-        maxWidth="lg"
-        sx={{ py: { xs: 6, md: 8 }, backgroundColor: '#FAF9F6' }}
-      >
+      {/* FEATURES SECTION - Más compacto */}
+      <Container sx={{ py: 6 }}>
         <Typography
-          variant="h3"
+          variant="h4"
           textAlign="center"
           sx={{
-            mb: 4, // antes 8
+            mb: 4,
             fontWeight: 700,
             color: '#5D4E37',
-            textShadow: '0 2px 4px rgba(0,0,0,0.1)',
             position: 'relative',
             '&::after': {
               content: '""',
               position: 'absolute',
-              bottom: -10,
+              bottom: -8,
               left: '50%',
               transform: 'translateX(-50%)',
-              width: 80,
-              height: 4,
+              width: 60,
+              height: 3,
               background: 'linear-gradient(90deg, #D4A574, #A8B5A0)',
               borderRadius: '2px'
             }
           }}
         >
-          ¿Por qué elegir Patitas y Sabores?
+          ¿Por qué elegirnos?
         </Typography>
 
-        <Grid container spacing={6} justifyContent="center">
+        <Grid container spacing={3} justifyContent="center">
           {features.map((feature, index) => (
-            <Grid item xs={12} md={4} key={index}>
-              <Fade in={showContent} timeout={800 + index * 200}>
+            <Grid item xs={12} sm={6} md={4} key={index}>
+              <Fade in={showContent} timeout={600 + index * 200}>
                 <Card
                   sx={{
                     height: '100%',
                     textAlign: 'center',
-                    borderRadius: '24px',
-                    background:
-                      'linear-gradient(135deg, #FFFFFF 0%, #F8F6F0 100%)',
-                    boxShadow: '0 12px 40px rgba(93, 78, 55, 0.1)',
-                    border: '1px solid rgba(212, 165, 116, 0.2)',
-                    transition:
-                      'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '4px',
-                      background:
-                        index === 0
-                          ? 'linear-gradient(90deg, #D4A574, #A8B5A0)'
-                          : index === 1
-                          ? 'linear-gradient(90deg, #A8B5A0, #8A7B5D)'
-                          : 'linear-gradient(90deg, #8A7B5D, #D4A574)',
-                      borderRadius: '24px 24px 0 0'
-                    },
+                    borderRadius: '16px',
+                    background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F6F0 100%)',
+                    boxShadow: '0 8px 25px rgba(93, 78, 55, 0.08)',
+                    border: '1px solid rgba(212, 165, 116, 0.15)',
+                    transition: 'all 0.3s ease',
                     '&:hover': {
-                      transform: 'translateY(-12px) scale(1.02)',
-                      boxShadow: '0 25px 60px rgba(93, 78, 55, 0.15)',
-                      border: '1px solid rgba(212, 165, 116, 0.4)'
+                      transform: 'translateY(-5px)',
+                      boxShadow: '0 15px 35px rgba(93, 78, 55, 0.12)',
                     }
                   }}
                 >
-                  <CardContent sx={{ p: 5 }}>
+                  <CardContent sx={{ p: 4 }}>
                     <Box
                       sx={{
-                        mb: 4,
-                        p: 3,
+                        mb: 3,
+                        p: 2,
                         borderRadius: '50%',
-                        background:
-                          index === 0
-                            ? 'linear-gradient(135deg, rgba(212, 165, 116, 0.1), rgba(168, 181, 160, 0.1))'
-                            : index === 1
-                            ? 'linear-gradient(135deg, rgba(168, 181, 160, 0.1), rgba(138, 123, 93, 0.1))'
-                            : 'linear-gradient(135deg, rgba(138, 123, 93, 0.1), rgba(212, 165, 116, 0.1))',
+                        background: 'linear-gradient(135deg, rgba(212, 165, 116, 0.1), rgba(168, 181, 160, 0.1))',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        transition: 'all 0.3s ease'
                       }}
                     >
                       {React.cloneElement(feature.icon, {
                         sx: {
-                          fontSize: 56,
-                          color:
-                            index === 0
-                              ? '#D4A574'
-                              : index === 1
-                              ? '#A8B5A0'
-                              : '#8A7B5D'
+                          fontSize: 40,
+                          color: '#D4A574'
                         }
                       })}
                     </Box>
                     <Typography
-                      variant="h5"
+                      variant="h6"
                       sx={{
-                        mb: 3,
-                        fontWeight: 700,
+                        mb: 2,
+                        fontWeight: 600,
                         color: '#5D4E37',
-                        fontSize: '1.4rem'
                       }}
                     >
                       {feature.title}
                     </Typography>
                     <Typography
-                      variant="body1"
+                      variant="body2"
                       sx={{
                         color: '#7D6B5D',
-                        lineHeight: 1.6,
-                        fontSize: '1rem',
-                        fontWeight: 400
+                        lineHeight: 1.5,
                       }}
                     >
                       {feature.description}
@@ -402,353 +363,234 @@ const HomePage = () => {
         </Grid>
       </Container>
 
-      {/* INSPIRATION SECTION */}
-      <Box sx={{ py: { xs: 6, md: 8 }, backgroundColor: '#FFFFFF' }}>
-        <Container maxWidth="lg">
-          <Typography
-            variant="h3"
-            textAlign="center"
-            sx={{
-              mb: 4,
-              fontWeight: 700,
-              color: '#5D4E37',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              position: 'relative',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                bottom: -10,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: 80,
-                height: 4,
-                background: 'linear-gradient(90deg, #D4A574, #A8B5A0)',
-                borderRadius: '2px'
-              }
-            }}
-          >
-            Nuestra Inspiración
-          </Typography>
-          <Grid container spacing={4} alignItems="center" justifyContent="center">
-            {[
-              {
-                image: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=800&q=80',
-                quote:
-                  'El amor por todas las criaturas vivientes es el más noble atributo del hombre.'
-              },
-              {
-                image: 'https://images.unsplash.com/photo-1533743983669-94fa5c4338ec?w=800&q=80',
-                quote:
-                  'Hasta que no hayas amado a un animal, una parte de tu alma permanecerá dormida.'
-              },
-              {
-                image: 'https://images.unsplash.com/photo-1560807707-8cc77767d783?w=800&q=80',
-                quote:
-                  'Los animales son amigos tan agradables: no hacen preguntas, no critican.'
-              },
-              {
-                image: 'https://images.unsplash.com/photo-1518717758536-85ae29035b6d?w=800&q=80',
-                quote:
-                  'La grandeza de una nación se puede juzgar por la forma en que trata a sus animales.'
-              },
-              {
-                image: 'https://images.unsplash.com/photo-1548681528-6a5c45b66b42?w=800&q=80',
-                quote:
-                  'El tiempo pasado con los gatos nunca es tiempo perdido.'
-              },
-              {
-                image: 'https://images.unsplash.com/photo-1505628346881-b72b27e84530?w=800&q=80',
-                quote:
-                  'Un perro es la única cosa en la tierra que te ama más de lo que se ama a sí mismo.'
-              }
-            ].map((item, index) => (
-              <Grid item xs={12} sm={6} md={4} key={index}>
-                <Zoom in={showContent} timeout={1000 + index * 200}>
-                  <Card
-                    sx={{
-                      borderRadius: '20px',
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      '&:hover .quote-overlay': {
-                        opacity: 1,
-                        transform: 'translateY(0)'
-                      },
-                      '&:hover .image-zoom': {
-                        transform: 'scale(1.15)'
-                      }
-                    }}
-                  >
-                    <CardMedia
-                      className="image-zoom"
-                      component="img"
-                      height="400"
-                      image={item.image}
-                      alt={`Inspiration ${index + 1}`}
-                      sx={{ transition: 'transform 0.5s ease' }}
-                    />
-                    <Box
-                      className="quote-overlay"
+      {/* INSPIRATION SECTION - Diseño compacto y profesional */}
+<Box sx={{ py: 6, backgroundColor: '#FAF9F6' }}>
+  <Container maxWidth="lg">
+    <Typography
+      variant="h4"
+      textAlign="center"
+      sx={{
+        mb: 4,
+        fontWeight: 700,
+        color: '#5D4E37',
+        position: 'relative',
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          bottom: -8,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 60,
+          height: 3,
+          background: 'linear-gradient(90deg, #D4A574, #A8B5A0)',
+          borderRadius: '2px'
+        }
+      }}
+    >
+      Nuestra Inspiración
+    </Typography>
+    
+    <Grid container spacing={3} justifyContent="center">
+      {inspirationItems.map((item, index) => (
+        <Grid item xs={12} sm={6} md={3} key={index}>
+          <Zoom in={showContent} timeout={800 + index * 200}>
+            <Card
+              sx={{
+                borderRadius: '16px',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.08)',
+                position: 'relative',
+                overflow: 'hidden',
+                height: '100%',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-5px)',
+                  boxShadow: '0 12px 25px rgba(0,0,0,0.15)',
+                }
+              }}
+            >
+              <CardMedia
+                component="img"
+                height="200"
+                image={item.image}
+                alt={`Inspiración ${index + 1}`}
+                sx={{ 
+                  objectFit: 'cover',
+                  objectPosition: 'center'
+                }}
+              />
+              <CardContent sx={{ p: 3 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontStyle: 'italic',
+                    color: '#5D4E37',
+                    lineHeight: 1.5,
+                    textAlign: 'center',
+                    fontWeight: 500
+                  }}
+                >
+                  "{item.quote}"
+                </Typography>
+              </CardContent>
+            </Card>
+          </Zoom>
+        </Grid>
+      ))}
+    </Grid>
+  </Container>
+</Box>
+
+      {/* TESTIMONIALS SECTION - Integrado */}
+      <Container sx={{ py: 6 }}>
+        <Typography
+          variant="h4"
+          textAlign="center"
+          sx={{
+            mb: 4,
+            fontWeight: 700,
+            color: '#5D4E37',
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: -8,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 60,
+              height: 3,
+              background: 'linear-gradient(90deg, #D4A574, #A8B5A0)',
+              borderRadius: '2px'
+            }
+          }}
+        >
+          Opiniones de Clientes
+        </Typography>
+
+        <Grid container spacing={3} justifyContent="center">
+          {testimonials.map((testimonial, index) => (
+            <Grid item xs={12} md={4} key={index}>
+              <Fade in={showContent} timeout={800 + index * 200}>
+                <Card
+                  sx={{
+                    height: '100%',
+                    borderRadius: '16px',
+                    background: '#FFFFFF',
+                    boxShadow: '0 6px 20px rgba(93, 78, 55, 0.08)',
+                    border: '1px solid rgba(212, 165, 116, 0.1)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-3px)',
+                      boxShadow: '0 10px 25px rgba(93, 78, 55, 0.12)',
+                    }
+                  }}
+                >
+                  <CardContent sx={{ p: 3 }}>
+                    <Box sx={{ display: 'flex', mb: 2 }}>
+                      {[...Array(testimonial.rating)].map((_, i) => (
+                        <StarIcon
+                          key={i}
+                          sx={{ color: '#FFD700', fontSize: 18 }}
+                        />
+                      ))}
+                    </Box>
+                    <Typography
+                      variant="body2"
                       sx={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                        color: '#FFFFFF',
-                        p: 3,
-                        textAlign: 'center',
-                        opacity: 0,
-                        transform: 'translateY(100%)',
-                        transition: 'opacity 0.5s ease, transform 0.5s ease'
+                        mb: 3,
+                        color: '#5D4E37',
+                        fontStyle: 'italic',
+                        lineHeight: 1.5,
                       }}
                     >
-                      <Typography
-                        variant="h6"
+                      "{testimonial.comment}"
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Box
                         sx={{
-                          fontStyle: 'italic',
-                          fontWeight: 300,
-                          color: '#FFFFFF'
+                          width: 45,
+                          height: 45,
+                          borderRadius: '50%',
+                          backgroundImage: `url(${testimonial.avatar})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          mr: 2
                         }}
-                      >
-                        "{item.quote}"
-                      </Typography>
-                    </Box>
-                  </Card>
-                </Zoom>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
-
-
-
-      {/* TESTIMONIALS SECTION */}
-      <Box sx={{ py: { xs: 6, md: 8 }, backgroundColor: '#FFFFFF' }}>
-        <Container maxWidth="lg">
-          <Typography
-            variant="h3"
-            textAlign="center"
-            sx={{
-              mb: 4, // antes 6
-              fontWeight: 700,
-              color: '#5D4E37',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}
-          >
-            Lo Que Dicen Nuestros Clientes
-          </Typography>
-
-          <Grid container spacing={4} justifyContent="center">
-            {[
-              {
-                name: 'María González',
-                pet: 'Luna (Golden Retriever)',
-                rating: 5,
-                comment:
-                  'Mis hijos aman estos snacks tanto como Luna. Son 100% naturales y Luna los devora con gusto. ¡Servicio excelente!',
-                avatar:
-                  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face'
-              },
-              {
-                name: 'Carlos Rodríguez',
-                pet: 'Milo (Gato Siamés)',
-                rating: 5,
-                comment:
-                  'Milo es muy exigente con la comida, pero estos snacks premium son su favorito. Calidad excepcional y entrega rápida.',
-                avatar:
-                  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face'
-              },
-              {
-                name: 'Ana López',
-                pet: 'Bella (Bulldog Francés)',
-                rating: 5,
-                comment:
-                  'Bella tiene problemas digestivos y estos snacks naturales han sido una bendición. Mi veterinario los recomienda.',
-                avatar:
-                  'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face'
-              }
-            ].map((testimonial, index) => (
-              <Grid item xs={12} md={4} key={index}>
-                <Fade in={showContent} timeout={1200 + index * 200}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      borderRadius: '20px',
-                      background:
-                        'linear-gradient(135deg, #FFFFFF 0%, #F8F6F0 100%)',
-                      boxShadow: '0 8px 32px rgba(93, 78, 55, 0.1)',
-                      border: '1px solid rgba(212, 165, 116, 0.2)',
-                      transition: 'all 0.3s ease-in-out',
-                      '&:hover': {
-                        transform: 'translateY(-8px)',
-                        boxShadow:
-                          '0 15px 45px rgba(93, 78, 55, 0.15)'
-                      }
-                    }}
-                  >
-                    <CardContent sx={{ p: 4 }}>
-                      <Box sx={{ display: 'flex', mb: 3 }}>
-                        {[...Array(testimonial.rating)].map((_, i) => (
-                          <StarIcon
-                            key={i}
-                            sx={{ color: '#FFD700', fontSize: 20 }}
-                          />
-                        ))}
-                      </Box>
-                      <Typography
-                        variant="body1"
-                        sx={{
-                          mb: 3,
-                          color: '#5D4E37',
-                          fontStyle: 'italic',
-                          lineHeight: 1.6,
-                          fontSize: '1rem'
-                        }}
-                      >
-                        "{testimonial.comment}"
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Box
+                      />
+                      <Box>
+                        <Typography
+                          variant="subtitle1"
                           sx={{
-                            width: 50,
-                            height: 50,
-                            borderRadius: '50%',
-                            backgroundImage: `url(${testimonial.avatar})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            mr: 2
+                            fontWeight: 600,
+                            color: '#5D4E37',
                           }}
-                        />
-                        <Box>
-                          <Typography
-                            variant="h6"
-                            sx={{
-                              fontWeight: 600,
-                              color: '#5D4E37',
-                              fontSize: '1rem'
-                            }}
-                          >
-                            {testimonial.name}
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              color: '#7D6B5D',
-                              fontSize: '0.9rem'
-                            }}
-                          >
-                            Dueño de {testimonial.pet}
-                          </Typography>
-                        </Box>
+                        >
+                          {testimonial.name}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: '#7D6B5D',
+                          }}
+                        >
+                          Dueño de {testimonial.pet}
+                        </Typography>
                       </Box>
-                    </CardContent>
-                  </Card>
-                </Fade>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Fade>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
 
-      {/* NOSOTROS SECTION */}
-      <Box sx={{ py: { xs: 6, md: 8 }, backgroundColor: '#FAF9F6' }}>
-        <Container maxWidth="lg">
-          <Typography
-            variant="h3"
-            textAlign="center"
-            sx={{
-              mb: 4,
-              fontWeight: 700,
-              color: '#5D4E37',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              position: 'relative',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                bottom: -10,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: 80,
-                height: 4,
-                background: 'linear-gradient(90deg, #D4A574, #A8B5A0)',
-                borderRadius: '2px'
-              }
-            }}
-          >
-            Sobre Nosotros
-          </Typography>
-          <Grid
-            container
-            spacing={6}
-            alignItems="center"
-            justifyContent="center"
-          >
+      {/* ABOUT SECTION - Más conciso */}
+      <Box sx={{ py: 6, backgroundColor: '#FAF9F6' }}>
+        <Container>
+          <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={6}>
               <Typography
-                variant="h5"
+                variant="h4"
                 sx={{
                   mb: 3,
-                  fontWeight: 600,
+                  fontWeight: 700,
                   color: '#5D4E37',
-                  lineHeight: 1.6
                 }}
               >
-                Nuestra Misión
+                Sobre Nosotros
               </Typography>
               <Typography
                 variant="body1"
                 sx={{
-                  mb: 4,
-                  color: '#7D6B5D',
-                  lineHeight: 1.8,
-                  fontSize: '1.1rem'
-                }}
-              >
-                En Patitas y Sabores, nos dedicamos a proporcionar snacks
-                premium de alta calidad para mascotas, elaborados con
-                ingredientes naturales y nutritivos. Creemos que cada mascota
-                merece lo mejor, y trabajamos incansablemente para ofrecer
-                productos que promuevan la salud y el bienestar de tus
-                compañeros peludos.
-              </Typography>
-              <Typography
-                variant="h5"
-                sx={{
                   mb: 3,
-                  fontWeight: 600,
-                  color: '#5D4E37',
-                  lineHeight: 1.6
+                  color: '#7D6B5D',
+                  lineHeight: 1.6,
                 }}
               >
-                Nuestra Historia
+                En Patitas y Sabores nos dedicamos a proporcionar snacks premium de alta 
+                calidad para mascotas, elaborados con ingredientes naturales y nutritivos. 
+                Creemos que cada mascota merece lo mejor.
               </Typography>
               <Typography
                 variant="body1"
                 sx={{
                   color: '#7D6B5D',
-                  lineHeight: 1.8,
-                  fontSize: '1.1rem'
+                  lineHeight: 1.6,
                 }}
               >
-                Fundada por amantes de los animales, Patitas y Sabores nació de
-                la pasión por cuidar a nuestras mascotas de manera natural y
-                saludable. Desde nuestros inicios, hemos crecido gracias a la
-                confianza de miles de dueños que buscan lo mejor para sus
-                amigos de cuatro patas.
+                Fundada por amantes de los animales, nuestra misión es promover la salud 
+                y el bienestar de tus compañeros peludos con productos de la más alta calidad.
               </Typography>
             </Grid>
             <Grid item xs={12} md={6}>
               <Box
                 sx={{
-                  height: 400,
-                  backgroundImage:
-                    'url(https://images.unsplash.com/photo-1551717743-49959800b1f6?w=600&q=80)',
+                  height: 300,
+                  backgroundImage: 'url(https://images.unsplash.com/photo-1551717743-49959800b1f6?w=600&q=80)',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
-                  borderRadius: '20px',
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+                  borderRadius: '16px',
+                  boxShadow: '0 8px 25px rgba(0,0,0,0.1)'
                 }}
               />
             </Grid>
@@ -756,194 +598,122 @@ const HomePage = () => {
         </Container>
       </Box>
 
-
-
-      {/* SOCIAL MEDIA SECTION */}
-      <Box sx={{ py: { xs: 6, md: 8 }, backgroundColor: '#FFFFFF' }}>
-        <Container maxWidth="md">
-          <Typography
-            variant="h3"
-            textAlign="center"
-            sx={{
-              mb: 4,
-              fontWeight: 700,
-              color: '#5D4E37',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              position: 'relative',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                bottom: -10,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: 80,
-                height: 4,
-                background: 'linear-gradient(90deg, #D4A574, #A8B5A0)',
-                borderRadius: '2px'
-              }
-            }}
-          >
-            Síguenos en Redes Sociales
-          </Typography>
-          <Typography
-            variant="h6"
-            textAlign="center"
-            sx={{
-              mb: 4, // antes 6
-              color: '#7D6B5D',
-              maxWidth: '600px',
-              mx: 'auto',
-              lineHeight: 1.6
-            }}
-          >
-            Conecta con nosotros y mantente al día con las últimas novedades,
-            consejos para mascotas y ofertas exclusivas.
-          </Typography>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: 4,
-              flexWrap: 'wrap'
-            }}
-          >
-            {[
-              {
-                icon: (
-                  <FacebookIcon sx={{ fontSize: 48, color: '#1877F2' }} />
-                ),
-                name: 'Facebook',
-                url: 'https://facebook.com/patitasySabores'
-              },
-              {
-                icon: (
-                  <WhatsAppIcon sx={{ fontSize: 48, color: '#25D366' }} />
-                ),
-                name: 'WhatsApp',
-                url: 'https://wa.me/1234567890'
-              },
-              {
-                icon: (
-                  <InstagramIcon sx={{ fontSize: 48, color: '#E4405F' }} />
-                ),
-                name: 'Instagram',
-                url: 'https://instagram.com/patitasySabores'
-              },
-              {
-                icon: (
-                  <TikTokIcon sx={{ fontSize: 48, color: '#000000' }} />
-                ),
-                name: 'TikTok',
-                url: 'https://tiktok.com/@patitasySabores'
-              }
-            ].map((social, index) => (
-              <Box
-                key={index}
-                component="a"
-                href={social.url}
-                target="_blank"
-                rel="noopener noreferrer"
+      {/* SOCIAL MEDIA SECTION - Integrado */}
+      <Container sx={{ py: 6 }}>
+        <Typography
+          variant="h4"
+          textAlign="center"
+          sx={{
+            mb: 3,
+            fontWeight: 700,
+            color: '#5D4E37',
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: -8,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 60,
+              height: 3,
+              background: 'linear-gradient(90deg, #D4A574, #A8B5A0)',
+              borderRadius: '2px'
+            }
+          }}
+        >
+          Síguenos
+        </Typography>
+        <Typography
+          variant="body1"
+          textAlign="center"
+          sx={{
+            mb: 4,
+            color: '#7D6B5D',
+            maxWidth: '500px',
+            mx: 'auto',
+          }}
+        >
+          Conecta con nosotros para novedades, consejos y ofertas exclusivas.
+        </Typography>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 2,
+            flexWrap: 'wrap'
+          }}
+        >
+          {socialMedia.map((social, index) => (
+            <Box
+              key={index}
+              component="a"
+              href={social.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                p: 2,
+                borderRadius: '12px',
+                background: '#FFFFFF',
+                boxShadow: '0 4px 15px rgba(93, 78, 55, 0.08)',
+                border: '1px solid rgba(212, 165, 116, 0.15)',
+                transition: 'all 0.3s ease',
+                textDecoration: 'none',
+                minWidth: 80,
+                '&:hover': {
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 8px 20px rgba(93, 78, 55, 0.12)',
+                }
+              }}
+            >
+              <Box sx={{ mb: 1, color: '#D4A574' }}>
+                {React.cloneElement(social.icon, { sx: { fontSize: 32 } })}
+              </Box>
+              <Typography
+                variant="caption"
                 sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  p: 3,
-                  borderRadius: '20px',
-                  background:
-                    'linear-gradient(135deg, #FFFFFF 0%, #F8F6F0 100%)',
-                  boxShadow: '0 8px 32px rgba(93, 78, 55, 0.1)',
-                  border: '1px solid rgba(212, 165, 116, 0.2)',
-                  transition: 'all 0.3s ease-in-out',
-                  textDecoration: 'none',
-                  '&:hover': {
-                    transform: 'translateY(-8px) scale(1.05)',
-                    boxShadow:
-                      '0 15px 45px rgba(93, 78, 55, 0.15)',
-                    border: '1px solid rgba(212, 165, 116, 0.4)'
-                  }
+                  fontWeight: 600,
+                  color: '#5D4E37',
                 }}
               >
-                <Box sx={{ mb: 2 }}>{social.icon}</Box>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: 600,
-                    color: '#5D4E37',
-                    fontSize: '1rem'
-                  }}
-                >
-                  {social.name}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        </Container>
-      </Box>
+                {social.name}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Container>
 
-
-
-      {/* CTA FINAL SECTION */}
+      {/* FINAL CTA SECTION - Más compacto */}
       <Box
         sx={{
-          background:
-            'linear-gradient(135deg, #2C3E50 0%, #34495E 50%, #2C3E50 100%)',
-          py: { xs: 6, md: 8 }, // antes 10
+          background: 'linear-gradient(135deg, #2C3E50 0%, #34495E 100%)',
+          py: 6,
           textAlign: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            background:
-              'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23D4A574" fill-opacity="0.05"%3E%3Ccircle cx="30" cy="30" r="4"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-            opacity: 0.1
-          }
         }}
       >
-        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
+        <Container maxWidth="sm">
           <Typography
-            variant="h3"
+            variant="h4"
             sx={{
-              mb: 4,
+              mb: 3,
               fontWeight: 700,
               color: '#FFFFFF',
-              textShadow: '0 2px 4px rgba(0,0,0,0.3)',
-              position: 'relative',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                bottom: -15,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: 100,
-                height: 4,
-                background:
-                  'linear-gradient(90deg, #D4A574, #A8B5A0, #8A7B5D)',
-                borderRadius: '2px'
-              }
             }}
           >
-            ¡Descubre nuestros productos!
+            ¡Encuentra el Snack Perfecto!
           </Typography>
           <Typography
-            variant="h6"
+            variant="body1"
             sx={{
-              mb: 6,
+              mb: 4,
               color: '#ECF0F1',
-              maxWidth: '700px',
-              mx: 'auto',
-              lineHeight: 1.6,
-              fontWeight: 400,
-              textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+              lineHeight: 1.5,
             }}
           >
-            Explora nuestra amplia variedad de snacks premium para perros y
-            gatos, todos elaborados con ingredientes naturales y de la más alta
-            calidad. ¡Encuentra el snack perfecto para tu compañero peludo!
+            Descubre nuestra variedad de snacks premium naturales para perros y gatos. 
+            Calidad garantizada para tu compañero peludo.
           </Typography>
           <Button
             variant="contained"
@@ -951,67 +721,24 @@ const HomePage = () => {
             component={Link}
             to="/productos"
             sx={{
-              px: 8,
-              py: 3,
-              fontSize: '1.2rem',
+              px: 5,
+              py: 1.5,
+              fontSize: '1rem',
               fontWeight: 600,
-              borderRadius: '50px',
-              background:
-                'linear-gradient(135deg, #D4A574 0%, #A8B5A0 50%, #8A7B5D 100%)',
+              borderRadius: '25px',
+              background: 'linear-gradient(135deg, #D4A574 0%, #A8B5A0 100%)',
               color: '#FFFFFF',
-              boxShadow: '0 12px 35px rgba(212, 165, 116, 0.4)',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              transition:
-                'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-              textTransform: 'none',
-              position: 'relative',
-              overflow: 'hidden',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: '-100%',
-                width: '100%',
-                height: '100%',
-                background:
-                  'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
-                transition: 'left 0.5s'
-              },
+              boxShadow: '0 8px 25px rgba(212, 165, 116, 0.4)',
               '&:hover': {
-                transform: 'translateY(-4px) scale(1.05)',
-                boxShadow:
-                  '0 20px 45px rgba(212, 165, 116, 0.5)',
-                background:
-                  'linear-gradient(135deg, #B8955D 0%, #8A9683 50%, #6B5D4A 100%)',
-                border: '2px solid rgba(255, 255, 255, 0.4)',
-                '&::before': {
-                  left: '100%'
-                }
-              },
-              '&:active': {
-                transform: 'translateY(-2px) scale(1.02)'
+                transform: 'translateY(-2px)',
+                boxShadow: '0 12px 30px rgba(212, 165, 116, 0.6)',
               }
             }}
           >
-            Ver Catálogo Completo
+            Ver Catálogo
           </Button>
         </Container>
       </Box>
-
-      {/* Animación de bounce del título principal */}
-      <style jsx>{`
-        @keyframes bounce {
-          0%, 20%, 50%, 80%, 100% {
-            transform: translateY(0);
-          }
-          40% {
-            transform: translateY(-10px);
-          }
-          60% {
-            transform: translateY(-5px);
-          }
-        }
-      `}</style>
 
       {/* Welcome Modal */}
       <WelcomeModal

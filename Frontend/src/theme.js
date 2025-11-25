@@ -4,40 +4,42 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#D4A574', // Beige dorado suave
-      light: '#E8D5B7', // Beige más claro
-      dark: '#B8955D', // Beige más oscuro
-      contrastText: '#5D4E37', // Marrón oscuro para texto
+      main: '#7f814d', // Verde oliva Apagado
+      light: '#e6e5c9', // Amarillo Claro
+      dark: '#55572f', // Verde oliva oscuro apagado
+      contrastText: '#3d210a', // Marrón Oscuro para texto
     },
     secondary: {
-      main: '#A8B5A0', // Verde sage suave
-      light: '#C8D1C5', // Verde sage más claro
-      dark: '#8A9683', // Verde sage más oscuro
-      contrastText: '#5D4E37',
+      main: '#886137', // Marrón Claro
+      light: '#e6e5c9', // Amarillo Claro
+      dark: '#3d210a', // Marrón Oscuro
+      contrastText: '#55572f', // Verde oliva oscuro apagado
     },
     background: {
-      default: '#F8F6F0', // Crema muy suave
-      paper: '#FFFFFF', // Blanco
+      default: '#e6e5c9', // Amarillo Claro
+      paper: '#e6e5c9', // Amarillo Claro para paper también
     },
     text: {
-      primary: '#5D4E37', // Marrón oscuro suave
-      secondary: '#7D6B5D', // Marrón medio
+      primary: '#3d210a', // Marrón Oscuro
+      secondary: '#7f814d', // Verde oliva Apagado
     },
     error: {
-      main: '#C4908F', // Rojo pastel suave
+      main: '#C4908F', // Mantengo como estaba
     },
     warning: {
-      main: '#D4B483', // Amarillo pastel suave
+      main: '#D4B483', // Mantengo como estaba
     },
     info: {
-      main: '#A8B5C7', // Azul pastel suave
+      main: '#7f814d', // Verde oliva Apagado
     },
     success: {
-      main: '#A8B5A0', // Verde pastel suave
+      main: '#7f814d', // Verde oliva Apagado
     },
   },
   typography: {
     fontFamily: [
+      '"Anicon Slab"',
+      'Chewy',
       'Quicksand',
       'Roboto',
       '"Helvetica Neue"',
@@ -45,53 +47,53 @@ const theme = createTheme({
       'sans-serif',
     ].join(','),
     h1: {
-      fontFamily: 'Quicksand',
+      fontFamily: '"Anicon Slab", serif',
       fontWeight: 700,
       fontSize: '3rem',
-      color: '#5D4E37',
+      color: '#886137', // marrón claro
     },
     h2: {
-      fontFamily: 'Quicksand',
+      fontFamily: '"Anicon Slab", serif',
       fontWeight: 600,
       fontSize: '2.5rem',
-      color: '#5D4E37',
+      color: '#886137',
     },
     h3: {
-      fontFamily: 'Quicksand',
+      fontFamily: '"Anicon Slab", serif',
       fontWeight: 600,
       fontSize: '2rem',
-      color: '#5D4E37',
+      color: '#886137',
     },
     h4: {
-      fontFamily: 'Quicksand',
+      fontFamily: '"Anicon Slab", serif',
       fontWeight: 500,
       fontSize: '1.75rem',
-      color: '#5D4E37',
+      color: '#886137',
     },
     h5: {
-      fontFamily: 'Quicksand',
+      fontFamily: '"Anicon Slab", serif',
       fontWeight: 500,
       fontSize: '1.5rem',
-      color: '#5D4E37',
+      color: '#886137',
     },
     h6: {
-      fontFamily: 'Quicksand',
+      fontFamily: '"Anicon Slab", serif',
       fontWeight: 500,
       fontSize: '1.25rem',
-      color: '#5D4E37',
+      color: '#886137',
     },
     body1: {
-      fontFamily: 'Roboto',
+      fontFamily: '"Roboto", "Helvetica Neue", Arial, sans-serif',
       fontSize: '1rem',
-      color: '#7D6B5D',
+      color: '#3d210a', // marrón oscuro
     },
     body2: {
-      fontFamily: 'Roboto',
+      fontFamily: '"Roboto", "Helvetica Neue", Arial, sans-serif',
       fontSize: '0.875rem',
-      color: '#7D6B5D',
+      color: '#3d210a',
     },
     button: {
-      fontFamily: 'Quicksand',
+      fontFamily: '"Anicon Slab", serif',
       fontWeight: 500,
       textTransform: 'none',
     },
