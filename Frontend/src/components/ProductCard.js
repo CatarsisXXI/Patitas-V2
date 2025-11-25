@@ -204,7 +204,7 @@ const ProductCard = ({ product }) => {
           sx={{
             textTransform: 'none',
             minWidth: 0,
-            backgroundColor: '#d4a574',
+            backgroundColor: '#5D4E37',
             color: 'white',
             '&:hover': { backgroundColor: '#b8955e' },
           }}
@@ -218,7 +218,7 @@ const ProductCard = ({ product }) => {
           sx={{
             textTransform: 'none',
             minWidth: 0,
-            backgroundColor: '#d4a574',
+            backgroundColor: '#5D4E37',
             color: 'white',
             '&:hover': { backgroundColor: '#b8955e' },
           }}
