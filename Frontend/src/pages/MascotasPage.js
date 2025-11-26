@@ -671,10 +671,10 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
         gap: 2
       }}>
         <Box>
-          <Typography variant="h3" component="h1" fontWeight="bold" sx={{ color: 'primary.main', mb: 1 }}>
+          <Typography variant="h3" component="h1" fontWeight="bold" sx={{ color: '#3d210a', mb: 1 }}>
             Mis Mascotas
           </Typography>
-          <Typography variant="h6" color="text.secondary">
+          <Typography variant="h6" color="#fff.secondary">
             Gestiona el perfil de tus compañeros peludos
           </Typography>
         </Box>

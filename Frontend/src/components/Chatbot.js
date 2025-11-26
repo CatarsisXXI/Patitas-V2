@@ -60,64 +60,201 @@ const ChatbotComponent = () => {
     }
   };
 
-  // Product recommendation logic
+  // Comprehensive allergy and synonym mapping
+  const getAllergySynonyms = () => ({
+    'pollo': ['pollo', 'ave', 'gallina', 'pava', 'carne de ave', 'carne ave', 'pollito'],
+    'cereales': ['cereales', 'trigo', 'avena', 'cebada', 'centeno', 'maíz', 'arroz', 'gluten', 'harina', 'grano', 'granos', 'cereal'],
+    'soya': ['soya', 'soja', 'soja', 'glycine max', 'leguminosa', 'soja texturizada'],
+    'papa': ['papa', 'patata', 'solánum tuberósum', 'tubérculo', 'papa blanca'],
+    'camote': ['camote', 'batata', 'boniato', 'ipomoea batatas', 'dulce', 'camote dulce'],
+    'legumbres': ['legumbres', 'leguminosas', 'frijol', 'habas', 'lentejas', 'garbanzos', 'judías', 'poroto', 'alubia', 'legumbre'],
+    'aceites vegetales': ['aceite vegetal', 'aceite de oliva', 'aceite oliva', 'oliva', 'aceite de girasol', 'aceite girasol', 'aceite de linaza', 'aceite linaza', 'aceite de maíz', 'aceite maíz', 'aceite vegetal refinado']
+  });
+
+  // Nutritional objectives mapping with synonyms and expected products
+  const getNutritionalObjectivesMapping = () => ({
+    'control de peso': {
+      keywords: ['control peso', 'peso', 'light', 'bajo calorías', 'bajo en calorías', 'adelgazar', 'dieta', 'reducir peso', 'mantenimiento peso', 'fibra', 'saciedad'],
+      expectedProducts: ['Dermosalud', 'Yacon Light', 'Yacón Light']
+    },
+    'aumento de energía o masa muscular': {
+      keywords: ['energía', 'masa muscular', 'muscular', 'proteína', 'fuerza', 'rendimiento', 'actividad', 'ejercicio', 'desarrollo muscular'],
+      expectedProducts: ['Yacon Light', 'Yacón Light', 'CarobFibra', 'Carob Fibra']
+    },
+    'apoyo digestivo (digestión sensible)': {
+      keywords: ['digestivo', 'digestión', 'sensible', 'estómago', 'intestinal', 'fibra', 'probiotico', 'prebiótico', 'digestivo', 'sensibilidad'],
+      expectedProducts: ['Digest Fit', 'CarobFibra', 'Carob Fibra', 'Yacon Light', 'Yacón Light']
+    },
+    'piel y pelaje saludables': {
+      keywords: ['piel', 'pelaje', 'dermosalud', 'dermatológico', 'brillo', 'caída pelo', 'omega', 'grasa saludable', 'derma', 'cutáneo'],
+      expectedProducts: ['Dermosalud', 'Digest Fit', 'Vital Omega Crunch', 'Omega Crunch']
+    },
+    'soporte articular o movilidad': {
+      keywords: ['articular', 'articulaciones', 'movilidad', 'huesos', 'cartílago', 'flexibilidad', 'artritis', 'articulación', 'movimiento'],
+      expectedProducts: ['Yacon Light', 'Yacón Light', 'CarobFibra', 'Carob Fibra', 'Vital Omega Crunch', 'Omega Crunch']
+    },
+    'soporte inmunológico': {
+      keywords: ['inmunológico', 'inmunidad', 'defensas', 'sistema inmune', 'protección', 'anticuerpos', 'inmune', 'defensa'],
+      expectedProducts: ['CarobFibra', 'Carob Fibra', 'Digest Fit', 'Yacon Light', 'Yacón Light']
+    },
+    'vitalidad y longevidad': {
+      keywords: ['vitalidad', 'longevidad', 'vejez', 'senior', 'adulto mayor', 'energía vital', 'calidad vida', 'envejecimiento', 'vital'],
+      expectedProducts: ['Digest Fit', 'Vital Omega Crunch', 'Omega Crunch']
+    },
+    'control del nivel de azúcar': {
+      keywords: ['azúcar', 'glucosa', 'diabetes', 'insulina', 'nivel azúcar', 'control glucémico', 'glicemia', 'azúcar en sangre'],
+      expectedProducts: ['Yacon Light', 'Yacón Light']
+    }
+  });
+
+  // Activity level mapping
+  const getActivityLevelMapping = () => ({
+    'sedentario': ['Digest Fit', 'Yacon Light', 'Yacón Light', 'Vital Omega Crunch', 'Omega Crunch'],
+    'moderadamente activo': [], // No specific restrictions
+    'muy activo': ['Yacon Light', 'Yacón Light', 'CarobFibra', 'Carob Fibra']
+  });
+
+  // Age mapping - ONLY FOR SENIOR
+  const getSeniorProducts = () => [
+    'Digest Fit', 
+    'Yacon Light', 
+    'Yacón Light', 
+    'Vital Omega Crunch', 
+    'Omega Crunch'
+  ];
+
+  // Improved product recommendation logic with hierarchical priority
   const getProductRecommendations = useCallback((mascota, allProducts) => {
     if (!allProducts || allProducts.length === 0) return [];
     
     const notas = mascota.notasAdicionales?.toLowerCase() || '';
+    
+    // Extract information from notes
     const alergias = extractSection(notas, 'Alergias');
     const objetivos = extractSection(notas, 'Objetivo nutricional');
+    const nivelActividad = extractSection(notas, 'Nivel de actividad')[0] || 'moderadamente activo';
+    const edad = extractSection(notas, 'Edad')[0] || '';
+    
     const objetivoPrincipal = (objetivos[0] || 'mantenimiento general').trim().toLowerCase();
 
-    // Allergy mapping
-    const alergiasMap = {
-      insectos: ['grillo', 'insecto'],
-      avena: ['avena', 'cereal', 'gluten'],
-      coco: ['coco'],
-      plátano: ['plátano', 'banana'],
-      aceite: ['aceite de oliva', 'oliva'],
-      tubérculo: ['camote', 'papa', 'yacón'],
-      linaza: ['linaza'],
-      calabaza: ['calabaza']
-    };
+    // Determine if senior (age > 7 years)
+    const esSenior = isMascotaSenior(edad, mascota);
 
-    // Filter safe products
+    // Get mappings
+    const allergySynonyms = getAllergySynonyms();
+    const nutritionalMapping = getNutritionalObjectivesMapping();
+    const activityMapping = getActivityLevelMapping();
+    const seniorProducts = getSeniorProducts();
+
+    // STEP 1: FILTER BY ALLERGIES (HIGHEST PRIORITY)
     const safeProducts = allProducts.filter(product => {
-      const productText = `${product.descripcion || ''} ${product.nombre || ''}`.toLowerCase();
-      return !alergias.some(alergia => 
-        alergiasMap[alergia]?.some(term => productText.includes(term))
-      );
+      const productText = `${product.descripcion || ''} ${product.nombre || ''} ${product.ingredientes || ''}`.toLowerCase();
+      
+      // Check if product contains any allergen
+      const hasAllergen = alergias.some(alergia => {
+        const synonyms = allergySynonyms[alergia] || [alergia];
+        return synonyms.some(synonym => 
+          productText.includes(synonym.toLowerCase())
+        );
+      });
+
+      return !hasAllergen;
     });
 
-    // Recommendation logic based on nutritional goals
-    const recommendationRules = {
-      'control de peso': ['Fibra Vital', 'fibra'],
-      'aumento de energía o masa muscular': ['NutriCamote', 'Grillo', 'Energía'],
-      'digestión sensible': ['Digest', 'digestión'],
-      'piel y pelaje saludables': ['Piel', 'Pelaje', 'Dermosalud'],
-      'soporte articular o movilidad': ['Digest', 'Fibra Vital', 'articular'],
-      'reducción de alergias o intolerancias': ['Piel', 'Pelaje', 'Dermosalud'],
-      'soporte inmunológico': ['Digest', 'Fibra Vital'],
-      'vitalidad y longevidad': ['NutriCamote', 'Grillo'],
-      'mantenimiento general': ['Fibra Vital']
-    };
+    if (safeProducts.length === 0) {
+      console.warn('No safe products found after allergy filtering');
+      return [];
+    }
 
-    // Find matching products
-    const objetivoKey = Object.keys(recommendationRules).find(key => 
-      objetivoPrincipal.includes(key)
-    ) || 'mantenimiento general';
-
-    const targetKeywords = recommendationRules[objetivoKey];
-    
-    const recommendedProducts = safeProducts.filter(product => {
+    // STEP 2: SCORE BY NUTRITIONAL OBJECTIVES (SECOND PRIORITY)
+    const nutritionScoredProducts = safeProducts.map(product => {
+      let score = 0;
       const productText = `${product.nombre || ''} ${product.descripcion || ''}`.toLowerCase();
-      return targetKeywords.some(keyword => 
-        productText.includes(keyword.toLowerCase())
+      const productName = product.nombre || '';
+      
+      // Nutritional objective scoring
+      const objectiveConfig = nutritionalMapping[objetivoPrincipal];
+      if (objectiveConfig) {
+        // Score for keywords in product text
+        objectiveConfig.keywords.forEach(keyword => {
+          if (productText.includes(keyword.toLowerCase())) {
+            score += 2;
+          }
+        });
+        
+        // Bonus for expected products by name
+        if (objectiveConfig.expectedProducts.some(expected => 
+          productName.toLowerCase().includes(expected.toLowerCase())
+        )) {
+          score += 3;
+        }
+      }
+
+      return { product, score, productName, productText };
+    });
+
+    // STEP 3: FILTER BY ACTIVITY LEVEL (THIRD PRIORITY)
+    const activityFilteredProducts = nutritionScoredProducts.filter(item => {
+      const activityProducts = activityMapping[nivelActividad] || [];
+      
+      // If no specific activity products, include all
+      if (activityProducts.length === 0) return true;
+      
+      // Check if product matches activity level
+      return activityProducts.some(activityProd => 
+        item.productName.toLowerCase().includes(activityProd.toLowerCase())
       );
     });
 
-    return recommendedProducts.length > 0 ? recommendedProducts : safeProducts.slice(0, 3);
+    // STEP 4: APPLY SENIOR PREFERENCE (ONLY IF SENIOR)
+    let finalScoredProducts = activityFilteredProducts.map(item => {
+      let finalScore = item.score;
+      
+      // Add senior bonus if applicable
+      if (esSenior) {
+        const isSeniorProduct = seniorProducts.some(seniorProd => 
+          item.productName.toLowerCase().includes(seniorProd.toLowerCase())
+        );
+        if (isSeniorProduct) {
+          finalScore += 2; // Bonus for senior-appropriate products
+        }
+      }
+
+      return { ...item, finalScore };
+    });
+
+    // Sort by final score and return top recommendations
+    const sortedProducts = finalScoredProducts
+      .sort((a, b) => b.finalScore - a.finalScore)
+      .map(item => item.product);
+
+    // Return results - if no high-scoring products, return safe products
+    return sortedProducts.length > 0 ? sortedProducts.slice(0, 5) : safeProducts.slice(0, 3);
   }, []);
+
+  // Helper function to determine if mascota is senior
+  const isMascotaSenior = (edadText, mascota) => {
+    // Try to extract numeric age from text
+    const edadMatch = edadText.match(/(\d+)/);
+    if (edadMatch) {
+      const edadNum = parseInt(edadMatch[0]);
+      return edadNum > 7;
+    }
+    
+    // Check for senior keywords
+    const seniorKeywords = ['senior', 'viejo', 'anciano', 'mayor', 'adulto mayor'];
+    if (seniorKeywords.some(keyword => edadText.includes(keyword))) {
+      return true;
+    }
+    
+    // Check mascota object directly for age
+    const mascotaEdad = mascota.edad || mascota.Edad;
+    if (mascotaEdad && typeof mascotaEdad === 'number') {
+      return mascotaEdad > 7;
+    }
+    
+    return false;
+  };
 
   const extractSection = (text, label) => {
     const regex = new RegExp(`${label}:([^|]+)`, 'i');
@@ -125,7 +262,7 @@ const ChatbotComponent = () => {
     return match ? match[1].split(',').map(s => s.trim().toLowerCase()) : [];
   };
 
-  // Chatbot configuration
+  // Rest of the component remains the same...
   const config = useMemo(() => ({
     initialMessages: [
       createChatBotMessage('¡Hola! Soy Coco, tu asistente de Patitas y Sabores. ¿En qué puedo ayudarte hoy?', {
@@ -143,13 +280,13 @@ const ChatbotComponent = () => {
               onClick={() => handleWidgetAction(props, 'recomendaciones')}
               style={buttonStyle}
             >
-              Recomendaciones
+              Recomendaciones Personalizadas
             </button>
             <button
               onClick={() => handleWidgetAction(props, 'productos')}
               style={buttonStyle}
             >
-              Productos
+              Ver Todos los Productos
             </button>
           </div>
         ),
@@ -173,6 +310,7 @@ const ChatbotComponent = () => {
                 const id = getMascotaId(mascota);
                 const nombre = getMascotaNombre(mascota);
                 const especie = mascota.especie || mascota.Especie || 'sin especie';
+                const edad = mascota.edad || extractSection(mascota.notasAdicionales?.toLowerCase() || '', 'Edad')[0] || '';
 
                 return (
                   <button
@@ -180,7 +318,7 @@ const ChatbotComponent = () => {
                     onClick={() => handleWidgetAction(props, `seleccionar_mascota_${id}`)}
                     style={buttonStyle}
                   >
-                    {`${nombre} (${especie})`}
+                    {`${nombre} (${especie})${edad ? ` - ${edad}` : ''}`}
                   </button>
                 );
               })}
@@ -196,7 +334,7 @@ const ChatbotComponent = () => {
           if (productList.length === 0) {
             return (
               <div style={{ padding: '8px', color: '#666' }}>
-                No hay productos disponibles en este momento.
+                No se encontraron productos que cumplan con los requisitos de alergias y objetivos nutricionales.
               </div>
             );
           }
@@ -298,20 +436,41 @@ const ChatbotComponent = () => {
         const recommendedProducts = getProductRecommendations(mascota, allProducts);
         const mascotaNombre = getMascotaNombre(mascota);
 
+        // Extract info for personalized message
+        const notas = mascota.notasAdicionales?.toLowerCase() || '';
+        const alergias = extractSection(notas, 'Alergias');
+        const objetivos = extractSection(notas, 'Objetivo nutricional');
+        const objetivoPrincipal = (objetivos[0] || 'mantenimiento general').trim();
+        const esSenior = isMascotaSenior(extractSection(notas, 'Edad')[0] || '', mascota);
+
         if (recommendedProducts.length === 0) {
-          const message = createChatBotMessage(`No encontré productos adecuados para ${mascotaNombre} basándome en sus necesidades específicas.`);
+          const message = createChatBotMessage(
+            `No encontré productos adecuados para ${mascotaNombre} que cumplan con sus alergias (${alergias.join(', ')}) y objetivo de ${objetivoPrincipal}. Te recomiendo consultar con nuestro equipo para opciones especiales.`
+          );
           updateChatState(message);
           sendOptions();
           return;
         }
 
-        // Create recommendation message flow
-        const introMessage = createChatBotMessage(
-          `¡Perfecto! Basándome en el perfil de ${mascotaNombre}, tengo algunas recomendaciones especiales:`
-        );
+        // Create personalized recommendation message
+        let personalizedMessage = `¡Perfecto! Para ${mascotaNombre} `;
+        
+        if (alergias.length > 0) {
+          personalizedMessage += `(evitando: ${alergias.join(', ')}) `;
+        }
+        
+        personalizedMessage += `con objetivo de ${objetivoPrincipal} `;
+        
+        if (esSenior) {
+          personalizedMessage += `y considerando su edad senior, `;
+        }
+        
+        personalizedMessage += `he seleccionado estos productos:`;
+
+        const introMessage = createChatBotMessage(personalizedMessage);
 
         const productMessage = createChatBotMessage(
-          `He seleccionado ${recommendedProducts.length} producto(s) que se adaptan a las necesidades de ${mascotaNombre}:`,
+          `Encontré ${recommendedProducts.length} producto(s) ideales para ${mascotaNombre}:`,
           {
             widget: 'productCards',
             payload: recommendedProducts,
@@ -329,6 +488,7 @@ const ChatbotComponent = () => {
       }
     }, [mascotas, getProductRecommendations, getMascotaNombre, getMascotaId, createChatBotMessage, updateChatState, sendOptions]);
 
+    // Rest of ActionProvider remains the same...
     const handleRecommendations = useCallback(() => {
       if (!mascotas || mascotas.length === 0) {
         const message = createChatBotMessage(
@@ -367,10 +527,10 @@ const ChatbotComponent = () => {
         }
 
         const productMessage = createChatBotMessage(
-          `¡Aquí tienes nuestros productos disponibles! Tenemos ${allProducts.length} producto(s) para ti:`,
+          `¡Aquí tienes todos nuestros productos disponibles! Tenemos ${allProducts.length} producto(s) para ti:`,
           {
             widget: 'productCards',
-            payload: allProducts.slice(0, 15), // Limit to 15 products
+            payload: allProducts.slice(0, 15),
           }
         );
 
@@ -385,7 +545,6 @@ const ChatbotComponent = () => {
       }
     }, [createChatBotMessage, updateChatState, sendOptions]);
 
-    // Event listeners and initial setup
     useEffect(() => {
       const greetingText = user
         ? `¡Hola ${user.name}! Soy Coco, tu asistente de Patitas y Sabores. ¿En qué puedo ayudarte hoy?`
@@ -446,6 +605,7 @@ const ChatbotComponent = () => {
     );
   };
 
+  // Rest of the component (MessageParser, styles, etc.) remains the same...
   const MessageParser = ({ children, actions }) => {
     const parse = (message) => {
       if (!message) return;
@@ -531,7 +691,7 @@ const ChatbotComponent = () => {
   );
 };
 
-// Helper components and styles
+// Helper components and styles (remain the same)...
 const ProductCard = ({ product, whatsappNumber }) => {
   const id = product.productoID || product.ProductoID || product.id || product.productId;
   const nombre = product.nombre || product.Nombre || product.NombreProducto || 'Sin nombre';
@@ -568,7 +728,7 @@ const ProductCard = ({ product, whatsappNumber }) => {
   );
 };
 
-// Styles
+// Styles (remain the same)...
 const buttonStyle = {
   backgroundColor: '#A8B5A0',
   color: '#000',
@@ -670,7 +830,6 @@ const closeButtonStyle = {
   '&:hover': { backgroundColor: '#C49A6A' },
 };
 
-// Widget action handler
 const handleWidgetAction = (props, action) => {
   if (props.onQuickReply) return props.onQuickReply(action);
   if (props.widgetProps && props.widgetProps.handleSelectMascota && action.startsWith('seleccionar_mascota_')) {

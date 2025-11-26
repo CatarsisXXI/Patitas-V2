@@ -32,18 +32,22 @@ import WelcomeModal from '../components/WelcomeModal';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 
+
 const values = [
   {
+    image: '/assets/valor3.png',
     icon: <EmojiEventsIcon />,
     title: "Calidad y Transparencia",
     description: "Elaboramos cada snack con ingredientes naturales y procesos caseros de alta calidad, siempre con información clara y honesta para generar confianza en cada familia."
   },
   {
+    image: '/assets/valor2.png',
     icon: <FavoriteIcon />,
     title: "Bienestar Integral",
     description: "Trabajamos por la salud y felicidad de las mascotas, entendiendo su cuidado como parte esencial del bienestar familiar."
   },
   {
+    image: '/assets/valor1.png',
     icon: <PsychologyIcon />,
     title: "Cuidado Personalizado",
     description: "Gracias a la IA, ofrecemos recomendaciones adaptadas a las necesidades únicas de cada peludito, creando vínculos cercanos y experiencias realmente pensadas para ellos."
@@ -393,7 +397,7 @@ const HomePage = () => {
       <Box 
         sx={{ 
           py: 6, 
-          backgroundColor: '#FAF9F6',
+          backgroundColor: '#fffaf0',
           borderRadius: '20px',
           mx: { xs: 2, md: 3 },
           mb: 4
@@ -481,245 +485,271 @@ const HomePage = () => {
       </Box>
 
       {/* VALORES SECTION */}
-      <Container sx={{ py: 6 }}>
-        <Typography
-          variant="h4"
-          textAlign="center"
+<Container sx={{ py: 6 }}>
+  <Typography
+    variant="h4"
+    textAlign="center"
+    sx={{
+      mb: 4,
+      fontWeight: 700,
+      color: '#5D4E37',
+      position: 'relative',
+      '&::after': {
+        content: '""',
+        position: 'absolute',
+        bottom: -8,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: 60,
+        height: 3,
+        background: 'linear-gradient(90deg, #D4A574, #A8B5A0)',
+        borderRadius: '2px'
+      }
+    }}
+  >
+    Nuestros Valores
+  </Typography>
+
+  <Box 
+    sx={{ 
+      display: 'flex',
+      flexDirection: { xs: 'column', md: 'row' },
+      gap: 3,
+      alignItems: 'stretch',
+      justifyContent: 'center'
+    }}
+  >
+    {values.map((value, index) => (
+      <Fade in={showContent} timeout={600 + index * 200} key={index}>
+        <Card
           sx={{
-            mb: 4,
-            fontWeight: 700,
-            color: '#5D4E37',
-            position: 'relative',
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              bottom: -8,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: 60,
-              height: 3,
-              background: 'linear-gradient(90deg, #D4A574, #A8B5A0)',
-              borderRadius: '2px'
+            flex: 1,
+            minWidth: { xs: '100%', md: '300px' },
+            maxWidth: { xs: '100%', md: '400px' },
+            textAlign: 'center',
+            borderRadius: '20px',
+            background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F6F0 100%)',
+            boxShadow: '0 8px 25px rgba(93, 78, 55, 0.08)',
+            border: '1px solid rgba(212, 165, 116, 0.15)',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              boxShadow: '0 15px 35px rgba(93, 78, 55, 0.12)',
             }
           }}
         >
-          Nuestros Valores
-        </Typography>
-
-        <Box 
-          sx={{ 
-            display: 'flex',
-            flexDirection: { xs: 'column', md: 'row' },
-            gap: 3,
-            alignItems: 'stretch',
-            justifyContent: 'center'
-          }}
-        >
-          {values.map((value, index) => (
-            <Fade in={showContent} timeout={600 + index * 200} key={index}>
-              <Card
-                sx={{
-                  flex: 1,
-                  minWidth: { xs: '100%', md: '300px' },
-                  maxWidth: { xs: '100%', md: '400px' },
-                  textAlign: 'center',
-                  borderRadius: '20px',
-                  background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F6F0 100%)',
-                  boxShadow: '0 8px 25px rgba(93, 78, 55, 0.08)',
-                  border: '1px solid rgba(212, 165, 116, 0.15)',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-5px)',
-                    boxShadow: '0 15px 35px rgba(93, 78, 55, 0.12)',
-                  }
-                }}
-              >
-                <CardContent sx={{ p: 4, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <Box
-                    sx={{
-                      mb: 3,
-                      p: 2,
-                      borderRadius: '50%',
-                      background: 'linear-gradient(135deg, rgba(212, 165, 116, 0.1), rgba(168, 181, 160, 0.1))',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      alignSelf: 'center'
-                    }}
-                  >
-                    {React.cloneElement(value.icon, {
-                      sx: {
-                        fontSize: 40,
-                        color: '#D4A574'
-                      }
-                    })}
-                  </Box>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      mb: 2,
-                      fontWeight: 600,
-                      color: '#5D4E37',
-                    }}
-                  >
-                    {value.title}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: '#7D6B5D',
-                      lineHeight: 1.5,
-                      flexGrow: 1
-                    }}
-                  >
-                    {value.description}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Fade>
-          ))}
-        </Box>
-      </Container>
-
-      {/* ABOUT SECTION - Modificada para disposición horizontal */}
-      <Box 
-        sx={{ 
-          py: 6, 
-          backgroundColor: '#FFFFFF',
-          borderRadius: '20px',
-          mx: { xs: 2, md: 3 },
-          mb: 4
-        }}
-      >
-        <Container maxWidth="lg">
-          <Typography
-            variant="h4"
-            textAlign="center"
+          {/* Imagen del valor */}
+          <CardMedia
+            component="img"
+            height="160"
+            image={value.image}
+            alt={value.title}
             sx={{
-              mb: 6,
-              fontWeight: 700,
-              color: '#5D4E37',
+              objectFit: 'cover',
+              width: '100%',
+              borderTopLeftRadius: '20px',
+              borderTopRightRadius: '20px'
+            }}
+          />
+          
+          <CardContent sx={{ p: 4, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box
+              sx={{
+                mb: 3,
+                p: 2,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, rgba(212, 165, 116, 0.1), rgba(168, 181, 160, 0.1))',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                alignSelf: 'center',
+                marginTop: '-60px', // Para superponer el ícono sobre la imagen
+                position: 'relative',
+                zIndex: 1,
+                backgroundColor: '#FFFFFF', // Fondo blanco para el círculo del ícono
+                boxShadow: '0 4px 15px rgba(93, 78, 55, 0.1)'
+              }}
+            >
+              {React.cloneElement(value.icon, {
+                sx: {
+                  fontSize: 40,
+                  color: '#D4A574'
+                }
+              })}
+            </Box>
+            <Typography
+              variant="h6"
+              sx={{
+                mb: 2,
+                fontWeight: 600,
+                color: '#5D4E37',
+              }}
+            >
+              {value.title}
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                color: '#7D6B5D',
+                lineHeight: 1.5,
+                flexGrow: 1
+              }}
+            >
+              {value.description}
+            </Typography>
+          </CardContent>
+        </Card>
+      </Fade>
+    ))}
+  </Box>
+</Container>
+
+{/* ABOUT SECTION - Modificada para disposición horizontal */}
+<Box 
+  sx={{ 
+    py: 6, 
+    backgroundColor: '#fffaf0',
+    borderRadius: '20px',
+    mx: { xs: 2, md: 3 },
+    mb: 4
+  }}
+>
+  <Container maxWidth="lg">
+    <Typography
+      variant="h4"
+      textAlign="center"
+      sx={{
+        mb: 6,
+        fontWeight: 700,
+        color: '#5D4E37',
+        position: 'relative',
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          bottom: -8,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 60,
+          height: 3,
+          background: 'linear-gradient(90deg, #D4A574, #A8B5A0)',
+          borderRadius: '2px'
+        }
+      }}
+    >
+      Sobre Nosotros
+    </Typography>
+
+    <Box 
+      sx={{ 
+        display: 'flex',
+        flexDirection: { xs: 'column', md: 'row' },
+        gap: 4,
+        alignItems: 'stretch',
+        justifyContent: 'center'
+      }}
+    >
+      {aboutSections.map((section, index) => (
+        <Fade in={showContent} timeout={600 + index * 200} key={index}>
+          <Card
+            sx={{
+              flex: 1,
+              minWidth: { xs: '100%', md: '300px' },
+              maxWidth: { xs: '100%', md: '400px' },
+              textAlign: 'center',
+              borderRadius: '16px',
+              background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F6F0 100%)',
+              boxShadow: '0 8px 25px rgba(93, 78, 55, 0.08)',
+              border: '1px solid rgba(212, 165, 116, 0.15)',
+              transition: 'all 0.3s ease',
               position: 'relative',
-              '&::after': {
+              overflow: 'hidden',
+              '&::before': {
                 content: '""',
                 position: 'absolute',
-                bottom: -8,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: 60,
-                height: 3,
-                background: 'linear-gradient(90deg, #D4A574, #A8B5A0)',
-                borderRadius: '2px'
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '4px',
+                background: `linear-gradient(90deg, ${section.color}, ${section.color}99)`,
+                borderRadius: '16px 16px 0 0'
+              },
+              '&:hover': {
+                transform: 'translateY(-5px)',
+                boxShadow: '0 15px 35px rgba(93, 78, 55, 0.12)',
               }
             }}
           >
-            Sobre Nosotros
-          </Typography>
-
-          <Box 
-            sx={{ 
-              display: 'flex',
-              flexDirection: { xs: 'column', md: 'row' },
-              gap: 4,
-              alignItems: 'stretch',
-              justifyContent: 'center'
-            }}
-          >
-            {aboutSections.map((section, index) => (
-              <Fade in={showContent} timeout={600 + index * 200} key={index}>
-                <Card
-                  sx={{
-                    flex: 1,
-                    minWidth: { xs: '100%', md: '300px' },
-                    maxWidth: { xs: '100%', md: '400px' },
-                    textAlign: 'center',
-                    borderRadius: '16px',
-                    background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F6F0 100%)',
-                    boxShadow: '0 8px 25px rgba(93, 78, 55, 0.08)',
-                    border: '1px solid rgba(212, 165, 116, 0.15)',
-                    transition: 'all 0.3s ease',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '4px',
-                      background: `linear-gradient(90deg, ${section.color}, ${section.color}99)`,
-                      borderRadius: '16px 16px 0 0'
-                    },
-                    '&:hover': {
-                      transform: 'translateY(-5px)',
-                      boxShadow: '0 15px 35px rgba(93, 78, 55, 0.12)',
-                    }
-                  }}
-                >
-                  <CardContent sx={{ p: 4, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <Box
-                      sx={{
-                        mb: 3,
-                        p: 2,
-                        borderRadius: '50%',
-                        background: `linear-gradient(135deg, ${section.color}20, ${section.color}10)`,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        alignSelf: 'center'
-                      }}
-                    >
-                      {React.cloneElement(section.icon, {
-                        sx: {
-                          fontSize: 40,
-                          color: section.color
-                        }
-                      })}
-                    </Box>
-                    <Typography
-                      variant="h5"
-                      sx={{
-                        mb: 3,
-                        fontWeight: 700,
-                        color: '#5D4E37',
-                      }}
-                    >
-                      {section.title}
-                    </Typography>
-                    <Typography
-                      variant="body1"
-                      sx={{
-                        color: '#7D6B5D',
-                        lineHeight: 1.6,
-                        textAlign: 'left',
-                        flexGrow: 1
-                      }}
-                    >
-                      {section.content}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Fade>
-            ))}
-          </Box>
-
-          {/* Imagen adicional */}
-          <Box sx={{ mt: 6, textAlign: 'center' }}>
-            <Box
-              sx={{
-                height: 300,
-                backgroundImage: 'url(https://images.unsplash.com/photo-1551717743-49959800b1f6?w=800&q=80)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                borderRadius: '16px',
-                boxShadow: '0 8px 25px rgba(0,0,0,0.1)',
-                mx: 'auto',
-                maxWidth: '800px'
-              }}
-            />
-          </Box>
-        </Container>
-      </Box>
+            <CardContent sx={{ 
+              p: 4, 
+              height: '100%', 
+              display: 'flex', 
+              flexDirection: 'column',
+              textAlign: 'center' // Añadir esta línea para centrar todo el contenido
+            }}>
+              <Box
+                sx={{
+                  mb: 3,
+                  p: 2,
+                  borderRadius: '50%',
+                  background: `linear-gradient(135deg, ${section.color}20, ${section.color}10)`,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  alignSelf: 'center'
+                }}
+              >
+                {React.cloneElement(section.icon, {
+                  sx: {
+                    fontSize: 40,
+                    color: section.color
+                  }
+                })}
+              </Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  mb: 3,
+                  fontWeight: 700,
+                  color: '#5D4E37',
+                  textAlign: 'center' // Asegurar que el título esté centrado
+                }}
+              >
+                {section.title}
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  color: '#7D6B5D',
+                  lineHeight: 1.6,
+                  textAlign: 'center', // Cambiar de 'left' a 'center'
+                  flexGrow: 1
+                }}
+              >
+                {section.content}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Fade>
+      ))}
+    </Box>
+    
+   {/* Imagen adicional */}
+    <Box sx={{ mt: 6, textAlign: 'center' }}>
+      <Box
+        sx={{
+          height: 300,
+          backgroundImage: 'url(https://images.unsplash.com/photo-1551717743-49959800b1f6?w=800&q=80)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          borderRadius: '16px',
+          boxShadow: '0 8px 25px rgba(0,0,0,0.1)',
+          mx: 'auto',
+          maxWidth: '800px'
+        }}
+      />
+    </Box>
+  </Container>
+</Box>
 
       {/* SOCIAL MEDIA SECTION */}
       <Container sx={{ py: 6 }}>
