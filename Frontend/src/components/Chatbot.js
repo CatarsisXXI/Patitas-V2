@@ -60,27 +60,27 @@ const ChatbotComponent = () => {
     warning: '#FFECB3'
   };
 
-  // Mapeo de alergias y sus sinónimos
+  // Mapeo de alergias y sus sinónimos - MÁS COMPLETO
   const alergiasMap = {
-    'Pollo': ['pollo', 'gallina', 'ave', 'carne de ave', 'poultry', 'chicken', 'aves', 'pollos'],
-    'Cereales': ['cereales', 'trigo', 'maíz', 'maiz', 'arroz', 'avena', 'cebada', 'grain', 'cereal', 'wheat', 'corn', 'rice', 'granos', 'granos enteros'],
-    'Soya': ['soya', 'soja', 'soja', 'glycine max', 'soy', 'soja', 'soya texturizada', 'proteína de soya'],
-    'Papa': ['papa', 'patata', 'solanum tuberosum', 'potato', 'papas', 'patatas'],
-    'Camote': ['camote', 'batata', 'papa dulce', 'ipomoea batatas', 'sweet potato', 'boniatos'],
-    'Legumbres': ['legumbres', 'lentejas', 'garbanzos', 'frijoles', 'judías', 'alubias', 'legumes', 'beans', 'lentils', 'leguminosas'],
-    'Aceites vegetales': ['aceite vegetal', 'aceite de soja', 'aceite de maíz', 'aceite de girasol', 'aceite de canola', 'vegetable oil', 'aceites refinados']
+    'Pollo': ['pollo', 'gallina', 'ave', 'carne de ave', 'poultry', 'chicken', 'aves', 'pollos', 'gallinas', 'carne de pollo'],
+    'Cereales': ['cereales', 'trigo', 'maíz', 'maiz', 'arroz', 'avena', 'cebada', 'grain', 'cereal', 'wheat', 'corn', 'rice', 'granos', 'granos enteros', 'harina', 'gluten'],
+    'Soya': ['soya', 'soja', 'soja', 'glycine max', 'soy', 'soja', 'soya texturizada', 'proteína de soya', 'lecitina de soya'],
+    'Papa': ['papa', 'patata', 'solanum tuberosum', 'potato', 'papas', 'patatas', 'papa natural'],
+    'Camote': ['camote', 'batata', 'papa dulce', 'ipomoea batatas', 'sweet potato', 'boniatos', 'camotes'],
+    'Legumbres': ['legumbres', 'lentejas', 'garbanzos', 'frijoles', 'judías', 'alubias', 'legumes', 'beans', 'lentils', 'leguminosas', 'guisantes', 'habas'],
+    'Aceites vegetales': ['aceite vegetal', 'aceite de soja', 'aceite de maíz', 'aceite de girasol', 'aceite de canola', 'vegetable oil', 'aceites refinados', 'aceite vegetal refinado']
   };
 
   // Mapeo de objetivos nutricionales y sus sinónimos
   const objetivosMap = {
-    'Control de peso': ['control de peso', 'peso', 'adelgazar', 'obesidad', 'sobrepeso', 'weight control', 'weight management', 'bajo en calorías', 'mantenimiento de peso', 'dieta', 'reducir peso'],
-    'Aumento de energía o masa muscular': ['energía', 'masa muscular', 'proteína', 'musculo', 'energetico', 'energy', 'muscle', 'protein', 'fortalecimiento', 'desarrollo muscular', 'ganancia muscular', 'alto en proteína'],
-    'Apoyo Digestivo': ['digestión', 'digestivo', 'sensible', 'prebiótico', 'probiótico', 'fibra', 'digest', 'sensitive stomach', 'digestive health', 'salud intestinal', 'flora intestinal', 'probióticos'],
-    'Piel y pelaje saludables': ['piel', 'pelaje', 'brillante', 'saludable', 'dermatológico', 'caspa', 'picor', 'skin', 'coat', 'fur', 'pelage', 'pelo brillante', 'dermatitis', 'omega', 'ácidos grasos'],
-    'Soporte articular o movilidad': ['articular', 'movilidad', 'articulaciones', 'cartílago', 'artritis', 'huesos', 'joint', 'mobility', 'arthritis', 'condroitín', 'glucosamina', 'flexibilidad'],
-    'Soporte inmunológico': ['inmunológico', 'defensas', 'inmunidad', 'resistencia a enfermedades', 'immune', 'defense', 'immunity', 'sistema inmunitario', 'anticuerpos', 'defensas naturales'],
-    'Vitalidad y longevidad': ['vitalidad', 'longevidad', 'vejez', 'anciano', 'senior', 'vital', 'longevity', 'vitality', 'adulto mayor', 'tercera edad', 'envejecimiento saludable'],
-    'Control del nivel de azúcar': ['azúcar', 'glucosa', 'diabetes', 'insulina', 'control de azúcar', 'sugar', 'glucose', 'diabetic', 'nivel glucémico', 'glicemia', 'bajo en azúcar']
+    'Control de peso': ['control de peso', 'peso', 'adelgazar', 'obesidad', 'sobrepeso', 'weight control', 'weight management', 'bajo en calorías', 'mantenimiento de peso', 'dieta', 'reducir peso', 'light', 'bajo en grasa'],
+    'Aumento de energía o masa muscular': ['energía', 'masa muscular', 'proteína', 'musculo', 'energetico', 'energy', 'muscle', 'protein', 'fortalecimiento', 'desarrollo muscular', 'ganancia muscular', 'alto en proteína', 'proteico', 'energético'],
+    'Apoyo Digestivo': ['digestión', 'digestivo', 'sensible', 'prebiótico', 'probiótico', 'fibra', 'digest', 'sensitive stomach', 'digestive health', 'salud intestinal', 'flora intestinal', 'probióticos', 'digestivo sensible'],
+    'Piel y pelaje saludables': ['piel', 'pelaje', 'brillante', 'saludable', 'dermatológico', 'caspa', 'picor', 'skin', 'coat', 'fur', 'pelage', 'pelo brillante', 'dermatitis', 'omega', 'ácidos grasos', 'brillo', 'hidratación'],
+    'Soporte articular o movilidad': ['articular', 'movilidad', 'articulaciones', 'cartílago', 'artritis', 'huesos', 'joint', 'mobility', 'arthritis', 'condroitín', 'glucosamina', 'flexibilidad', 'articulaciones saludables'],
+    'Soporte inmunológico': ['inmunológico', 'defensas', 'inmunidad', 'resistencia a enfermedades', 'immune', 'defense', 'immunity', 'sistema inmunitario', 'anticuerpos', 'defensas naturales', 'inmunidad fuerte'],
+    'Vitalidad y longevidad': ['vitalidad', 'longevidad', 'vejez', 'anciano', 'senior', 'vital', 'longevity', 'vitality', 'adulto mayor', 'tercera edad', 'envejecimiento saludable', 'vida larga'],
+    'Control del nivel de azúcar': ['azúcar', 'glucosa', 'diabetes', 'insulina', 'control de azúcar', 'sugar', 'glucose', 'diabetic', 'nivel glucémico', 'glicemia', 'bajo en azúcar', 'diabético']
   };
 
   useEffect(() => {
@@ -119,7 +119,7 @@ const ChatbotComponent = () => {
       .trim() || '';
   };
 
-  // Función mejorada para verificar alergias
+  // Función MEJORADA para verificar alergias - MÁS ESTRICTA
   const contieneAlergenos = (producto, alergias) => {
     if (!alergias || alergias.length === 0) return false;
     
@@ -127,15 +127,23 @@ const ChatbotComponent = () => {
     const nombre = normalizeText(producto.nombre || producto.Nombre || '');
     const ingredientes = normalizeText(producto.ingredientes || producto.Ingredientes || '');
     const categoria = normalizeText(producto.categoria || producto.Categoria || '');
+    const beneficios = normalizeText(producto.beneficios || producto.Beneficios || '');
     
-    const textoCompleto = `${descripcion} ${nombre} ${ingredientes} ${categoria}`;
+    const textoCompleto = `${descripcion} ${nombre} ${ingredientes} ${categoria} ${beneficios}`;
 
-    return alergias.some(alergia => {
+    // Buscar en cada alergia y sus sinónimos
+    for (const alergia of alergias) {
       const sinonimos = alergiasMap[alergia] || [normalizeText(alergia)];
-      return sinonimos.some(sinonimo => 
-        textoCompleto.includes(normalizeText(sinonimo))
-      );
-    });
+      for (const sinonimo of sinonimos) {
+        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
+        if (patron.test(textoCompleto)) {
+          console.log(`Producto ${producto.nombre} excluido por alergia: ${alergia} (sinónimo: ${sinonimo})`);
+          return true;
+        }
+      }
+    }
+    
+    return false;
   };
 
   // Función mejorada para calcular puntuación de objetivos
@@ -151,9 +159,10 @@ const ChatbotComponent = () => {
 
     return objetivos.reduce((puntuacion, objetivo) => {
       const sinonimos = objetivosMap[objetivo] || [normalizeText(objetivo)];
-      const encontrado = sinonimos.some(sinonimo => 
-        textoCompleto.includes(normalizeText(sinonimo))
-      );
+      const encontrado = sinonimos.some(sinonimo => {
+        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
+        return patron.test(textoCompleto);
+      });
       return puntuacion + (encontrado ? 1 : 0);
     }, 0);
   };
@@ -259,18 +268,41 @@ const ChatbotComponent = () => {
       const alergias = mascota.alergias || [];
       const objetivos = mascota.objetivosNutricionales || [];
 
-      // Lógica mejorada de recomendación
+      console.log(`Generando recomendaciones para ${nombre}:`, { alergias, objetivos });
+
+      // FILTRADO ESTRICTO POR ALERGIAS - PRIORIDAD MÁXIMA
       const productosFiltrados = products.filter(producto => {
-        // Excluir productos con alergenos
-        if (contieneAlergenos(producto, alergias)) {
-          return false;
+        const tieneAlergenos = contieneAlergenos(producto, alergias);
+        if (tieneAlergenos) {
+          console.log(`❌ EXCLUIDO: ${producto.nombre} - contiene alérgenos`);
         }
-        return true;
+        return !tieneAlergenos;
       });
 
+      console.log(`Productos después de filtrar alergias: ${productosFiltrados.length} de ${products.length}`);
+
+      // Si no hay productos después del filtrado por alergias
+      if (productosFiltrados.length === 0) {
+        let mensaje = `Basado en el perfil de ${nombre}`;
+        if (alergias.length > 0) {
+          mensaje += ` (excluyendo productos con: ${alergias.join(', ')})`;
+        }
+        mensaje += `, no encontré productos seguros que cumplan con las restricciones de alergias. Te recomiendo explorar todos nuestros productos o ajustar las alergias registradas.`;
+
+        addMessage(
+          mensaje,
+          'bot',
+          [
+            { label: '🛍️ Explorar Todos los Productos', action: 'productos' },
+            { label: '💬 Menú Principal', action: 'inicio' }
+          ]
+        );
+        return;
+      }
+
+      // CALCULAR PUNTUACIÓN PARA PRODUCTOS SEGUROS
       const productosRecomendados = productosFiltrados
         .map(producto => {
-          // Calcular puntuación basada en objetivos
           const puntuacionObjetivos = calcularPuntuacionObjetivos(producto, objetivos);
           const esPremium = normalizeText(producto.nombre).includes('premium') || 
                            normalizeText(producto.categoria).includes('premium') ||
@@ -285,52 +317,45 @@ const ChatbotComponent = () => {
             puntuacionExtra += 0.5;
           }
           
+          const puntuacionTotal = (puntuacionObjetivos * 2) + (esPremium ? 1 : 0) + puntuacionExtra;
+          
+          console.log(`Producto: ${producto.nombre}, Puntos: ${puntuacionTotal} (objetivos: ${puntuacionObjetivos}, premium: ${esPremium}, extra: ${puntuacionExtra})`);
+          
           return {
             ...producto,
-            puntuacion: (puntuacionObjetivos * 2) + (esPremium ? 1 : 0) + puntuacionExtra
+            puntuacion: puntuacionTotal
           };
         })
-        .sort((a, b) => b.puntuacion - a.puntuacion || (b.precio || 0) - (a.precio || 0))
+        .sort((a, b) => {
+          // Primero por puntuación, luego por precio (mayor a menor)
+          if (b.puntuacion !== a.puntuacion) {
+            return b.puntuacion - a.puntuacion;
+          }
+          return (b.precio || 0) - (a.precio || 0);
+        })
         .slice(0, 3);
 
-      if (productosRecomendados.length === 0) {
-        let mensaje = `Basado en el perfil de ${nombre}`;
-        if (alergias.length > 0) {
-          mensaje += ` (evitando: ${alergias.join(', ')})`;
-        }
-        if (objetivos.length > 0) {
-          mensaje += `, buscando: ${objetivos.join(', ')}`;
-        }
-        mensaje += `, actualmente no tengo recomendaciones específicas disponibles. Te sugiero explorar nuestra sección completa de productos.`;
-
-        addMessage(
-          mensaje,
-          'bot',
-          [
-            { label: '🛍️ Explorar Productos', action: 'productos' },
-            { label: '💬 Menú Principal', action: 'inicio' }
-          ]
-        );
-        return;
-      }
+      console.log('Productos recomendados finales:', productosRecomendados);
 
       let mensajeRecomendacion = `Basándome en el perfil de **${nombre}**`;
       if (alergias.length > 0) {
-        mensajeRecomendacion += ` (evitando: ${alergias.join(', ')})`;
+        mensajeRecomendacion += ` (excluyendo: ${alergias.join(', ')})`;
       }
       if (objetivos.length > 0) {
         mensajeRecomendacion += `, buscando: ${objetivos.join(', ')}`;
       }
-      mensajeRecomendacion += `, he seleccionado estos productos perfectos:`;
+      mensajeRecomendacion += `, he seleccionado estos productos seguros y adecuados:`;
 
       addMessage(mensajeRecomendacion, 'bot');
 
+      // Mostrar productos recomendados
       productosRecomendados.forEach((producto, index) => {
         setTimeout(() => {
           addMessage('', 'bot', { type: 'product', product: producto });
         }, index * 600);
       });
 
+      // Mensaje final con opciones
       setTimeout(() => {
         addMessage(
           '¿Te gustaría explorar más productos o necesitas otra recomendación?',
@@ -434,36 +459,61 @@ const ChatbotComponent = () => {
     }
   };
 
-  // Componente ProductCard mejorado con manejo robusto de imágenes
+  // Componente ProductCard MEJORADO con manejo de imágenes locales
   const ProductCard = ({ product }) => {
     const nombre = product.nombre || product.Nombre || 'Sin nombre';
     const precio = (product.precio ?? product.Precio) !== undefined ? (product.precio ?? product.Precio) : null;
     
-    // Manejo robusto de imágenes
+    // Función MEJORADA para obtener imágenes - Soporte para imágenes locales
     const getProductImage = () => {
       const posiblesPropiedades = [
         'imagen', 'Imagen', 'imagenURL', 'imagenUrl', 'urlImagen', 
         'image', 'Image', 'imageURL', 'imageUrl', 'urlImage',
         'foto', 'Foto', 'fotoURL', 'fotoUrl', 'urlFoto',
-        'img', 'Img', 'imgURL', 'imgUrl', 'urlImg'
+        'img', 'Img', 'imgURL', 'imgUrl', 'urlImg',
+        'fileName', 'FileName', 'archivo', 'Archivo'
       ];
       
       for (let prop of posiblesPropiedades) {
         if (product[prop] && typeof product[prop] === 'string' && product[prop].trim() !== '') {
-          const url = product[prop].trim();
+          let imagenUrl = product[prop].trim();
           
-          // Si es una URL completa o data URL
-          if (url.startsWith('http') || url.startsWith('//') || url.startsWith('data:')) {
-            return url;
+          // Si es una URL completa (http, https, data URL)
+          if (imagenUrl.startsWith('http') || imagenUrl.startsWith('//') || imagenUrl.startsWith('data:')) {
+            return imagenUrl;
           }
           
-          // Si es una ruta relativa
-          if (url.startsWith('./') || url.startsWith('../') || url.startsWith('/')) {
-            return url;
+          // Si es una ruta relativa que comienza con / (absoluta desde la raíz)
+          if (imagenUrl.startsWith('/')) {
+            return imagenUrl;
           }
           
-          // Si no tiene prefijo, asumimos que es una ruta relativa desde la raíz
-          return `/${url}`;
+          // Si es solo un nombre de archivo (imágenes locales del backend)
+          // Asumimos que las imágenes están en wwwroot/images/products/
+          if (!imagenUrl.includes('/') && !imagenUrl.includes('\\')) {
+            return `/images/products/${imagenUrl}`;
+          }
+          
+          // Si es una ruta relativa con estructura de carpetas
+          if (imagenUrl.startsWith('./') || imagenUrl.startsWith('../')) {
+            return imagenUrl;
+          }
+          
+          // Si contiene backslashes (rutas de Windows) convertimos a forward slashes
+          if (imagenUrl.includes('\\')) {
+            imagenUrl = imagenUrl.replace(/\\/g, '/');
+          }
+          
+          // Si parece una ruta de archivo local sin el prefijo /images/products/
+          if (imagenUrl.includes('images/') || imagenUrl.includes('products/')) {
+            if (!imagenUrl.startsWith('/')) {
+              return `/${imagenUrl}`;
+            }
+            return imagenUrl;
+          }
+          
+          // Por defecto, asumimos que está en la carpeta de productos
+          return `/images/products/${imagenUrl}`;
         }
       }
       return null;
@@ -489,7 +539,7 @@ const ChatbotComponent = () => {
         >
           <CardContent sx={{ p: 2 }}>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              {/* Imagen del producto - Mejorada */}
+              {/* Imagen del producto - MEJORADO para imágenes locales */}
               <Box
                 sx={{
                   position: 'relative',
@@ -497,40 +547,59 @@ const ChatbotComponent = () => {
                 }}
               >
                 {imagen ? (
+                  <Box sx={{ position: 'relative' }}>
+                    <Avatar 
+                      src={imagen}
+                      onError={(e) => {
+                        console.log('Error cargando imagen:', imagen, 'para producto:', nombre);
+                        e.target.style.display = 'none';
+                      }}
+                      sx={{ 
+                        width: 70, 
+                        height: 70,
+                        borderRadius: 2,
+                        border: `2px solid ${colorPalette.primary}`,
+                        backgroundColor: colorPalette.background
+                      }} 
+                      variant="rounded"
+                    />
+                    {/* Fallback que se muestra si la imagen falla */}
+                    <Avatar 
+                      sx={{ 
+                        width: 70, 
+                        height: 70,
+                        borderRadius: 2,
+                        backgroundColor: colorPalette.accent,
+                        border: `2px solid ${colorPalette.primary}`,
+                        display: 'none',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }} 
+                      variant="rounded"
+                    >
+                      <LocalOfferIcon sx={{ color: colorPalette.text, fontSize: 30 }} />
+                    </Avatar>
+                  </Box>
+                ) : (
                   <Avatar 
-                    src={imagen}
-                    onError={(e) => {
-                      console.log('Error loading image:', imagen);
-                      e.target.style.display = 'none';
-                      if (e.target.nextSibling) {
-                        e.target.nextSibling.style.display = 'flex';
-                      }
-                    }}
                     sx={{ 
                       width: 70, 
                       height: 70,
                       borderRadius: 2,
+                      backgroundColor: colorPalette.accent,
                       border: `2px solid ${colorPalette.primary}`,
-                      backgroundColor: colorPalette.background
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }} 
                     variant="rounded"
-                  />
-                ) : null}
-                <Avatar 
-                  sx={{ 
-                    width: 70, 
-                    height: 70,
-                    borderRadius: 2,
-                    backgroundColor: colorPalette.accent,
-                    border: `2px solid ${colorPalette.primary}`,
-                    display: imagen ? 'none' : 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }} 
-                  variant="rounded"
-                >
-                  <LocalOfferIcon sx={{ color: colorPalette.text, fontSize: 30 }} />
-                </Avatar>
+                  >
+                    <LocalOfferIcon sx={{ color: colorPalette.text, fontSize: 30 }} />
+                  </Avatar>
+                )}
               </Box>
               
               {/* Información del producto */}
