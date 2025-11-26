@@ -44,6 +44,8 @@ import PetsIcon from '@mui/icons-material/Pets';
 import CakeIcon from '@mui/icons-material/Cake';
 import FemaleIcon from '@mui/icons-material/Female';
 import MaleIcon from '@mui/icons-material/Male';
+import InputAdornment from '@mui/material/InputAdornment';
+
 
 // Avatares mejorados con más opciones
 const petAvatars = {
@@ -51,19 +53,19 @@ const petAvatars = {
     { id: 'cat1', src: 'https://images.vexels.com/media/users/3/154255/isolated/preview/9afaf910583333c167e40ee094e12cfa-avatar-animal-gato.png', alt: 'Gato Animado 1' },
     { id: 'cat2', src: 'https://images.vexels.com/media/users/3/155407/isolated/preview/84d636131360b843e427a4ff7061ae0a-gato-rayado-avatar.png', alt: 'Gato Animado 2' },
     { id: 'cat3', src: 'https://images.vexels.com/media/users/3/154703/isolated/preview/ba8ca6661d159486337e8b3b6da0ae7b-avatar-de-gato-mascota.png', alt: 'Gato Animado 3' },
-    { id: 'cat4', src: 'https://cdn-icons-png.flaticon.com/512/2204/2204714.png', alt: 'Gato Animado 4' },
+    { id: 'cat4', src: 'https://images.vexels.com/media/users/3/155373/isolated/preview/0fc6a08bcea7d5dabd97ec5b156a3155-avatar-de-gato-sonoliento.png', alt: 'Gato Animado 4' },
   ],
   Perro: [
     { id: 'dog1', src: 'https://images.vexels.com/media/users/3/144137/isolated/preview/ca748806d79d3d8d5721d3eb1e663672-ilustracion-de-rottweiler.png', alt: 'Perro Animado 1' },
     { id: 'dog2', src: 'https://images.vexels.com/media/users/3/144928/isolated/lists/ebbccaf76f41f7d83e45a42974cfcd87-ilustracion-de-perro.png', alt: 'Perro Animado 2' },
     { id: 'dog3', src: 'https://images.vexels.com/media/users/3/144116/isolated/preview/a0ade422aae6024947c80e14507b4b15-ilustracion-de-mucuchies.png', alt: 'Perro Animado 3' },
-    { id: 'dog4', src: 'https://cdn-icons-png.flaticon.com/512/6205/6205827.png', alt: 'Perro Animado 4' },
+    { id: 'dog4', src: 'https://images.vexels.com/media/users/3/144094/isolated/preview/e1aa7540a5644884d9275b6e95b5c254-ilustracion-de-pastor-aleman.png', alt: 'Perro Animado 4' },
   ]
 };
 
 // Opciones predefinidas para formularios
 const FORM_OPTIONS = {
-  alergias: ['Pollo', 'Cereales', 'Soya', 'Papa', 'Camote', 'Legumbres', 'Aceites', 'Vegetales'],
+  alergias: ['Pollo', 'Cereales', 'Soya', 'Papa', 'Camote', 'Legumbres', 'Aceite vegetal'],
   objetivos: [
     'Control de peso',
     'Aumento de energía o masa muscular',
@@ -311,92 +313,89 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
                 onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
                 required
                 helperText="Cómo llamas a tu compañero peludo"
-              />
-            </Grid>
+                variant="outlined"
+      InputProps={{
+        startAdornment: (
+          <InputAdornment position="start">
+            <PetsIcon color="primary" />
+          </InputAdornment>
+        ),
+      }}
+      sx={{
+        '& .MuiOutlinedInput-root': { minHeight: 56 }, // hace el campo más alto
+      }}
+    />
+  </Grid>
+            
+{/* Especie */}
+  <Grid item xs={6} sm={3} md={2}>
+    <FormControl fullWidth variant="outlined" sx={{ minWidth: 150 }}>
+      <InputLabel>Especie</InputLabel>
+      <Select
+        name="especie"
+        value={formData.especie}
+        onChange={(e) => setFormData(prev => ({ ...prev, especie: e.target.value, avatar: '' }))}
+        label="Especie"
+      >
+        <MenuItem value="Perro"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><PetsIcon fontSize="small" />Perro</Box></MenuItem>
+        <MenuItem value="Gato"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><PetsIcon fontSize="small" />Gato</Box></MenuItem>
+      </Select>
+    </FormControl>
+  </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth required>
-                <InputLabel>Especie</InputLabel>
-                <Select
-                  name="especie"
-                  value={formData.especie}
-                  onChange={(e) => setFormData(prev => ({ ...prev, especie: e.target.value, avatar: '' }))}
-                  label="Especie"
-                >
-                  <MenuItem value="Perro">🐕 Perro</MenuItem>
-                  <MenuItem value="Gato">🐈 Gato</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+  {/* Sexo */}
+  <Grid item xs={6} sm={3} md={2}>
+    <FormControl fullWidth variant="outlined" sx={{ minWidth: 120 }}>
+      <InputLabel>Sexo</InputLabel>
+      <Select
+        name="sexo"
+        value={formData.sexo}
+        onChange={(e) => setFormData(prev => ({ ...prev, sexo: e.target.value }))}
+        label="Sexo"
+      >
+        <MenuItem value="Hembra">Hembra</MenuItem>
+        <MenuItem value="Macho">Macho</MenuItem>
+      </Select>
+    </FormControl>
+  </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Sexo</InputLabel>
-                <Select
-                  name="sexo"
-                  value={formData.sexo}
-                  onChange={(e) => setFormData(prev => ({ ...prev, sexo: e.target.value }))}
-                  label="Sexo"
-                >
-                  <MenuItem value="Hembra">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <FemaleIcon fontSize="small" /> Hembra
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="Macho">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <MaleIcon fontSize="small" /> Macho
-                    </Box>
-                  </MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+  {/* Raza */}
+  <Grid item xs={12} sm={6} md={3}>
+    <TextField
+      fullWidth
+      label="Raza o Tipo"
+      name="raza"
+      value={formData.raza}
+      onChange={(e) => setFormData(prev => ({ ...prev, raza: e.target.value }))}
+      helperText="Ej: Labrador, Siames, Mestizo..."
+      variant="outlined"
+      sx={{ '& .MuiOutlinedInput-root': { minHeight: 56 } }}
+    />
+  </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Raza"
-                name="raza"
-                value={formData.raza}
-                onChange={(e) => setFormData(prev => ({ ...prev, raza: e.target.value }))}
-                helperText="Ej: Labrador, Siames, Mestizo..."
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Tamaño</InputLabel>
-                <Select
-                  name="tamaño"
-                  value={formData.tamaño}
-                  onChange={(e) => setFormData(prev => ({ ...prev, tamaño: e.target.value }))}
-                  label="Tamaño"
-                >
-                  <MenuItem value="Pequeño">Pequeño</MenuItem>
-                  <MenuItem value="Mediano">Mediano</MenuItem>
-                  <MenuItem value="Grande">Grande</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Fecha de Nacimiento"
-                name="fechaNacimiento"
-                type="date"
-                value={formData.fechaNacimiento}
-                onChange={(e) => setFormData(prev => ({ ...prev, fechaNacimiento: e.target.value }))}
-                InputLabelProps={{ shrink: true }}
-                helperText="Para calcular su edad y necesidades específicas"
-              />
-              {formData.fechaNacimiento && (
-                <Typography variant="body2" color="primary" sx={{ mt: 1 }}>
-                  {calculateAge(formData.fechaNacimiento)} • {getAgeRange(formData.fechaNacimiento)}
-                </Typography>
-              )}
-            </Grid>
-          </Grid>
+  {/* Fecha de nacimiento */}
+  <Grid item xs={12} sm={6} md={5}>
+    <TextField
+      fullWidth
+      label="Fecha de Nacimiento"
+      name="fechaNacimiento"
+      type="date"
+      value={formData.fechaNacimiento}
+      onChange={(e) => setFormData(prev => ({ ...prev, fechaNacimiento: e.target.value }))}
+      InputLabelProps={{ shrink: true }}
+      helperText="Para calcular su edad y necesidades específicas"
+      variant="outlined"
+      InputProps={{
+        startAdornment: (
+          <InputAdornment position="start">
+            <CakeIcon color="primary" />
+          </InputAdornment>
+        ),
+      }}
+      sx={{ '& .MuiOutlinedInput-root': { minHeight: 56 } }}
+    />
+  </Grid>
+</Grid>
         );
 
       case 1:
@@ -447,74 +446,128 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
       case 2:
         return (
           <Box>
-            <Typography variant="body1" gutterBottom sx={{ mb: 3 }}>
-              Esta información nos ayuda a recomendar la mejor alimentación para tu compañero
-            </Typography>
+      <Typography variant="body1" sx={{ mb: 3 }}>
+        Esta información nos ayuda a recomendar la mejor alimentación para tu compañero
+      </Typography>
 
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-                Alergias o Intolerancias
-              </Typography>
-              <FormGroup row={!isMobile}>
-                {FORM_OPTIONS.alergias.map(option => (
-                  <FormControlLabel
-                    key={option}
-                    control={
-                      <Checkbox
-                        checked={formData.alergias.includes(option)}
-                        onChange={() => handleCheckboxChange('alergias', option)}
-                      />
-                    }
-                    label={option}
-                  />
-                ))}
-              </FormGroup>
-            </Box>
+      {/* ==== ALERGIAS 4–3 ==== */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+          Alergias o Intolerancias
+        </Typography>
 
-            <Divider sx={{ my: 2 }} />
+        <Grid container spacing={2}>
+          {/* Columna izquierda = 4 opciones */}
+          <Grid item xs={12} sm={6}>
+            <FormGroup>
+              {FORM_OPTIONS.alergias.slice(0, 4).map(option => (
+                <FormControlLabel
+                  key={option}
+                  control={
+                    <Checkbox
+                      checked={formData.alergias.includes(option)}
+                      onChange={() => handleCheckboxChange("alergias", option)}
+                    />
+                  }
+                  label={option}
+                />
+              ))}
+            </FormGroup>
+          </Grid>
 
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-                Objetivo Nutricional
-              </Typography>
-              <FormGroup row={!isMobile}>
-                {FORM_OPTIONS.objetivos.map(option => (
-                  <FormControlLabel
-                    key={option}
-                    control={
-                      <Checkbox
-                        checked={formData.objetivo.includes(option)}
-                        onChange={() => handleCheckboxChange('objetivo', option)}
-                      />
-                    }
-                    label={option}
-                  />
-                ))}
-              </FormGroup>
-            </Box>
+          {/* Columna derecha = resto (3 opciones) */}
+          <Grid item xs={12} sm={6}>
+            <FormGroup>
+              {FORM_OPTIONS.alergias.slice(4).map(option => (
+                <FormControlLabel
+                  key={option}
+                  control={
+                    <Checkbox
+                      checked={formData.alergias.includes(option)}
+                      onChange={() => handleCheckboxChange("alergias", option)}
+                    />
+                  }
+                  label={option}
+                />
+              ))}
+            </FormGroup>
+          </Grid>
+        </Grid>
+      </Box>
 
-            <Divider sx={{ my: 2 }} />
+      <Divider sx={{ my: 2 }} />
 
-            <Box>
-              <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-                Nivel de Actividad
-              </Typography>
-              <FormGroup row={!isMobile}>
-                {FORM_OPTIONS.nivelesActividad.map(option => (
-                  <FormControlLabel
-                    key={option}
-                    control={
-                      <Checkbox
-                        checked={formData.actividad === option}
-                        onChange={() => setFormData(prev => ({ ...prev, actividad: option }))}
-                      />
-                    }
-                    label={option}
-                  />
-                ))}
-              </FormGroup>
-            </Box>
-          </Box>
+      {/* ==== OBJETIVO NUTRICIONAL 4–4 ==== */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+          Objetivo Nutricional
+        </Typography>
+
+        <Grid container spacing={2}>
+          {/* Columna izquierda (4 opciones) */}
+          <Grid item xs={12} sm={6}>
+            <FormGroup>
+              {FORM_OPTIONS.objetivos.slice(0, 4).map(option => (
+                <FormControlLabel
+                  key={option}
+                  control={
+                    <Checkbox
+                      checked={formData.objetivo.includes(option)}
+                      onChange={() => handleCheckboxChange("objetivo", option)}
+                    />
+                  }
+                  label={option}
+                />
+              ))}
+            </FormGroup>
+          </Grid>
+
+          {/* Columna derecha (4 opciones) */}
+          <Grid item xs={12} sm={6}>
+            <FormGroup>
+              {FORM_OPTIONS.objetivos.slice(4).map(option => (
+                <FormControlLabel
+                  key={option}
+                  control={
+                    <Checkbox
+                      checked={formData.objetivo.includes(option)}
+                      onChange={() => handleCheckboxChange("objetivo", option)}
+                    />
+                  }
+                  label={option}
+                />
+              ))}
+            </FormGroup>
+          </Grid>
+        </Grid>
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
+
+      {/* ==== ACTIVIDAD (se mantiene igual) ==== */}
+      <Box>
+        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+          Nivel de Actividad
+        </Typography>
+
+        <FormGroup row={!isMobile}>
+          {FORM_OPTIONS.nivelesActividad.map(option => (
+            <FormControlLabel
+              key={option}
+              control={
+                <Checkbox
+                  checked={formData.actividad === option}
+                  onChange={() =>
+                    setFormData(prev => ({ ...prev, actividad: option }))
+                  }
+                />
+              }
+              label={option}
+            />
+          ))}
+        </FormGroup>
+      </Box>
+    </Box>
         );
 
       default:
@@ -749,10 +802,10 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
           backgroundColor: 'primary.main',
           color: 'white'
         }}>
-          <Typography variant="h5" component="div" fontWeight="bold">
+          <Typography variant="h5" component="div" fontWeight="bold" color='#ffffffff'>
             {editingMascota ? `Editar ${formData.nombre}` : 'Nueva Mascota'}
           </Typography>
-          <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
+          <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5, color: '#ffffffff' }}>
             {editingMascota ? 'Actualiza la información de tu mascota' : 'Completa el perfil de tu nuevo compañero'}
           </Typography>
         </DialogTitle>
@@ -773,26 +826,68 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ p: 3, borderTop: 1, borderColor: 'divider', gap: 1 }}>
-          {!editingMascota && activeStep > 0 && (
-            <Button onClick={handleBack} variant="outlined">
-              Atrás
-            </Button>
-          )}
-          <Box sx={{ flex: 1 }} />
-          <Button onClick={handleClose} variant="outlined">
-            Cancelar
-          </Button>
-          {!editingMascota && activeStep < steps.length - 1 ? (
-            <Button onClick={handleNext} variant="contained">
-              Siguiente
-            </Button>
-          ) : (
-            <Button onClick={handleSubmit} variant="contained" size="large">
-              {editingMascota ? 'Actualizar Mascota' : 'Completar Registro'}
-            </Button>
-          )}
-        </DialogActions>
+<DialogActions sx={{ p: 3, borderTop: 1, borderColor: 'divider', gap: 1 }}>
+  
+  {/* Botón ATRÁS */}
+  {!editingMascota && activeStep > 0 && (
+    <Button 
+      onClick={handleBack} 
+      variant="contained"
+      sx={{ 
+        backgroundColor: '#5D4E37',
+        color: 'white',
+        borderColor: '#5D4E37',
+        '&:hover': { backgroundColor: '#4A3F2D' }
+      }}
+    >
+      Atrás
+    </Button>
+  )}
+
+  <Box sx={{ flex: 1 }} />
+
+  {/* Botón CANCELAR */}
+  <Button 
+    onClick={handleClose} 
+    variant="contained"
+    sx={{
+      backgroundColor: '#5D4E37',
+      color: 'white',
+      borderColor: '#5D4E37',
+      '&:hover': { backgroundColor: '#4A3F2D' }
+    }}
+  >
+    Cancelar
+  </Button>
+
+  {/* BOTÓN SIGUIENTE o COMPLETAR */}
+  {!editingMascota && activeStep < steps.length - 1 ? (
+    <Button 
+      onClick={handleNext} 
+      variant="contained"
+      sx={{
+        backgroundColor: '#5D4E37',
+        color: 'white',
+        '&:hover': { backgroundColor: '#4A3F2D' }
+      }}
+    >
+      Siguiente
+    </Button>
+  ) : (
+    <Button 
+      onClick={handleSubmit} 
+      variant="contained" 
+      size="large"
+      sx={{
+        backgroundColor: '#5D4E37',
+        color: 'white',
+        '&:hover': { backgroundColor: '#4A3F2D' }
+      }}
+    >
+      {editingMascota ? 'Actualizar Mascota' : 'Completar Registro'}
+    </Button>
+  )}
+</DialogActions>
       </Dialog>
     </Container>
   );

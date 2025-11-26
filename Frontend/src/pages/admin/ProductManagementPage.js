@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-
 import {
   Container,
   Typography,
@@ -28,20 +27,44 @@ import {
   Fab,
   Grid,
   FormControlLabel,
-  Switch
+  Switch,
+  Card,
+  CardContent,
+  Avatar,
+  Tooltip,
+  alpha,
+  useTheme,
+  InputAdornment,
+  Divider
 } from '@mui/material';
-
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Search as SearchIcon,
+  Inventory as InventoryIcon,
+  Category as CategoryIcon,
+  AttachMoney as MoneyIcon,
+  Numbers as NumbersIcon,
+  CloudUpload as CloudUploadIcon,
+  Link as LinkIcon,
+  ToggleOn as ToggleOnIcon,
+  ToggleOff as ToggleOffIcon,
+  Image as ImageIcon
+} from '@mui/icons-material';
 import productService from '../../services/productService';
 
 const ProductManagementPage = () => {
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',
@@ -49,13 +72,47 @@ const ProductManagementPage = () => {
     stock: '',
     categoriaID: '',
     activo: true,
-    imagenURL: '' // State for image URL
+    imagenURL: ''
   });
-  const [imageFile, setImageFile] = useState(null); // State for the image file
-  const [imageOption, setImageOption] = useState('file'); // 'file' or 'url'
+  const [imageFile, setImageFile] = useState(null);
+  const [imageOption, setImageOption] = useState('file');
+  const [imagePreview, setImagePreview] = useState('');
   const [formErrors, setFormErrors] = useState({});
   const [submitLoading, setSubmitLoading] = useState(false);
   const [alert, setAlert] = useState(null);
+
+  const theme = useTheme();
+
+  // Paleta de colores profesional
+  const colors = {
+    primary: '#2563eb',
+    secondary: '#64748b',
+    success: '#16a34a',
+    warning: '#d97706',
+    error: '#dc2626',
+    background: '#f8fafc',
+    surface: '#ffffff',
+    text: '#1e293b',
+    textLight: '#64748b'
+  };
+
+  // Función para construir la URL completa de la imagen
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return '';
+    
+    // Si ya es una URL completa, retornarla
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    }
+    
+    // Si es una ruta local del servidor, construir la URL completa
+    if (imagePath.startsWith('/')) {
+      return `${window.location.origin}${imagePath}`;
+    }
+    
+    // Si es un nombre de archivo, asumir que está en la carpeta de productos
+    return `${window.location.origin}/images/products/${imagePath}`;
+  };
 
   const showAlert = useCallback((message, severity = 'success') => {
     setAlert({ message, severity });
@@ -66,9 +123,13 @@ const ProductManagementPage = () => {
     try {
       setLoading(true);
       const data = await productService.getAdminProductos();
-      setProducts(data);
+      // Procesar las URLs de imagen para mostrar correctamente
+      const processedData = data.map(product => ({
+        ...product,
+        imagenURL: getImageUrl(product.imagenURL)
+      }));
+      setProducts(processedData);
     } catch (error) {
-
       console.error('Error fetching products:', error);
       showAlert('Error al cargar productos', 'error');
     } finally {
@@ -91,6 +152,55 @@ const ProductManagementPage = () => {
     fetchCategories();
   }, [fetchProducts, fetchCategories]);
 
+  useEffect(() => {
+    filterProducts();
+  }, [products, searchTerm, statusFilter, categoryFilter]);
+
+  const filterProducts = () => {
+    let filtered = products;
+
+    // Filtrar por término de búsqueda
+    if (searchTerm) {
+      filtered = filtered.filter(product =>
+        product.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.descripcion.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.categoriaNombre.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filtrar por estado
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(product => 
+        statusFilter === 'active' ? product.activo : !product.activo
+      );
+    }
+
+    // Filtrar por categoría
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(product => 
+        product.categoriaNombre === categoryFilter
+      );
+    }
+
+    setFilteredProducts(filtered);
+  };
+
+  const getStatusCount = (status) => {
+    if (status === 'active') {
+      return products.filter(product => product.activo).length;
+    } else if (status === 'inactive') {
+      return products.filter(product => !product.activo).length;
+    }
+    return products.length;
+  };
+
+  const getStockStatus = (product) => {
+    if (!product.activo) return { label: 'Inactivo', color: colors.error };
+    if (product.stock === 0) return { label: 'Agotado', color: colors.error };
+    if (product.stock <= 10) return { label: 'Bajo Stock', color: colors.warning };
+    return { label: 'Disponible', color: colors.success };
+  };
+
   const handleOpenDialog = (product = null) => {
     if (product) {
       setEditingProduct(product);
@@ -100,8 +210,12 @@ const ProductManagementPage = () => {
         precio: product.precio.toString(),
         stock: product.stock.toString(),
         categoriaID: categories.find(c => c.nombre === product.categoriaNombre)?.categoriaID || '',
-        activo: product.activo
+        activo: product.activo,
+        imagenURL: product.imagenURL || ''
       });
+      setImagePreview(product.imagenURL || '');
+      // Determinar la opción de imagen basada en si ya tiene imagen
+      setImageOption(product.imagenURL ? 'url' : 'file');
     } else {
       setEditingProduct(null);
       setFormData({
@@ -110,8 +224,11 @@ const ProductManagementPage = () => {
         precio: '',
         stock: '',
         categoriaID: '',
-        activo: true
+        activo: true,
+        imagenURL: ''
       });
+      setImagePreview('');
+      setImageOption('file');
     }
     setImageFile(null);
     setFormErrors({});
@@ -127,14 +244,47 @@ const ProductManagementPage = () => {
       precio: '',
       stock: '',
       categoriaID: '',
-      activo: true
+      activo: true,
+      imagenURL: ''
     });
     setImageFile(null);
+    setImagePreview('');
     setFormErrors({});
   };
 
   const handleFileChange = (event) => {
-    setImageFile(event.target.files[0]);
+    const file = event.target.files[0];
+    if (file) {
+      // Validar tipo de archivo
+      if (!file.type.startsWith('image/')) {
+        showAlert('Por favor selecciona un archivo de imagen válido', 'error');
+        return;
+      }
+      
+      // Validar tamaño (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showAlert('La imagen no debe exceder los 5MB', 'error');
+        return;
+      }
+      
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => setImagePreview(e.target.result);
+      reader.readAsDataURL(file);
+      
+      // Limpiar error de imagen si existe
+      setFormErrors(prev => ({ ...prev, image: '' }));
+    }
+  };
+
+  const handleImageUrlChange = (url) => {
+    setFormData(prev => ({ ...prev, imagenURL: url }));
+    setImagePreview(url);
+    
+    // Limpiar error de imagen si existe
+    if (url.trim()) {
+      setFormErrors(prev => ({ ...prev, image: '' }));
+    }
   };
 
   const validateForm = () => {
@@ -149,12 +299,20 @@ const ProductManagementPage = () => {
     }
     if (!formData.categoriaID) errors.categoriaID = 'La categoría es requerida';
 
-    // Validate image based on option selected
+    // Validar imagen basada en la opción seleccionada
     if (!editingProduct) {
+      // Para productos nuevos, la imagen es obligatoria
       if (imageOption === 'file' && !imageFile) {
         errors.image = 'Debes seleccionar un archivo de imagen.';
       } else if (imageOption === 'url' && !formData.imagenURL.trim()) {
         errors.image = 'Debes ingresar una URL de imagen.';
+      }
+    } else {
+      // Para edición, la imagen es opcional (puede mantener la actual)
+      if (imageOption === 'file' && !imageFile && !imagePreview) {
+        errors.image = 'Debes seleccionar un archivo de imagen o mantener la actual.';
+      } else if (imageOption === 'url' && !formData.imagenURL.trim() && !imagePreview) {
+        errors.image = 'Debes ingresar una URL de imagen o mantener la actual.';
       }
     }
 
@@ -167,23 +325,26 @@ const ProductManagementPage = () => {
 
     setSubmitLoading(true);
 
-    const productFormData = new FormData();
-    productFormData.append('nombre', formData.nombre);
-    productFormData.append('descripcion', formData.descripcion);
-    productFormData.append('precio', parseFloat(formData.precio));
-    productFormData.append('stock', parseInt(formData.stock));
-    productFormData.append('categoriaID', parseInt(formData.categoriaID));
-    productFormData.append('activo', formData.activo);
-
-    if (imageOption === 'file' && imageFile) {
-        productFormData.append('imagenFile', imageFile);
-    } else if (imageOption === 'url' && formData.imagenURL) {
-        productFormData.append('imagenURL', formData.imagenURL);
-    }
-
     try {
+      const productFormData = new FormData();
+      productFormData.append('nombre', formData.nombre);
+      productFormData.append('descripcion', formData.descripcion);
+      productFormData.append('precio', parseFloat(formData.precio));
+      productFormData.append('stock', parseInt(formData.stock));
+      productFormData.append('categoriaID', parseInt(formData.categoriaID));
+      productFormData.append('activo', formData.activo);
+
+      // Manejar la imagen según la opción seleccionada
+      if (imageOption === 'file' && imageFile) {
+        productFormData.append('imagenFile', imageFile);
+      } else if (imageOption === 'url' && formData.imagenURL.trim()) {
+        productFormData.append('imagenURL', formData.imagenURL);
+      } else if (editingProduct && !imageFile && !formData.imagenURL.trim()) {
+        // Si está editando y no cambió la imagen, mantener la actual
+        productFormData.append('imagenURL', editingProduct.imagenURL);
+      }
+
       if (editingProduct) {
-        // If updating, we might not have a new image. The backend should handle this.
         await productService.updateProducto(editingProduct.productoID, productFormData);
         showAlert('Producto actualizado exitosamente');
       } else {
@@ -227,118 +388,392 @@ const ProductManagementPage = () => {
           console.error('Error force deleting product:', error);
           showAlert('Error al eliminar el producto permanentemente', 'error');
         }
-      } else if (userInput !== null) { // User typed something but it was wrong or cancelled
+      } else if (userInput !== null) {
         showAlert('La confirmación no coincide. El producto no ha sido eliminado.', 'warning');
       }
     }
   };
 
+  const ProductCard = ({ product }) => {
+    const status = getStockStatus(product);
+    
+    return (
+      <Card 
+        sx={{ 
+          mb: 2,
+          border: `1px solid ${alpha(colors.primary, 0.1)}`,
+          borderRadius: 3,
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: '0 8px 25px rgba(0,0,0,0.1)'
+          }
+        }}
+      >
+        <CardContent sx={{ p: 3 }}>
+          <Grid container spacing={2} alignItems="center">
+            {/* Imagen del producto */}
+            <Grid item xs={12} sm={2}>
+              <Avatar
+                src={product.imagenURL}
+                variant="rounded"
+                sx={{ 
+                  width: 80, 
+                  height: 80,
+                  border: `2px solid ${alpha(colors.primary, 0.2)}`
+                }}
+              >
+                <InventoryIcon />
+              </Avatar>
+            </Grid>
+
+            {/* Información del producto */}
+            <Grid item xs={12} sm={4}>
+              <Typography variant="h6" fontWeight="600" gutterBottom>
+                {product.nombre}
+              </Typography>
+              <Typography variant="body2" color={colors.textLight} sx={{ mb: 1 }}>
+                {product.descripcion.length > 80 
+                  ? `${product.descripcion.substring(0, 80)}...` 
+                  : product.descripcion
+                }
+              </Typography>
+              <Chip 
+                label={product.categoriaNombre}
+                size="small"
+                variant="outlined"
+                sx={{ 
+                  borderColor: colors.primary,
+                  color: colors.primary
+                }}
+              />
+            </Grid>
+
+            {/* Precio y stock */}
+            <Grid item xs={6} sm={2}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <MoneyIcon sx={{ color: colors.primary, fontSize: 20 }} />
+                <Typography variant="h6" color={colors.primary}>
+                  S/ {product.precio.toFixed(2)}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <NumbersIcon sx={{ color: colors.textLight, fontSize: 18 }} />
+                <Typography variant="body2" color={colors.textLight}>
+                  Stock: {product.stock}
+                </Typography>
+              </Box>
+            </Grid>
+
+            {/* Estado */}
+            <Grid item xs={6} sm={2}>
+              <Chip
+                label={status.label}
+                size="small"
+                sx={{
+                  backgroundColor: status.color,
+                  color: 'white',
+                  fontWeight: '600'
+                }}
+              />
+            </Grid>
+
+            {/* Acciones */}
+            <Grid item xs={12} sm={2}>
+              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                <Tooltip title="Editar producto">
+                  <IconButton
+                    onClick={() => handleOpenDialog(product)}
+                    sx={{ 
+                      border: `1px solid ${alpha(colors.primary, 0.2)}`,
+                      borderRadius: 2
+                    }}
+                  >
+                    <EditIcon sx={{ color: colors.primary }} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title={product.activo ? "Desactivar producto" : "Eliminar permanentemente"}>
+                  <IconButton
+                    onClick={() => handleDelete(product)}
+                    sx={{ 
+                      border: `1px solid ${alpha(colors.error, 0.2)}`,
+                      borderRadius: 2
+                    }}
+                  >
+                    <DeleteIcon sx={{ color: colors.error }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <CircularProgress />
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '60vh',
+        flexDirection: 'column',
+        gap: 2
+      }}>
+        <CircularProgress size={60} thickness={4} />
+        <Typography variant="h6" color={colors.textLight}>
+          Cargando productos...
+        </Typography>
       </Box>
     );
   }
 
   return (
-    <Container sx={{ py: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      {/* Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography 
+          variant="h3" 
+          component="h1" 
+          fontWeight="800" 
+          gutterBottom
+          sx={{ color: colors.text }}
+        >
           Gestión de Productos
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-        >
-          Nuevo Producto
-        </Button>
+        <Typography variant="h6" color={colors.textLight}>
+          Administra el catálogo de productos de tu tienda
+        </Typography>
       </Box>
 
+      {/* Alertas */}
       {alert && (
-        <Alert severity={alert.severity} sx={{ mb: 3 }}>
+        <Alert 
+          severity={alert.severity} 
+          sx={{ 
+            mb: 3, 
+            borderRadius: 3,
+            border: `1px solid ${colors[alert.severity]}`
+          }}
+        >
           {alert.message}
         </Alert>
       )}
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>Nombre</TableCell>
-              <TableCell>Categoría</TableCell>
-              <TableCell>Precio</TableCell>
-              <TableCell>Stock</TableCell>
-              <TableCell>Estado</TableCell>
-              <TableCell>Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {products.map((product) => (
-              <TableRow key={product.productoID}>
-                <TableCell>{product.productoID}</TableCell>
-                <TableCell>{product.nombre}</TableCell>
-                <TableCell>{product.categoriaNombre}</TableCell>
-                <TableCell>S/ {product.precio.toFixed(2)}</TableCell>
-                <TableCell>{product.stock}</TableCell>
-                <TableCell>
-                <Chip
-                    label={product.activo ? (product.stock > 0 ? 'Activo' : 'Agotado') : 'Inactivo'}
-                    color={product.activo ? (product.stock > 0 ? 'success' : 'warning') : 'error'}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <IconButton
-                    color="primary"
-                    onClick={() => handleOpenDialog(product)}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    color="error"
-                    onClick={() => handleDelete(product)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+      {/* Estadísticas rápidas */}
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        <Grid item xs={6} sm={3}>
+          <Card sx={{ borderRadius: 3, bgcolor: alpha(colors.primary, 0.05) }}>
+            <CardContent sx={{ textAlign: 'center', p: 2 }}>
+              <Typography variant="h4" fontWeight="bold" color={colors.primary}>
+                {products.length}
+              </Typography>
+              <Typography variant="body2" color={colors.textLight}>
+                Total Productos
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Card sx={{ borderRadius: 3, bgcolor: alpha(colors.success, 0.05) }}>
+            <CardContent sx={{ textAlign: 'center', p: 2 }}>
+              <Typography variant="h4" fontWeight="bold" color={colors.success}>
+                {getStatusCount('active')}
+              </Typography>
+              <Typography variant="body2" color={colors.textLight}>
+                Activos
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Card sx={{ borderRadius: 3, bgcolor: alpha(colors.warning, 0.05) }}>
+            <CardContent sx={{ textAlign: 'center', p: 2 }}>
+              <Typography variant="h4" fontWeight="bold" color={colors.warning}>
+                {products.filter(p => p.stock <= 10 && p.activo).length}
+              </Typography>
+              <Typography variant="body2" color={colors.textLight}>
+                Bajo Stock
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Card sx={{ borderRadius: 3, bgcolor: alpha(colors.error, 0.05) }}>
+            <CardContent sx={{ textAlign: 'center', p: 2 }}>
+              <Typography variant="h4" fontWeight="bold" color={colors.error}>
+                {getStatusCount('inactive')}
+              </Typography>
+              <Typography variant="body2" color={colors.textLight}>
+                Inactivos
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {/* Filtros y búsqueda */}
+      <Card sx={{ mb: 3, borderRadius: 3 }}>
+        <CardContent sx={{ p: 3 }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                placeholder="Buscar productos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="primary" />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 3
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <Select
+                fullWidth
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                sx={{ borderRadius: 3 }}
+              >
+                <MenuItem value="all">Todos los estados</MenuItem>
+                <MenuItem value="active">Activos</MenuItem>
+                <MenuItem value="inactive">Inactivos</MenuItem>
+              </Select>
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <Select
+                fullWidth
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                sx={{ borderRadius: 3 }}
+              >
+                <MenuItem value="all">Todas las categorías</MenuItem>
+                {categories.map(category => (
+                  <MenuItem key={category.categoriaID} value={category.nombre}>
+                    {category.nombre}
+                  </MenuItem>
+                ))}
+              </Select>
+            </Grid>
+            <Grid item xs={12} sm={2}>
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => handleOpenDialog()}
+                sx={{ 
+                  borderRadius: 3,
+                  height: '56px',
+                  background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`
+                }}
+              >
+                Nuevo
+              </Button>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
 
-      {/* Product Form Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
+      {/* Lista de productos */}
+      {filteredProducts.length === 0 ? (
+        <Card sx={{ borderRadius: 3, textAlign: 'center', py: 8 }}>
+          <CardContent>
+            <InventoryIcon sx={{ fontSize: 80, color: colors.textLight, mb: 2, opacity: 0.5 }} />
+            <Typography variant="h6" color={colors.textLight} gutterBottom>
+              No se encontraron productos
+            </Typography>
+            <Typography variant="body2" color={colors.textLight}>
+              {searchTerm || statusFilter !== 'all' || categoryFilter !== 'all'
+                ? 'Intenta con otros términos de búsqueda' 
+                : 'No hay productos registrados'
+              }
+            </Typography>
+          </CardContent>
+        </Card>
+      ) : (
+        <Box>
+          {filteredProducts.map((product) => (
+            <ProductCard key={product.productoID} product={product} />
+          ))}
+        </Box>
+      )}
+
+      {/* Diálogo de producto */}
+      <Dialog 
+        open={dialogOpen} 
+        onClose={handleCloseDialog} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ 
+          borderBottom: `1px solid ${alpha(colors.primary, 0.1)}`,
+          background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`,
+          color: 'white'
+        }}>
+          <Typography variant="h5" fontWeight="600">
+            {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
+          </Typography>
         </DialogTitle>
-        <DialogContent>
-          <Box component="form" sx={{ mt: 2 }}>
-            <Grid container spacing={2}>
+        <DialogContent sx={{ p: 0 }}>
+          <Box sx={{ p: 4 }}>
+            <Grid container spacing={3}>
+              {/* Previsualización de imagen */}
+              <Grid item xs={12}>
+                <Box sx={{ textAlign: 'center', mb: 3 }}>
+                  <Avatar
+                    src={imagePreview}
+                    variant="rounded"
+                    sx={{ 
+                      width: 120, 
+                      height: 120,
+                      mx: 'auto',
+                      border: `2px solid ${alpha(colors.primary, 0.2)}`,
+                      mb: 2
+                    }}
+                  >
+                    <ImageIcon sx={{ fontSize: 40, color: colors.textLight }} />
+                  </Avatar>
+                  <Typography variant="body2" color={colors.textLight}>
+                    {imagePreview ? 'Vista previa de la imagen' : 'Sin imagen seleccionada'}
+                  </Typography>
+                </Box>
+              </Grid>
+
+              {/* Campos del formulario */}
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Nombre"
+                  label="Nombre del Producto"
                   value={formData.nombre}
                   onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                   error={!!formErrors.nombre}
                   helperText={formErrors.nombre}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2
+                    }
+                  }}
                 />
               </Grid>
-              <Grid item xs={12}>
+
+              <Grid item xs={12} sm={6}>
                 <FormControl fullWidth error={!!formErrors.categoriaID}>
-                  <InputLabel id="categoria-select-label">Categoría</InputLabel>
+                  <InputLabel>Categoría</InputLabel>
                   <Select
-                    labelId="categoria-select-label"
                     value={formData.categoriaID}
                     label="Categoría"
                     onChange={(e) => setFormData({ ...formData, categoriaID: e.target.value })}
-                    sx={{ minHeight: '56px' }} // Make it taller for better visibility
+                    sx={{ borderRadius: 2 }}
                   >
                     {categories.map((category) => (
                       <MenuItem key={category.categoriaID} value={category.categoriaID}>
@@ -347,7 +782,7 @@ const ProductManagementPage = () => {
                     ))}
                   </Select>
                   {formErrors.categoriaID && (
-                    <Typography variant="caption" color="error" sx={{ mt: 1, ml: 2 }}>
+                    <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
                       {formErrors.categoriaID}
                     </Typography>
                   )}
@@ -364,21 +799,33 @@ const ProductManagementPage = () => {
                   error={!!formErrors.precio}
                   helperText={formErrors.precio}
                   InputProps={{
-                    startAdornment: <Typography sx={{ mr: 1 }}>S/</Typography>,
+                    startAdornment: <Typography sx={{ mr: 1, color: colors.textLight }}>S/</Typography>,
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2
+                    }
                   }}
                 />
               </Grid>
+
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Stock"
+                  label="Stock Disponible"
                   type="number"
                   value={formData.stock}
                   onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                   error={!!formErrors.stock}
                   helperText={formErrors.stock}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2
+                    }
+                  }}
                 />
               </Grid>
+
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -389,63 +836,98 @@ const ProductManagementPage = () => {
                   onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                   error={!!formErrors.descripcion}
                   helperText={formErrors.descripcion}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2
+                    }
+                  }}
                 />
               </Grid>
+
+              {/* Opciones de imagen */}
               <Grid item xs={12}>
-                <FormControl component="fieldset">
-                  <Typography variant="subtitle1" gutterBottom>
-                    Opción de Imagen
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                    <Button
-                      variant={imageOption === 'file' ? 'contained' : 'outlined'}
-                      onClick={() => setImageOption('file')}
-                    >
-                      Subir Archivo
-                    </Button>
-                    <Button
-                      variant={imageOption === 'url' ? 'contained' : 'outlined'}
-                      onClick={() => setImageOption('url')}
-                    >
-                      URL de Imagen
-                    </Button>
-                  </Box>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="h6" gutterBottom sx={{ color: colors.text }}>
+                  Imagen del Producto
+                </Typography>
+                
+                <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                  <Button
+                    variant={imageOption === 'file' ? 'contained' : 'outlined'}
+                    startIcon={<CloudUploadIcon />}
+                    onClick={() => setImageOption('file')}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    Subir Archivo
+                  </Button>
+                  <Button
+                    variant={imageOption === 'url' ? 'contained' : 'outlined'}
+                    startIcon={<LinkIcon />}
+                    onClick={() => setImageOption('url')}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    URL de Imagen
+                  </Button>
+                </Box>
 
-                  {imageOption === 'file' ? (
-                    <Box>
-                      <Button
-                        variant="contained"
-                        component="label"
-                        fullWidth
-                      >
-                        Seleccionar Archivo de Imagen
-                        <input
-                          type="file"
-                          hidden
-                          accept="image/*"
-                          onChange={handleFileChange}
-                        />
-                      </Button>
-                      {imageFile && <Typography sx={{ mt: 1 }}>{imageFile.name}</Typography>}
-                    </Box>
-                  ) : (
-                    <TextField
+                {imageOption === 'file' ? (
+                  <Box>
+                    <Button
+                      variant="outlined"
+                      component="label"
                       fullWidth
-                      label="URL de la Imagen"
-                      value={formData.imagenURL}
-                      onChange={(e) => setFormData({ ...formData, imagenURL: e.target.value })}
-                      placeholder="https://ejemplo.com/imagen.jpg"
-                      helperText="Ingresa la URL completa de la imagen"
-                    />
-                  )}
-
-                  {formErrors.image && (
-                    <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
-                      {formErrors.image}
+                      startIcon={<CloudUploadIcon />}
+                      sx={{ borderRadius: 2, mb: 2 }}
+                    >
+                      Seleccionar Archivo de Imagen
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={handleFileChange}
+                      />
+                    </Button>
+                    {imageFile && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" color={colors.success}>
+                          Archivo seleccionado: {imageFile.name}
+                        </Typography>
+                        <Chip 
+                          label={`${(imageFile.size / 1024 / 1024).toFixed(2)} MB`} 
+                          size="small" 
+                          color="primary" 
+                        />
+                      </Box>
+                    )}
+                    <Typography variant="caption" color={colors.textLight} sx={{ mt: 1, display: 'block' }}>
+                      Formatos soportados: JPG, PNG, GIF. Tamaño máximo: 5MB
                     </Typography>
-                  )}
-                </FormControl>
+                  </Box>
+                ) : (
+                  <TextField
+                    fullWidth
+                    label="URL de la Imagen"
+                    value={formData.imagenURL}
+                    onChange={(e) => handleImageUrlChange(e.target.value)}
+                    placeholder="https://ejemplo.com/imagen.jpg o /images/products/mi-imagen.jpg"
+                    helperText="Ingresa una URL completa o ruta local del servidor"
+                    error={!!formErrors.image}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2
+                      }
+                    }}
+                  />
+                )}
+
+                {formErrors.image && (
+                  <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+                    {formErrors.image}
+                  </Typography>
+                )}
               </Grid>
+
+              {/* Estado del producto */}
               <Grid item xs={12}>
                 <FormControlLabel
                   control={
@@ -455,29 +937,55 @@ const ProductManagementPage = () => {
                       color="primary"
                     />
                   }
-                  label="Producto Activo"
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {formData.activo ? <ToggleOnIcon color="success" /> : <ToggleOffIcon color="error" />}
+                      <Typography>
+                        Producto {formData.activo ? 'Activo' : 'Inactivo'}
+                      </Typography>
+                    </Box>
+                  }
                 />
               </Grid>
             </Grid>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancelar</Button>
+        <DialogActions sx={{ p: 3, gap: 1 }}>
+          <Button 
+            onClick={handleCloseDialog}
+            variant="outlined"
+            sx={{ borderRadius: 2 }}
+          >
+            Cancelar
+          </Button>
           <Button
             onClick={handleSubmit}
             variant="contained"
             disabled={submitLoading}
+            sx={{ 
+              borderRadius: 2,
+              background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`
+            }}
           >
-            {submitLoading ? <CircularProgress size={20} /> : (editingProduct ? 'Actualizar' : 'Crear')}
+            {submitLoading ? (
+              <CircularProgress size={20} sx={{ color: 'white' }} />
+            ) : (
+              editingProduct ? 'Actualizar Producto' : 'Crear Producto'
+            )}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Floating Action Button for mobile */}
+      {/* Botón flotante para móvil */}
       <Fab
         color="primary"
         aria-label="add"
-        sx={{ position: 'fixed', bottom: 16, right: 16 }}
+        sx={{ 
+          position: 'fixed', 
+          bottom: 16, 
+          right: 16,
+          background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`
+        }}
         onClick={() => handleOpenDialog()}
       >
         <AddIcon />
