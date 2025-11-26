@@ -110,19 +110,19 @@ const HomePage = () => {
 
   const inspirationItems = [
     {
-      image: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=400&h=300&fit=crop',
+      image: 'https://media.istockphoto.com/id/1041987488/es/foto/lindo-perro-de-poner-su-cara-en-sus-rodillas-y-el-hombre-sonriente-de-las-manos-rascarse-el.jpg?s=612x612&w=0&k=20&c=_-QrG1QimtXPttueHgPSkhchwUcn8DNtEclUpV991Cg=',
       quote: 'El amor por todas las criaturas vivientes es el más noble atributo del hombre.'
     },
     {
-      image: 'https://images.unsplash.com/photo-1533743983669-94fa5c4338ec?w=400&h=300&fit=crop',
+      image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8cGVycm8lMjBmZWxpenxlbnwwfHwwfHx8MA%3D%3D',
       quote: 'Hasta que no hayas amado a un animal, una parte de tu alma permanecerá dormida.'
     },
     {
-      image: 'https://images.unsplash.com/photo-1560807707-8cc77767d783?w=400&h=300&fit=crop',
+      image: 'https://img.freepik.com/foto-gratis/fotografia-angulo-lindo-perro-capturado-arco-iris-cielo-azul_181624-18212.jpg?semt=ais_hybrid&w=740&q=80',
       quote: 'Los animales son amigos tan agradables: no hacen preguntas, no critican.'
     },
     {
-      image: 'https://images.unsplash.com/photo-1518717758536-85ae29035b6d?w=400&h=300&fit=crop',
+      image: 'https://ladogmami.com/wp-content/uploads/2021/01/5.-Perro-feliz-10-senales-para-identificarlo-scaled-1.jpg',
       quote: 'La grandeza de una nación se puede juzgar por la forma en que trata a sus animales.'
     }
   ];

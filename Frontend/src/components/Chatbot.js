@@ -1,1075 +1,683 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Fab,
-  Box,
-  Slide,
-  Fade,
-  Zoom,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  Chip,
-  Avatar,
-  IconButton,
-  useTheme,
-  useMediaQuery,
-  alpha,
-  Tooltip
-} from '@mui/material';
-import {
-  Chat as ChatIcon,
-  Close as CloseIcon,
-  Pets as PetsIcon,
-  ShoppingBag as ShoppingBagIcon,
-  Favorite as FavoriteIcon,
-  Star as StarIcon,
-  WhatsApp as WhatsAppIcon,
-  Visibility as VisibilityIcon,
-  ExpandLess as ExpandLessIcon,
-  LocalOffer as LocalOfferIcon
-} from '@mui/icons-material';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import Chatbot from 'react-chatbot-kit';
+import { createChatBotMessage } from 'react-chatbot-kit';
+import 'react-chatbot-kit/build/main.css';
+import { Fab, Box } from '@mui/material';
+import ChatIcon from '@mui/icons-material/Chat';
+import CloseIcon from '@mui/icons-material/Close';
 import { useAuth } from '../context/AuthContext';
 import mascotaService from '../services/mascotaService';
 import productService from '../services/productService';
 
 const ChatbotComponent = () => {
-  const [showChatbot, setShowChatbot] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [showChatbot, setShowChatbot] = useState(true);
   const [mascotas, setMascotas] = useState([]);
   const [products, setProducts] = useState([]);
-  const [conversation, setConversation] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
 
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  // Helper functions
+  const getMascotaId = useCallback((m) => 
+    (m && (m.MascotaID ?? m.mascotaID ?? m.id ?? m.idMascota ?? m.id_mascota)), []);
 
-  // Paleta de colores pastel para IA
-  const colorPalette = {
-    primary: '#A8D8EA',
-    secondary: '#FFAAA7',
-    accent: '#FFD3B5',
-    background: '#FAFAFA',
-    surface: '#FFFFFF',
-    text: '#424242',
-    textLight: '#757575',
-    userBubble: '#E3F2FD',
-    botBubble: '#F5F5F5',
-    success: '#C8E6C9',
-    warning: '#FFECB3'
-  };
+  const getMascotaNombre = useCallback((m) => 
+    (m?.nombre || m?.Nombre || 'tu mascota'), []);
 
-  // Mapeo de alergias y sus sinónimos - MÁS COMPLETO
-  const alergiasMap = {
-    'Pollo': ['pollo', 'gallina', 'ave', 'carne de ave', 'poultry', 'chicken', 'aves', 'pollos', 'gallinas', 'carne de pollo'],
-    'Cereales': ['cereales', 'trigo', 'maíz', 'maiz', 'arroz', 'avena', 'cebada', 'grain', 'cereal', 'wheat', 'corn', 'rice', 'granos', 'granos enteros', 'harina', 'gluten'],
-    'Soya': ['soya', 'soja', 'soja', 'glycine max', 'soy', 'soja', 'soya texturizada', 'proteína de soya', 'lecitina de soya'],
-    'Papa': ['papa', 'patata', 'solanum tuberosum', 'potato', 'papas', 'patatas', 'papa natural'],
-    'Camote': ['camote', 'batata', 'papa dulce', 'ipomoea batatas', 'sweet potato', 'boniatos', 'camotes'],
-    'Legumbres': ['legumbres', 'lentejas', 'garbanzos', 'frijoles', 'judías', 'alubias', 'legumes', 'beans', 'lentils', 'leguminosas', 'guisantes', 'habas'],
-    'Aceites vegetales': ['aceite vegetal', 'aceite de soja', 'aceite de maíz', 'aceite de girasol', 'aceite de canola', 'vegetable oil', 'aceites refinados', 'aceite vegetal refinado']
-  };
+  const whatsappNumber = '51956550376';
 
-  // Mapeo de objetivos nutricionales y sus sinónimos
-  const objetivosMap = {
-    'Control de peso': ['control de peso', 'peso', 'adelgazar', 'obesidad', 'sobrepeso', 'weight control', 'weight management', 'bajo en calorías', 'mantenimiento de peso', 'dieta', 'reducir peso', 'light', 'bajo en grasa'],
-    'Aumento de energía o masa muscular': ['energía', 'masa muscular', 'proteína', 'musculo', 'energetico', 'energy', 'muscle', 'protein', 'fortalecimiento', 'desarrollo muscular', 'ganancia muscular', 'alto en proteína', 'proteico', 'energético'],
-    'Apoyo Digestivo': ['digestión', 'digestivo', 'sensible', 'prebiótico', 'probiótico', 'fibra', 'digest', 'sensitive stomach', 'digestive health', 'salud intestinal', 'flora intestinal', 'probióticos', 'digestivo sensible'],
-    'Piel y pelaje saludables': ['piel', 'pelaje', 'brillante', 'saludable', 'dermatológico', 'caspa', 'picor', 'skin', 'coat', 'fur', 'pelage', 'pelo brillante', 'dermatitis', 'omega', 'ácidos grasos', 'brillo', 'hidratación'],
-    'Soporte articular o movilidad': ['articular', 'movilidad', 'articulaciones', 'cartílago', 'artritis', 'huesos', 'joint', 'mobility', 'arthritis', 'condroitín', 'glucosamina', 'flexibilidad', 'articulaciones saludables'],
-    'Soporte inmunológico': ['inmunológico', 'defensas', 'inmunidad', 'resistencia a enfermedades', 'immune', 'defense', 'immunity', 'sistema inmunitario', 'anticuerpos', 'defensas naturales', 'inmunidad fuerte'],
-    'Vitalidad y longevidad': ['vitalidad', 'longevidad', 'vejez', 'anciano', 'senior', 'vital', 'longevity', 'vitality', 'adulto mayor', 'tercera edad', 'envejecimiento saludable', 'vida larga'],
-    'Control del nivel de azúcar': ['azúcar', 'glucosa', 'diabetes', 'insulina', 'control de azúcar', 'sugar', 'glucose', 'diabetic', 'nivel glucémico', 'glicemia', 'bajo en azúcar', 'diabético']
-  };
-
+  // Data fetching
   useEffect(() => {
     if (user) {
       fetchMascotas();
-      fetchProducts();
     }
   }, [user]);
 
   const fetchMascotas = async () => {
     try {
+      setIsLoading(true);
       const data = await mascotaService.getMascotas();
-      setMascotas(data);
+      setMascotas(data || []);
     } catch (error) {
       console.error('Error fetching mascotas:', error);
+      setMascotas([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const fetchProducts = async () => {
     try {
+      setIsLoading(true);
       const data = await productService.getProductos();
-      setProducts(data);
+      setProducts(data || []);
+      return data || [];
     } catch (error) {
       console.error('Error fetching products:', error);
+      setProducts([]);
+      return [];
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getMascotaId = (m) => (m && (m.MascotaID ?? m.mascotaID ?? m.id ?? m.idMascota ?? m.id_mascota));
-  const whatsappNumber = '51956550376';
-
-  // Función mejorada para normalizar texto
-  const normalizeText = (text) => {
-    return text?.toString().toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim() || '';
-  };
-
-  // Función MEJORADA para verificar alergias - MÁS ESTRICTA
-  const contieneAlergenos = (producto, alergias) => {
-    if (!alergias || alergias.length === 0) return false;
+  // Product recommendation logic
+  const getProductRecommendations = useCallback((mascota, allProducts) => {
+    if (!allProducts || allProducts.length === 0) return [];
     
-    const descripcion = normalizeText(producto.descripcion || producto.Descripcion || '');
-    const nombre = normalizeText(producto.nombre || producto.Nombre || '');
-    const ingredientes = normalizeText(producto.ingredientes || producto.Ingredientes || '');
-    const categoria = normalizeText(producto.categoria || producto.Categoria || '');
-    const beneficios = normalizeText(producto.beneficios || producto.Beneficios || '');
-    
-    const textoCompleto = `${descripcion} ${nombre} ${ingredientes} ${categoria} ${beneficios}`;
+    const notas = mascota.notasAdicionales?.toLowerCase() || '';
+    const alergias = extractSection(notas, 'Alergias');
+    const objetivos = extractSection(notas, 'Objetivo nutricional');
+    const objetivoPrincipal = (objetivos[0] || 'mantenimiento general').trim().toLowerCase();
 
-    // Buscar en cada alergia y sus sinónimos
-    for (const alergia of alergias) {
-      const sinonimos = alergiasMap[alergia] || [normalizeText(alergia)];
-      for (const sinonimo of sinonimos) {
-        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
-        if (patron.test(textoCompleto)) {
-          console.log(`Producto ${producto.nombre} excluido por alergia: ${alergia} (sinónimo: ${sinonimo})`);
-          return true;
-        }
-      }
-    }
-    
-    return false;
-  };
-
-  // Función mejorada para calcular puntuación de objetivos
-  const calcularPuntuacionObjetivos = (producto, objetivos) => {
-    if (!objetivos || objetivos.length === 0) return 0;
-    
-    const descripcion = normalizeText(producto.descripcion || producto.Descripcion || '');
-    const nombre = normalizeText(producto.nombre || producto.Nombre || '');
-    const beneficios = normalizeText(producto.beneficios || producto.Beneficios || '');
-    const categoria = normalizeText(producto.categoria || producto.Categoria || '');
-    
-    const textoCompleto = `${descripcion} ${nombre} ${beneficios} ${categoria}`;
-
-    return objetivos.reduce((puntuacion, objetivo) => {
-      const sinonimos = objetivosMap[objetivo] || [normalizeText(objetivo)];
-      const encontrado = sinonimos.some(sinonimo => {
-        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
-        return patron.test(textoCompleto);
-      });
-      return puntuacion + (encontrado ? 1 : 0);
-    }, 0);
-  };
-
-  // Mensaje de bienvenida inicial
-  useEffect(() => {
-    if (showChatbot && conversation.length === 0) {
-      const welcomeMessage = {
-        type: 'bot',
-        content: user 
-          ? `¡Hola ${user.name}! 👋 Soy Coco, tu asistente virtual de Patitas y Sabores.\n\nPuedo ayudarte a encontrar productos perfectos para tus mascotas y ofrecerte recomendaciones personalizadas. ¿Por dónde empezamos?`
-          : '¡Hola! 👋 Soy Coco, tu asistente virtual de Patitas y Sabores.\n\nPuedo ayudarte a encontrar productos perfectos para tus mascotas y ofrecerte recomendaciones personalizadas. ¿Por dónde empezamos?',
-        timestamp: new Date()
-      };
-      setConversation([welcomeMessage]);
-    }
-  }, [showChatbot, user, conversation.length]);
-
-  const addMessage = (content, type = 'bot', options = null) => {
-    const newMessage = {
-      type,
-      content,
-      timestamp: new Date(),
-      options
+    // Allergy mapping
+    const alergiasMap = {
+      insectos: ['grillo', 'insecto'],
+      avena: ['avena', 'cereal', 'gluten'],
+      coco: ['coco'],
+      plátano: ['plátano', 'banana'],
+      aceite: ['aceite de oliva', 'oliva'],
+      tubérculo: ['camote', 'papa', 'yacón'],
+      linaza: ['linaza'],
+      calabaza: ['calabaza']
     };
-    setConversation(prev => [...prev, newMessage]);
+
+    // Filter safe products
+    const safeProducts = allProducts.filter(product => {
+      const productText = `${product.descripcion || ''} ${product.nombre || ''}`.toLowerCase();
+      return !alergias.some(alergia => 
+        alergiasMap[alergia]?.some(term => productText.includes(term))
+      );
+    });
+
+    // Recommendation logic based on nutritional goals
+    const recommendationRules = {
+      'control de peso': ['Fibra Vital', 'fibra'],
+      'aumento de energía o masa muscular': ['NutriCamote', 'Grillo', 'Energía'],
+      'digestión sensible': ['Digest', 'digestión'],
+      'piel y pelaje saludables': ['Piel', 'Pelaje', 'Dermosalud'],
+      'soporte articular o movilidad': ['Digest', 'Fibra Vital', 'articular'],
+      'reducción de alergias o intolerancias': ['Piel', 'Pelaje', 'Dermosalud'],
+      'soporte inmunológico': ['Digest', 'Fibra Vital'],
+      'vitalidad y longevidad': ['NutriCamote', 'Grillo'],
+      'mantenimiento general': ['Fibra Vital']
+    };
+
+    // Find matching products
+    const objetivoKey = Object.keys(recommendationRules).find(key => 
+      objetivoPrincipal.includes(key)
+    ) || 'mantenimiento general';
+
+    const targetKeywords = recommendationRules[objetivoKey];
+    
+    const recommendedProducts = safeProducts.filter(product => {
+      const productText = `${product.nombre || ''} ${product.descripcion || ''}`.toLowerCase();
+      return targetKeywords.some(keyword => 
+        productText.includes(keyword.toLowerCase())
+      );
+    });
+
+    return recommendedProducts.length > 0 ? recommendedProducts : safeProducts.slice(0, 3);
+  }, []);
+
+  const extractSection = (text, label) => {
+    const regex = new RegExp(`${label}:([^|]+)`, 'i');
+    const match = text.match(regex);
+    return match ? match[1].split(',').map(s => s.trim().toLowerCase()) : [];
   };
 
-  const handleQuickReply = (action, value = null) => {
-    addMessage(value || action, 'user');
-    setLoading(true);
+  // Chatbot configuration
+  const config = useMemo(() => ({
+    initialMessages: [
+      createChatBotMessage('¡Hola! Soy Coco, tu asistente de Patitas y Sabores. ¿En qué puedo ayudarte hoy?', {
+        widget: 'mainOptions',
+      }),
+    ],
+    botName: 'Coco',
+    inputDisabled: true,
+    widgets: [
+      {
+        widgetName: 'mainOptions',
+        widgetFunc: (props) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+            <button
+              onClick={() => handleWidgetAction(props, 'recomendaciones')}
+              style={buttonStyle}
+            >
+              Recomendaciones
+            </button>
+            <button
+              onClick={() => handleWidgetAction(props, 'productos')}
+              style={buttonStyle}
+            >
+              Productos
+            </button>
+          </div>
+        ),
+      },
+      {
+        widgetName: 'mascotaOptions',
+        widgetFunc: (props) => {
+          const mascotaList = props.widgetProps?.mascotas || mascotas || [];
+          
+          if (mascotaList.length === 0) {
+            return (
+              <div style={{ padding: '8px', color: '#666', fontStyle: 'italic' }}>
+                No hay mascotas registradas
+              </div>
+            );
+          }
 
-    setTimeout(() => {
-      switch (action) {
-        case 'recomendaciones':
-          handleRecommendations();
-          break;
-        case 'productos':
-          handleProductos();
-          break;
-        case 'seleccionar_mascota':
-          handleSelectMascota(value);
-          break;
-        case 'inicio':
-          handleDefault();
-          break;
-        default:
-          handleDefault();
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+              {mascotaList.map((mascota) => {
+                const id = getMascotaId(mascota);
+                const nombre = getMascotaNombre(mascota);
+                const especie = mascota.especie || mascota.Especie || 'sin especie';
+
+                return (
+                  <button
+                    key={id || `${nombre}_${Math.random()}`}
+                    onClick={() => handleWidgetAction(props, `seleccionar_mascota_${id}`)}
+                    style={buttonStyle}
+                  >
+                    {`${nombre} (${especie})`}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        },
+      },
+      {
+        widgetName: 'productCards',
+        widgetFunc: ({ payload }) => {
+          const productList = Array.isArray(payload) ? payload : [];
+          
+          if (productList.length === 0) {
+            return (
+              <div style={{ padding: '8px', color: '#666' }}>
+                No hay productos disponibles en este momento.
+              </div>
+            );
+          }
+
+          return (
+            <div style={productContainerStyle}>
+              {productList.map((product, index) => (
+                <ProductCard 
+                  key={product.id || product.productoID || index}
+                  product={product}
+                  whatsappNumber={whatsappNumber}
+                />
+              ))}
+            </div>
+          );
+        },
       }
-      setLoading(false);
-    }, 1000);
-  };
+    ],
+    customStyles: {
+      botMessageBox: {
+        backgroundColor: '#A8B5A0',
+        color: '#000',
+      },
+      userMessageBox: {
+        backgroundColor: '#D4A574',
+        color: '#000',
+      },
+      chatButton: {
+        backgroundColor: '#A8B5A0',
+      },
+    },
+    customComponents: {
+      botAvatar: (props) => (
+        <div {...props}>
+          <img
+            src="https://static.vecteezy.com/system/resources/previews/005/055/092/non_2x/cute-australian-shepherd-dog-avatar-cartoon-icon-illustration-vector.jpg"
+            alt="Coco Bot"
+            style={{ width: '40px', height: '40px', borderRadius: '50%' }}
+          />
+        </div>
+      ),
+      input: () => null,
+      quickReply: (props) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+          {props.quickReplies.map((reply, index) => (
+            <button
+              key={index}
+              onClick={() => props.onQuickReply(reply.value)}
+              style={quickReplyButtonStyle}
+              onMouseOver={(e) => (e.target.style.backgroundColor = '#8FA68E')}
+              onMouseOut={(e) => (e.target.style.backgroundColor = '#A8B5A0')}
+            >
+              {reply.label}
+            </button>
+          ))}
+        </div>
+      ),
+    },
+  }), [mascotas, getMascotaId, getMascotaNombre]);
 
-  const handleRecommendations = () => {
-    if (!mascotas || mascotas.length === 0) {
-      addMessage(
-        `No veo mascotas registradas en tu perfil aún. 📝\n\nPara obtener recomendaciones personalizadas, primero registra a tu mascota en la sección "Mis Mascotas". Luego podré analizar sus necesidades específicas y sugerirte los productos más adecuados.`,
-        'bot',
-        [
-          { label: '🛍️ Explorar Productos', action: 'productos' },
-          { label: '💬 Menú Principal', action: 'inicio' }
-        ]
-      );
-      return;
-    }
+  // Action Provider with improved logic
+  const ActionProvider = ({ createChatBotMessage, setState, children }) => {
+    
+    const updateChatState = useCallback((newMessages) => {
+      setState(prev => ({
+        ...prev,
+        messages: [...prev.messages, ...(Array.isArray(newMessages) ? newMessages : [newMessages])]
+      }));
+    }, []);
 
-    if (mascotas.length > 1) {
-      addMessage(
-        'Veo que tienes varias mascotas registradas. 🐕🐈\n\n¿Para cuál de ellas te gustaría que prepare recomendaciones personalizadas?',
-        'bot',
-        mascotas.map(mascota => ({
-          label: `${mascota.nombre} (${mascota.especie})`,
-          action: 'seleccionar_mascota',
-          value: getMascotaId(mascota)
-        }))
-      );
-      return;
-    }
-
-    const mascota = mascotas[0];
-    handleRecommendationsForMascota(getMascotaId(mascota));
-  };
-
-  const handleSelectMascota = (mascotaId) => {
-    const mascota = mascotas.find(m => String(getMascotaId(m)) === String(mascotaId));
-    if (mascota) {
-      addMessage(`Perfecto! Preparando recomendaciones personalizadas para ${mascota.nombre}... 🎯`, 'bot');
-      setTimeout(() => {
-        handleRecommendationsForMascota(mascotaId);
-      }, 1500);
-    }
-  };
-
-  const handleRecommendationsForMascota = async (mascotaId) => {
-    const mascota = mascotas.find(m => String(getMascotaId(m)) === String(mascotaId));
-    if (!mascota) {
-      addMessage('No pude encontrar la mascota seleccionada. ¿Podrías intentarlo de nuevo?', 'bot');
-      return;
-    }
-
-    try {
-      const nombre = mascota.nombre || 'tu mascota';
-      const alergias = mascota.alergias || [];
-      const objetivos = mascota.objetivosNutricionales || [];
-
-      console.log(`Generando recomendaciones para ${nombre}:`, { alergias, objetivos });
-
-      // FILTRADO ESTRICTO POR ALERGIAS - PRIORIDAD MÁXIMA
-      const productosFiltrados = products.filter(producto => {
-        const tieneAlergenos = contieneAlergenos(producto, alergias);
-        if (tieneAlergenos) {
-          console.log(`❌ EXCLUIDO: ${producto.nombre} - contiene alérgenos`);
-        }
-        return !tieneAlergenos;
+    const sendOptions = useCallback(() => {
+      const optionsMsg = createChatBotMessage('¿En qué más puedo ayudarte?', {
+        widget: 'mainOptions',
       });
+      
+      setTimeout(() => {
+        updateChatState(optionsMsg);
+      }, 1000);
+    }, [createChatBotMessage, updateChatState]);
 
-      console.log(`Productos después de filtrar alergias: ${productosFiltrados.length} de ${products.length}`);
-
-      // Si no hay productos después del filtrado por alergias
-      if (productosFiltrados.length === 0) {
-        let mensaje = `Basado en el perfil de ${nombre}`;
-        if (alergias.length > 0) {
-          mensaje += ` (excluyendo productos con: ${alergias.join(', ')})`;
-        }
-        mensaje += `, no encontré productos seguros que cumplan con las restricciones de alergias. Te recomiendo explorar todos nuestros productos o ajustar las alergias registradas.`;
-
-        addMessage(
-          mensaje,
-          'bot',
-          [
-            { label: '🛍️ Explorar Todos los Productos', action: 'productos' },
-            { label: '💬 Menú Principal', action: 'inicio' }
-          ]
-        );
+    const handleRecommendationsForMascota = useCallback(async (mascotaId) => {
+      const mascota = mascotas.find(m => String(getMascotaId(m)) === String(mascotaId));
+      
+      if (!mascota) {
+        const message = createChatBotMessage('No pude encontrar la mascota seleccionada. Intenta de nuevo.');
+        updateChatState(message);
         return;
       }
 
-      // CALCULAR PUNTUACIÓN PARA PRODUCTOS SEGUROS
-      const productosRecomendados = productosFiltrados
-        .map(producto => {
-          const puntuacionObjetivos = calcularPuntuacionObjetivos(producto, objetivos);
-          const esPremium = normalizeText(producto.nombre).includes('premium') || 
-                           normalizeText(producto.categoria).includes('premium') ||
-                           normalizeText(producto.descripcion).includes('premium');
-          
-          // Puntuación adicional por características específicas
-          let puntuacionExtra = 0;
-          if (mascota.especie && normalizeText(producto.descripcion).includes(normalizeText(mascota.especie))) {
-            puntuacionExtra += 1;
-          }
-          if (mascota.raza && normalizeText(producto.descripcion).includes(normalizeText(mascota.raza))) {
-            puntuacionExtra += 0.5;
-          }
-          
-          const puntuacionTotal = (puntuacionObjetivos * 2) + (esPremium ? 1 : 0) + puntuacionExtra;
-          
-          console.log(`Producto: ${producto.nombre}, Puntos: ${puntuacionTotal} (objetivos: ${puntuacionObjetivos}, premium: ${esPremium}, extra: ${puntuacionExtra})`);
-          
-          return {
-            ...producto,
-            puntuacion: puntuacionTotal
-          };
-        })
-        .sort((a, b) => {
-          // Primero por puntuación, luego por precio (mayor a menor)
-          if (b.puntuacion !== a.puntuacion) {
-            return b.puntuacion - a.puntuacion;
-          }
-          return (b.precio || 0) - (a.precio || 0);
-        })
-        .slice(0, 3);
+      try {
+        const allProducts = await fetchProducts();
+        
+        if (!allProducts || allProducts.length === 0) {
+          const message = createChatBotMessage('Lo siento, no hay productos disponibles para recomendar en este momento.');
+          updateChatState(message);
+          return;
+        }
 
-      console.log('Productos recomendados finales:', productosRecomendados);
+        const recommendedProducts = getProductRecommendations(mascota, allProducts);
+        const mascotaNombre = getMascotaNombre(mascota);
 
-      let mensajeRecomendacion = `Basándome en el perfil de **${nombre}**`;
-      if (alergias.length > 0) {
-        mensajeRecomendacion += ` (excluyendo: ${alergias.join(', ')})`;
+        if (recommendedProducts.length === 0) {
+          const message = createChatBotMessage(`No encontré productos adecuados para ${mascotaNombre} basándome en sus necesidades específicas.`);
+          updateChatState(message);
+          sendOptions();
+          return;
+        }
+
+        // Create recommendation message flow
+        const introMessage = createChatBotMessage(
+          `¡Perfecto! Basándome en el perfil de ${mascotaNombre}, tengo algunas recomendaciones especiales:`
+        );
+
+        const productMessage = createChatBotMessage(
+          `He seleccionado ${recommendedProducts.length} producto(s) que se adaptan a las necesidades de ${mascotaNombre}:`,
+          {
+            widget: 'productCards',
+            payload: recommendedProducts,
+          }
+        );
+
+        updateChatState([introMessage, productMessage]);
+        sendOptions();
+
+      } catch (error) {
+        console.error('Error generating recommendations:', error);
+        const message = createChatBotMessage('Ocurrió un error al generar las recomendaciones. Inténtalo de nuevo.');
+        updateChatState(message);
+        sendOptions();
       }
-      if (objetivos.length > 0) {
-        mensajeRecomendacion += `, buscando: ${objetivos.join(', ')}`;
+    }, [mascotas, getProductRecommendations, getMascotaNombre, getMascotaId, createChatBotMessage, updateChatState, sendOptions]);
+
+    const handleRecommendations = useCallback(() => {
+      if (!mascotas || mascotas.length === 0) {
+        const message = createChatBotMessage(
+          <span style={{ color: '#886137', fontWeight: 'bold' }}>
+            No tienes mascotas registradas. ¡Registra a tu mascota en la sección de Mascotas para recibir recomendaciones personalizadas!
+          </span>
+        );
+        updateChatState(message);
+        sendOptions();
+        return;
       }
-      mensajeRecomendacion += `, he seleccionado estos productos seguros y adecuados:`;
 
-      addMessage(mensajeRecomendacion, 'bot');
+      if (mascotas.length > 1) {
+        const askMessage = createChatBotMessage('Tienes varias mascotas registradas. ¿Para cuál deseas la recomendación?', {
+          widget: 'mascotaOptions',
+          widgetProps: { mascotas },
+        });
+        updateChatState(askMessage);
+        return;
+      }
 
-      // Mostrar productos recomendados
-      productosRecomendados.forEach((producto, index) => {
-        setTimeout(() => {
-          addMessage('', 'bot', { type: 'product', product: producto });
-        }, index * 600);
+      // Single mascota case
+      const mascota = mascotas[0];
+      handleRecommendationsForMascota(getMascotaId(mascota));
+    }, [mascotas, handleRecommendationsForMascota, getMascotaId, createChatBotMessage, updateChatState, sendOptions]);
+
+    const handleProductos = useCallback(async () => {
+      try {
+        const allProducts = await fetchProducts();
+        
+        if (!allProducts || allProducts.length === 0) {
+          const message = createChatBotMessage('No hay productos disponibles en este momento.');
+          updateChatState(message);
+          sendOptions();
+          return;
+        }
+
+        const productMessage = createChatBotMessage(
+          `¡Aquí tienes nuestros productos disponibles! Tenemos ${allProducts.length} producto(s) para ti:`,
+          {
+            widget: 'productCards',
+            payload: allProducts.slice(0, 15), // Limit to 15 products
+          }
+        );
+
+        updateChatState(productMessage);
+        sendOptions();
+
+      } catch (error) {
+        console.error('Error getting products:', error);
+        const message = createChatBotMessage('Lo siento, hubo un error al obtener la lista de productos. Inténtalo de nuevo.');
+        updateChatState(message);
+        sendOptions();
+      }
+    }, [createChatBotMessage, updateChatState, sendOptions]);
+
+    // Event listeners and initial setup
+    useEffect(() => {
+      const greetingText = user
+        ? `¡Hola ${user.name}! Soy Coco, tu asistente de Patitas y Sabores. ¿En qué puedo ayudarte hoy?`
+        : '¡Hola! Soy Coco, tu asistente de Patitas y Sabores. ¿En qué puedo ayudarte hoy?';
+
+      const greeting = createChatBotMessage(greetingText, {
+        widget: 'mainOptions',
       });
 
-      // Mensaje final con opciones
-      setTimeout(() => {
-        addMessage(
-          '¿Te gustaría explorar más productos o necesitas otra recomendación?',
-          'bot',
-          [
-            { label: '🛍️ Ver Más Productos', action: 'productos' },
-            { label: '🎯 Otra Recomendación', action: 'recomendaciones' },
-            { label: '💬 Menú Principal', action: 'inicio' }
-          ]
+      setState(prev => {
+        const hasGreeting = prev.messages.some(m => 
+          m.message?.includes?.('¿En qué puedo ayudarte hoy?')
         );
-      }, productosRecomendados.length * 600 + 1000);
+        return hasGreeting ? prev : { ...prev, messages: [...prev.messages, greeting] };
+      });
+    }, [user, createChatBotMessage, setState]);
 
-    } catch (error) {
-      console.error('Error generating recommendations:', error);
-      addMessage(
-        'Lo siento, hubo un error al generar las recomendaciones. Por favor, intenta de nuevo.',
-        'bot',
-        [
-          { label: '🔄 Intentar Nuevamente', action: 'recomendaciones' },
-          { label: '🛍️ Explorar Productos', action: 'productos' }
-        ]
-      );
-    }
-  };
+    useEffect(() => {
+      const handler = (e) => {
+        const value = e?.detail;
+        if (!value) return;
 
-  const handleProductos = () => {
-    if (products.length === 0) {
-      addMessage(
-        'Actualmente no hay productos disponibles. Estamos trabajando para agregar nuevos productos muy pronto! ⏳',
-        'bot',
-        [
-          { label: '🎯 Obtener Recomendaciones', action: 'recomendaciones' },
-          { label: '💬 Menú Principal', action: 'inicio' }
-        ]
-      );
-      return;
-    }
-
-    addMessage(
-      'Aquí tienes nuestros productos disponibles: 🛍️',
-      'bot'
-    );
-
-    const sortedProducts = [...products].sort((a, b) => {
-      const catA = a.categoria || 'Otros';
-      const catB = b.categoria || 'Otros';
-      if (catA !== catB) return catA.localeCompare(catB);
-      return (b.precio || 0) - (a.precio || 0);
-    });
-
-    const productBatches = [];
-    for (let i = 0; i < sortedProducts.length; i += 2) {
-      productBatches.push(sortedProducts.slice(i, i + 2));
-    }
-
-    productBatches.forEach((batch, batchIndex) => {
-      setTimeout(() => {
-        batch.forEach(product => {
-          addMessage('', 'bot', { type: 'product', product });
-        });
+        const action = value.toString().toLowerCase();
         
-        if (batchIndex === productBatches.length - 1) {
-          setTimeout(() => {
-            addMessage(
-              '¿En qué más puedo ayudarte?',
-              'bot',
-              [
-                { label: '🎯 Recomendaciones Personalizadas', action: 'recomendaciones' },
-                { label: '💬 Menú Principal', action: 'inicio' }
-              ]
-            );
-          }, 1000);
-        }
-      }, batchIndex * 800);
-    });
-  };
-
-  const handleDefault = () => {
-    addMessage(
-      '¡Hola de nuevo! ¿En qué puedo ayudarte hoy? 😊\n\nPuedo ofrecerte recomendaciones personalizadas para tus mascotas o mostrarte nuestro catálogo completo de productos.',
-      'bot',
-      [
-        { label: '🎯 Recomendaciones', action: 'recomendaciones' },
-        { label: '🛍️ Ver Productos', action: 'productos' }
-      ]
-    );
-  };
-
-  const handleProductAction = (product, action) => {
-    if (action === 'view') {
-      const productId = product.productoID || product.ProductoID || product.id;
-      if (productId) {
-        window.open(`/productos/${productId}`, '_blank');
-      }
-    } else if (action === 'buy') {
-      const nombre = product.nombre || product.Nombre || 'Producto';
-      const precio = product.precio ?? product.Precio;
-      const text = `Hola! Estoy interesado en comprar: ${nombre}${precio ? ` (S/${precio})` : ''}. ¿Pueden brindarme más información?`;
-      const url = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(text)}`;
-      window.open(url, '_blank');
-    }
-  };
-
-  // Componente ProductCard MEJORADO con manejo de imágenes locales
-  const ProductCard = ({ product }) => {
-    const nombre = product.nombre || product.Nombre || 'Sin nombre';
-    const precio = (product.precio ?? product.Precio) !== undefined ? (product.precio ?? product.Precio) : null;
-    
-    // Función MEJORADA para obtener imágenes - Soporte para imágenes locales
-    const getProductImage = () => {
-      const posiblesPropiedades = [
-        'imagen', 'Imagen', 'imagenURL', 'imagenUrl', 'urlImagen', 
-        'image', 'Image', 'imageURL', 'imageUrl', 'urlImage',
-        'foto', 'Foto', 'fotoURL', 'fotoUrl', 'urlFoto',
-        'img', 'Img', 'imgURL', 'imgUrl', 'urlImg',
-        'fileName', 'FileName', 'archivo', 'Archivo'
-      ];
-      
-      for (let prop of posiblesPropiedades) {
-        if (product[prop] && typeof product[prop] === 'string' && product[prop].trim() !== '') {
-          let imagenUrl = product[prop].trim();
-          
-          // Si es una URL completa (http, https, data URL)
-          if (imagenUrl.startsWith('http') || imagenUrl.startsWith('//') || imagenUrl.startsWith('data:')) {
-            return imagenUrl;
-          }
-          
-          // Si es una ruta relativa que comienza con / (absoluta desde la raíz)
-          if (imagenUrl.startsWith('/')) {
-            return imagenUrl;
-          }
-          
-          // Si es solo un nombre de archivo (imágenes locales del backend)
-          // Asumimos que las imágenes están en wwwroot/images/products/
-          if (!imagenUrl.includes('/') && !imagenUrl.includes('\\')) {
-            return `/images/products/${imagenUrl}`;
-          }
-          
-          // Si es una ruta relativa con estructura de carpetas
-          if (imagenUrl.startsWith('./') || imagenUrl.startsWith('../')) {
-            return imagenUrl;
-          }
-          
-          // Si contiene backslashes (rutas de Windows) convertimos a forward slashes
-          if (imagenUrl.includes('\\')) {
-            imagenUrl = imagenUrl.replace(/\\/g, '/');
-          }
-          
-          // Si parece una ruta de archivo local sin el prefijo /images/products/
-          if (imagenUrl.includes('images/') || imagenUrl.includes('products/')) {
-            if (!imagenUrl.startsWith('/')) {
-              return `/${imagenUrl}`;
+        switch (action) {
+          case 'recomendaciones':
+            handleRecommendations();
+            break;
+          case 'productos':
+            handleProductos();
+            break;
+          default:
+            if (action.startsWith('seleccionar_mascota_')) {
+              const mascotaId = action.replace('seleccionar_mascota_', '');
+              handleRecommendationsForMascota(mascotaId);
             }
-            return imagenUrl;
-          }
-          
-          // Por defecto, asumimos que está en la carpeta de productos
-          return `/images/products/${imagenUrl}`;
+            break;
         }
-      }
-      return null;
-    };
+      };
 
-    const imagen = getProductImage();
+      window.addEventListener('chatbot-option', handler);
+      return () => window.removeEventListener('chatbot-option', handler);
+    }, [handleRecommendations, handleProductos, handleRecommendationsForMascota]);
 
     return (
-      <Zoom in timeout={800} style={{ transitionDelay: '200ms' }}>
-        <Card 
-          sx={{ 
-            mb: 2, 
-            border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
-            borderRadius: 3,
-            background: colorPalette.surface,
-            transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-            '&:hover': {
-              transform: 'translateY(-4px) scale(1.02)',
-              boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
-            }
-          }}
-        >
-          <CardContent sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              {/* Imagen del producto - MEJORADO para imágenes locales */}
-              <Box
-                sx={{
-                  position: 'relative',
-                  flexShrink: 0
-                }}
-              >
-                {imagen ? (
-                  <Box sx={{ position: 'relative' }}>
-                    <Avatar 
-                      src={imagen}
-                      onError={(e) => {
-                        console.log('Error cargando imagen:', imagen, 'para producto:', nombre);
-                        e.target.style.display = 'none';
-                      }}
-                      sx={{ 
-                        width: 70, 
-                        height: 70,
-                        borderRadius: 2,
-                        border: `2px solid ${colorPalette.primary}`,
-                        backgroundColor: colorPalette.background
-                      }} 
-                      variant="rounded"
-                    />
-                    {/* Fallback que se muestra si la imagen falla */}
-                    <Avatar 
-                      sx={{ 
-                        width: 70, 
-                        height: 70,
-                        borderRadius: 2,
-                        backgroundColor: colorPalette.accent,
-                        border: `2px solid ${colorPalette.primary}`,
-                        display: 'none',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }} 
-                      variant="rounded"
-                    >
-                      <LocalOfferIcon sx={{ color: colorPalette.text, fontSize: 30 }} />
-                    </Avatar>
-                  </Box>
-                ) : (
-                  <Avatar 
-                    sx={{ 
-                      width: 70, 
-                      height: 70,
-                      borderRadius: 2,
-                      backgroundColor: colorPalette.accent,
-                      border: `2px solid ${colorPalette.primary}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }} 
-                    variant="rounded"
-                  >
-                    <LocalOfferIcon sx={{ color: colorPalette.text, fontSize: 30 }} />
-                  </Avatar>
-                )}
-              </Box>
-              
-              {/* Información del producto */}
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography 
-                    variant="subtitle2" 
-                    fontWeight="600" 
-                    color={colorPalette.text}
-                    sx={{ 
-                      lineHeight: 1.2,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      flex: 1,
-                      mr: 1
-                    }}
-                  >
-                    {nombre}
-                  </Typography>
-                  {precio && (
-                    <Chip 
-                      label={`S/ ${precio}`} 
-                      size="small"
-                      sx={{ 
-                        backgroundColor: colorPalette.success,
-                        color: colorPalette.text,
-                        fontWeight: '600',
-                        fontSize: '0.7rem',
-                        flexShrink: 0,
-                        height: 24,
-                        minWidth: 'auto',
-                        px: 1
-                      }}
-                    />
-                  )}
-                </Box>
-                
-                {/* Categoría */}
-                {product.categoria && (
-                  <Chip 
-                    label={product.categoria}
-                    size="small"
-                    variant="outlined"
-                    sx={{ 
-                      mb: 1,
-                      fontSize: '0.6rem',
-                      height: 20,
-                      borderColor: colorPalette.primary,
-                      color: colorPalette.textLight
-                    }}
-                  />
-                )}
-                
-                {/* Botones compactos */}
-                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                  <Button
-                    onClick={() => handleProductAction(product, 'view')}
-                    variant="outlined"
-                    size="small"
-                    startIcon={<VisibilityIcon sx={{ fontSize: 16 }} />}
-                    sx={{ 
-                      borderRadius: 2,
-                      fontSize: '0.7rem',
-                      borderColor: colorPalette.primary,
-                      color: colorPalette.primary,
-                      '&:hover': {
-                        backgroundColor: alpha(colorPalette.primary, 0.1),
-                        borderColor: colorPalette.primary,
-                        transform: 'scale(1.05)'
-                      },
-                      transition: 'all 0.2s ease',
-                      minWidth: 'auto',
-                      px: 1.5,
-                      height: 28
-                    }}
-                  >
-                    Ver
-                  </Button>
-                  <Button
-                    onClick={() => handleProductAction(product, 'buy')}
-                    variant="contained"
-                    size="small"
-                    startIcon={<WhatsAppIcon sx={{ fontSize: 16 }} />}
-                    sx={{ 
-                      borderRadius: 2,
-                      fontSize: '0.7rem',
-                      backgroundColor: colorPalette.primary,
-                      color: colorPalette.text,
-                      '&:hover': {
-                        backgroundColor: alpha(colorPalette.primary, 0.8),
-                        transform: 'scale(1.05)'
-                      },
-                      transition: 'all 0.2s ease',
-                      minWidth: 'auto',
-                      px: 1.5,
-                      height: 28
-                    }}
-                  >
-                    Comprar
-                  </Button>
-                </Box>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-      </Zoom>
+      <div>
+        {React.Children.map(children, (child, index) =>
+          React.cloneElement(child, {
+            key: index,
+            actions: {
+              handleRecommendations,
+              handleProductos,
+              handleRecommendationsForMascota,
+            },
+          })
+        )}
+      </div>
     );
   };
 
-  const QuickReplies = ({ options }) => (
-    <Fade in timeout={600} style={{ transitionDelay: '300ms' }}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-        {options.map((option, index) => (
-          <Chip
-            key={index}
-            label={option.label}
-            onClick={() => handleQuickReply(option.action, option.value)}
-            clickable
-            variant="outlined"
-            sx={{
-              borderRadius: 2,
-              borderColor: colorPalette.primary,
-              color: colorPalette.text,
-              backgroundColor: colorPalette.surface,
-              '&:hover': {
-                backgroundColor: alpha(colorPalette.primary, 0.15),
-                transform: 'scale(1.08)',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
-              },
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              fontSize: '0.8rem',
-              height: 32,
-              animation: `fadeInUp 0.5s ease-out ${index * 100}ms both`
-            }}
-          />
-        ))}
-      </Box>
-    </Fade>
-  );
+  const MessageParser = ({ children, actions }) => {
+    const parse = (message) => {
+      if (!message) return;
+      
+      const msg = message.toString().toLowerCase();
+      
+      if (msg === 'recomendaciones' || msg === 'recomendacion') {
+        actions.handleRecommendations();
+      } else if (msg === 'productos') {
+        actions.handleProductos();
+      } else if (msg.startsWith('seleccionar_mascota_')) {
+        const id = msg.replace('seleccionar_mascota_', '');
+        actions.handleRecommendationsForMascota?.(id);
+      }
+    };
 
-  const MessageBubble = ({ message, index }) => (
-    <Slide in direction="up" timeout={800} style={{ transitionDelay: `${index * 150}ms` }}>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: message.type === 'user' ? 'flex-end' : 'flex-start',
-          mb: 2,
-          animation: `messageSlideIn 0.6s ease-out ${index * 150}ms both`
-        }}
-      >
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 1,
-            flexDirection: message.type === 'user' ? 'row-reverse' : 'row',
-            maxWidth: '85%'
-          }}
-        >
-          {message.type === 'bot' && (
-            <Avatar
-              src="/assets/chatbot.png"
-              sx={{
-                width: 32,
-                height: 32,
-                border: `2px solid ${colorPalette.primary}`,
-                animation: 'bounceIn 0.8s ease-out'
-              }}
-            />
-          )}
-          <Box
-            sx={{
-              p: 2,
-              borderRadius: 3,
-              background: message.type === 'user' 
-                ? `linear-gradient(135deg, ${colorPalette.userBubble} 0%, ${alpha(colorPalette.primary, 0.3)} 100%)`
-                : `linear-gradient(135deg, ${colorPalette.botBubble} 0%, ${alpha(colorPalette.accent, 0.1)} 100%)`,
-              color: colorPalette.text,
-              border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              whiteSpace: 'pre-line',
-              lineHeight: 1.5,
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-              }
-            }}
-          >
-            <Typography variant="body2" sx={{ lineHeight: 1.5 }}>
-              {message.content}
-            </Typography>
-            {message.options && message.options.type === 'product' && (
-              <ProductCard product={message.options.product} />
-            )}
-            {message.options && Array.isArray(message.options) && (
-              <QuickReplies options={message.options} />
-            )}
-          </Box>
-        </Box>
-      </Box>
-    </Slide>
-  );
+    return (
+      <div>
+        {React.Children.map(children, (child, index) =>
+          React.cloneElement(child, {
+            key: index,
+            parse: parse,
+            actions: actions,
+          })
+        )}
+      </div>
+    );
+  };
 
-  const ChatHeader = () => (
-    <Box
-      sx={{
-        p: 2,
-        borderBottom: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
-        background: `linear-gradient(135deg, ${colorPalette.primary} 0%, ${colorPalette.accent} 100%)`,
-        color: colorPalette.text,
-        borderTopLeftRadius: 12,
-        borderTopRightRadius: 12
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Avatar
-          src="/assets/chatbot.png"
-          sx={{ 
-            width: 40, 
-            height: 40,
-            border: `2px solid ${colorPalette.surface}`
-          }}
-        />
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h6" fontWeight="bold">
-            Coco Assistant
-          </Typography>
-          <Typography variant="caption" sx={{ opacity: 0.8 }}>
-            Patitas y Sabores • En línea
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <IconButton
-            size="small"
-            onClick={() => setIsMinimized(!isMinimized)}
-            sx={{ color: colorPalette.text }}
-          >
-            <ExpandLessIcon />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={() => setShowChatbot(false)}
-            sx={{ color: colorPalette.text }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </Box>
-      </Box>
-    </Box>
-  );
-
-  const QuickActions = () => (
-    <Fade in timeout={600}>
-      <Box sx={{ 
-        p: 2, 
-        borderTop: `1px solid ${alpha(colorPalette.primary, 0.1)}`,
-        backgroundColor: colorPalette.background
-      }}>
-        <Typography variant="caption" color={colorPalette.textLight} gutterBottom>
-          Acciones rápidas:
-        </Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {[
-            { label: '🎯 Recomendaciones', action: 'recomendaciones' },
-            { label: '🛍️ Productos', action: 'productos' }
-          ].map((action, index) => (
-            <Chip
-              key={index}
-              label={action.label}
-              onClick={() => handleQuickReply(action.action)}
-              size="small"
-              clickable
-              sx={{
-                borderRadius: 2,
-                backgroundColor: alpha(colorPalette.primary, 0.1),
-                color: colorPalette.text,
-                border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
-                '&:hover': {
-                  backgroundColor: alpha(colorPalette.primary, 0.2),
-                  transform: 'scale(1.05)'
-                },
-                transition: 'all 0.2s ease',
-                fontSize: '0.75rem',
-                height: 28
-              }}
-            />
-          ))}
-        </Box>
-      </Box>
-    </Fade>
-  );
-
-  // Agregar estilos CSS para animaciones personalizadas
-  const styles = `
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
+  // Hide input field
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .custom-chatbot-container input, 
+      .custom-chatbot-container textarea, 
+      .custom-chatbot-container .react-chatbot-kit-chat-input { 
+        display: none !important; 
       }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    @keyframes messageSlideIn {
-      from {
-        opacity: 0;
-        transform: translateY(30px) scale(0.95);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
-    }
-    @keyframes bounceIn {
-      0% {
-        opacity: 0;
-        transform: scale(0.3);
-      }
-      50% {
-        opacity: 1;
-        transform: scale(1.05);
-      }
-      70% {
-        transform: scale(0.9);
-      }
-      100% {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-    @keyframes pulse {
-      0%, 100% {
-        transform: scale(1);
-      }
-      50% {
-        transform: scale(1.1);
-      }
-    }
-  `;
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
 
   if (!showChatbot) {
     return (
-      <>
-        <style>{styles}</style>
-        <Tooltip title="¡Habla con Coco!" placement="left" arrow>
-          <Zoom in timeout={800}>
-            <Fab
-              color="primary"
-              aria-label="chat"
-              onClick={() => setShowChatbot(true)}
-              sx={{
-                position: 'fixed',
-                bottom: 16,
-                right: 16,
-                background: `linear-gradient(135deg, ${colorPalette.primary} 0%, ${colorPalette.accent} 100%)`,
-                '&:hover': {
-                  transform: 'scale(1.15) rotate(5deg)',
-                  boxShadow: `0 6px 25px ${alpha(colorPalette.primary, 0.4)}`,
-                  animation: 'pulse 2s infinite'
-                },
-                transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                zIndex: 1000
-              }}
-            >
-              <Box
-                component="img"
-                src="/assets/chatbot.png"
-                alt="Coco Assistant"
-                sx={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: '50%',
-                  transition: 'transform 0.3s ease'
-                }}
-              />
-            </Fab>
-          </Zoom>
-        </Tooltip>
-      </>
+      <Fab
+        color="primary"
+        aria-label="chat"
+        onClick={() => setShowChatbot(true)}
+        sx={fabStyle}
+      >
+        <img
+          src="/assets/chatbot.png"
+          alt="Coco Bot"
+          style={{ width: '56px', height: '56px', borderRadius: '50%' }}
+        />
+      </Fab>
     );
   }
 
   return (
-    <>
-      <style>{styles}</style>
-      <Slide in direction="up" timeout={600}>
-        <Box
-          sx={{
-            position: 'fixed',
-            bottom: 16,
-            right: 16,
-            width: isMobile ? 'calc(100vw - 32px)' : 400,
-            height: isMinimized ? 60 : 600,
-            maxHeight: isMobile ? '70vh' : 'none',
-            backgroundColor: colorPalette.background,
-            borderRadius: 3,
-            boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
-            border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            zIndex: 1000,
-            transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
-          }}
+    <Box sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 1000 }}>
+      <Box sx={{ position: 'relative' }}>
+        <Fab
+          size="small"
+          onClick={() => setShowChatbot(false)}
+          sx={closeButtonStyle}
         >
-          <ChatHeader />
-          
-          {!isMinimized && (
-            <>
-              <Box
-                sx={{
-                  flex: 1,
-                  overflow: 'auto',
-                  p: 2,
-                  background: colorPalette.background
-                }}
-              >
-                {conversation.map((message, index) => (
-                  <MessageBubble 
-                    key={index} 
-                    message={message} 
-                    index={index}
-                  />
-                ))}
-                {loading && (
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Avatar
-                        src="/assets/chatbot.png"
-                        sx={{ width: 32, height: 32 }}
-                      />
-                      <Box
-                        sx={{
-                          p: 2,
-                          borderRadius: 3,
-                          background: colorPalette.botBubble,
-                          border: `1px solid ${alpha(colorPalette.primary, 0.2)}`
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          {[0, 1, 2].map(i => (
-                            <Box
-                              key={i}
-                              sx={{
-                                width: 6,
-                                height: 6,
-                                borderRadius: '50%',
-                                backgroundColor: colorPalette.primary,
-                                animation: 'pulse 1.4s ease-in-out infinite both',
-                                animationDelay: `${i * 0.16}s`
-                              }}
-                            />
-                          ))}
-                        </Box>
-                      </Box>
-                    </Box>
-                  </Box>
-                )}
-              </Box>
-              <QuickActions />
-            </>
-          )}
+          <CloseIcon />
+        </Fab>
+        <Box sx={{ width: 350, height: 500 }}>
+          <div className="custom-chatbot-container">
+            <Chatbot
+              key={showChatbot ? 'open' : 'closed'}
+              config={config}
+              actionProvider={ActionProvider}
+              messageParser={MessageParser}
+            />
+          </div>
         </Box>
-      </Slide>
-    </>
+      </Box>
+    </Box>
   );
+};
+
+// Helper components and styles
+const ProductCard = ({ product, whatsappNumber }) => {
+  const id = product.productoID || product.ProductoID || product.id || product.productId;
+  const nombre = product.nombre || product.Nombre || product.NombreProducto || 'Sin nombre';
+  const desc = product.descripcion || product.Descripcion || product.DescripcionCorta || '';
+  const precio = (product.precio ?? product.Precio) !== undefined ? (product.precio ?? product.Precio) : null;
+
+  const handleComprar = () => {
+    const text = `Hola! Estoy interesado en comprar: ${nombre} ${precio ? `(S/${precio})` : ''}. Puedes coordinar conmigo?`;
+    const url = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleVerDetalle = () => {
+    if (id) window.location.href = `/productos/${id}`;
+  };
+
+  return (
+    <div style={productCardStyle}>
+      <div style={productNameStyle}>
+        {nombre} {precio ? `- S/${precio}` : ''}
+      </div>
+      <div style={productDescriptionStyle}>
+        {desc}
+      </div>
+      <div style={productActionsStyle}>
+        <button onClick={handleVerDetalle} style={detailButtonStyle}>
+          Ver detalle
+        </button>
+        <button onClick={handleComprar} style={buyButtonStyle}>
+          Comprar
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Styles
+const buttonStyle = {
+  backgroundColor: '#A8B5A0',
+  color: '#000',
+  border: 'none',
+  borderRadius: 20,
+  padding: '8px 12px',
+  cursor: 'pointer',
+  fontWeight: 'bold',
+  textAlign: 'left'
+};
+
+const quickReplyButtonStyle = {
+  backgroundColor: '#A8B5A0',
+  color: '#000',
+  border: 'none',
+  borderRadius: '20px',
+  padding: '8px 16px',
+  cursor: 'pointer',
+  fontSize: '14px',
+  fontWeight: 'bold',
+};
+
+const productContainerStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
+  marginTop: 8,
+  maxWidth: '100%',
+  overflowX: 'hidden'
+};
+
+const productCardStyle = {
+  borderRadius: 8,
+  padding: 8,
+  border: '1px solid #ddd',
+  background: '#fff',
+  margin: '4px 0',
+  width: '100%',
+  boxSizing: 'border-box'
+};
+
+const productNameStyle = {
+  fontWeight: 'bold',
+  wordBreak: 'break-word'
+};
+
+const productDescriptionStyle = {
+  fontSize: 12,
+  color: '#444',
+  marginTop: 6,
+  wordBreak: 'break-word',
+  maxHeight: '3em',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis'
+};
+
+const productActionsStyle = {
+  display: 'flex',
+  gap: 8,
+  marginTop: 8,
+  flexWrap: 'wrap'
+};
+
+const detailButtonStyle = {
+  backgroundColor: '#A8B5A0',
+  color: '#000',
+  border: 'none',
+  borderRadius: 6,
+  padding: '6px 10px',
+  cursor: 'pointer',
+  flex: '1 1 auto',
+  minWidth: 'fit-content'
+};
+
+const buyButtonStyle = {
+  backgroundColor: '#D4A574',
+  color: '#000',
+  border: 'none',
+  borderRadius: 6,
+  padding: '6px 10px',
+  cursor: 'pointer',
+  flex: '1 1 auto',
+  minWidth: 'fit-content'
+};
+
+const fabStyle = {
+  position: 'fixed',
+  bottom: 16,
+  right: 16,
+  backgroundColor: '#A8B5A0',
+  '&:hover': { backgroundColor: '#8FA68E' },
+};
+
+const closeButtonStyle = {
+  position: 'absolute',
+  top: -10,
+  right: -10,
+  backgroundColor: '#D4A574',
+  '&:hover': { backgroundColor: '#C49A6A' },
+};
+
+// Widget action handler
+const handleWidgetAction = (props, action) => {
+  if (props.onQuickReply) return props.onQuickReply(action);
+  if (props.widgetProps && props.widgetProps.handleSelectMascota && action.startsWith('seleccionar_mascota_')) {
+    const mascotaId = action.replace('seleccionar_mascota_', '');
+    return props.widgetProps.handleSelectMascota(mascotaId);
+  }
+  window.dispatchEvent(new CustomEvent('chatbot-option', { detail: action }));
 };
 
 export default ChatbotComponent;

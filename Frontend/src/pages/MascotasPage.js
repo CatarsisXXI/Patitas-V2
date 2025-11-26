@@ -734,18 +734,22 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
         <Grid container spacing={3}>
           {mascotas.map((mascota) => (
             <Grid item key={mascota.mascotaID} xs={12} sm={6} lg={4}>
-              <Card 
-                sx={{ 
-                  height: '100%', 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: 4
-                  }
-                }}
-              >
+              <Card
+  sx={{
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    backgroundColor: '#fffaf0', // ← fondo siempre blanco pastel
+    border: '1px solid rgba(0, 0, 0, 0.06)',
+    transition: 'all 0.3s ease',
+    boxShadow: 1,
+
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: 4
+    }
+  }}
+>
                 <CardContent sx={{ flexGrow: 1, textAlign: 'center', p: 3 }}>
                   <Avatar 
                     src={mascota.avatar} 
