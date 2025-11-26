@@ -47,17 +47,40 @@ const ChatbotComponent = () => {
 
   // Paleta de colores pastel para IA
   const colorPalette = {
-    primary: '#A8D8EA', // Azul pastel suave
-    secondary: '#FFAAA7', // Rosa pastel suave
-    accent: '#FFD3B5', // Melocotón pastel
-    background: '#FAFAFA', // Blanco casi puro
-    surface: '#FFFFFF', // Blanco puro
-    text: '#424242', // Gris oscuro suave
-    textLight: '#757575', // Gris medio
-    userBubble: '#E3F2FD', // Azul muy claro
-    botBubble: '#F5F5F5', // Gris muy claro
-    success: '#C8E6C9', // Verde pastel
-    warning: '#FFECB3' // Amarillo pastel
+    primary: '#A8D8EA',
+    secondary: '#FFAAA7',
+    accent: '#FFD3B5',
+    background: '#FAFAFA',
+    surface: '#FFFFFF',
+    text: '#424242',
+    textLight: '#757575',
+    userBubble: '#E3F2FD',
+    botBubble: '#F5F5F5',
+    success: '#C8E6C9',
+    warning: '#FFECB3'
+  };
+
+  // Mapeo de alergias y sus sinónimos
+  const alergiasMap = {
+    'Pollo': ['pollo', 'gallina', 'ave', 'carne de ave', 'poultry', 'chicken', 'aves', 'pollos'],
+    'Cereales': ['cereales', 'trigo', 'maíz', 'maiz', 'arroz', 'avena', 'cebada', 'grain', 'cereal', 'wheat', 'corn', 'rice', 'granos', 'granos enteros'],
+    'Soya': ['soya', 'soja', 'soja', 'glycine max', 'soy', 'soja', 'soya texturizada', 'proteína de soya'],
+    'Papa': ['papa', 'patata', 'solanum tuberosum', 'potato', 'papas', 'patatas'],
+    'Camote': ['camote', 'batata', 'papa dulce', 'ipomoea batatas', 'sweet potato', 'boniatos'],
+    'Legumbres': ['legumbres', 'lentejas', 'garbanzos', 'frijoles', 'judías', 'alubias', 'legumes', 'beans', 'lentils', 'leguminosas'],
+    'Aceites vegetales': ['aceite vegetal', 'aceite de soja', 'aceite de maíz', 'aceite de girasol', 'aceite de canola', 'vegetable oil', 'aceites refinados']
+  };
+
+  // Mapeo de objetivos nutricionales y sus sinónimos
+  const objetivosMap = {
+    'Control de peso': ['control de peso', 'peso', 'adelgazar', 'obesidad', 'sobrepeso', 'weight control', 'weight management', 'bajo en calorías', 'mantenimiento de peso', 'dieta', 'reducir peso'],
+    'Aumento de energía o masa muscular': ['energía', 'masa muscular', 'proteína', 'musculo', 'energetico', 'energy', 'muscle', 'protein', 'fortalecimiento', 'desarrollo muscular', 'ganancia muscular', 'alto en proteína'],
+    'Apoyo Digestivo': ['digestión', 'digestivo', 'sensible', 'prebiótico', 'probiótico', 'fibra', 'digest', 'sensitive stomach', 'digestive health', 'salud intestinal', 'flora intestinal', 'probióticos'],
+    'Piel y pelaje saludables': ['piel', 'pelaje', 'brillante', 'saludable', 'dermatológico', 'caspa', 'picor', 'skin', 'coat', 'fur', 'pelage', 'pelo brillante', 'dermatitis', 'omega', 'ácidos grasos'],
+    'Soporte articular o movilidad': ['articular', 'movilidad', 'articulaciones', 'cartílago', 'artritis', 'huesos', 'joint', 'mobility', 'arthritis', 'condroitín', 'glucosamina', 'flexibilidad'],
+    'Soporte inmunológico': ['inmunológico', 'defensas', 'inmunidad', 'resistencia a enfermedades', 'immune', 'defense', 'immunity', 'sistema inmunitario', 'anticuerpos', 'defensas naturales'],
+    'Vitalidad y longevidad': ['vitalidad', 'longevidad', 'vejez', 'anciano', 'senior', 'vital', 'longevity', 'vitality', 'adulto mayor', 'tercera edad', 'envejecimiento saludable'],
+    'Control del nivel de azúcar': ['azúcar', 'glucosa', 'diabetes', 'insulina', 'control de azúcar', 'sugar', 'glucose', 'diabetic', 'nivel glucémico', 'glicemia', 'bajo en azúcar']
   };
 
   useEffect(() => {
@@ -88,6 +111,53 @@ const ChatbotComponent = () => {
   const getMascotaId = (m) => (m && (m.MascotaID ?? m.mascotaID ?? m.id ?? m.idMascota ?? m.id_mascota));
   const whatsappNumber = '51956550376';
 
+  // Función mejorada para normalizar texto
+  const normalizeText = (text) => {
+    return text?.toString().toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim() || '';
+  };
+
+  // Función mejorada para verificar alergias
+  const contieneAlergenos = (producto, alergias) => {
+    if (!alergias || alergias.length === 0) return false;
+    
+    const descripcion = normalizeText(producto.descripcion || producto.Descripcion || '');
+    const nombre = normalizeText(producto.nombre || producto.Nombre || '');
+    const ingredientes = normalizeText(producto.ingredientes || producto.Ingredientes || '');
+    const categoria = normalizeText(producto.categoria || producto.Categoria || '');
+    
+    const textoCompleto = `${descripcion} ${nombre} ${ingredientes} ${categoria}`;
+
+    return alergias.some(alergia => {
+      const sinonimos = alergiasMap[alergia] || [normalizeText(alergia)];
+      return sinonimos.some(sinonimo => 
+        textoCompleto.includes(normalizeText(sinonimo))
+      );
+    });
+  };
+
+  // Función mejorada para calcular puntuación de objetivos
+  const calcularPuntuacionObjetivos = (producto, objetivos) => {
+    if (!objetivos || objetivos.length === 0) return 0;
+    
+    const descripcion = normalizeText(producto.descripcion || producto.Descripcion || '');
+    const nombre = normalizeText(producto.nombre || producto.Nombre || '');
+    const beneficios = normalizeText(producto.beneficios || producto.Beneficios || '');
+    const categoria = normalizeText(producto.categoria || producto.Categoria || '');
+    
+    const textoCompleto = `${descripcion} ${nombre} ${beneficios} ${categoria}`;
+
+    return objetivos.reduce((puntuacion, objetivo) => {
+      const sinonimos = objetivosMap[objetivo] || [normalizeText(objetivo)];
+      const encontrado = sinonimos.some(sinonimo => 
+        textoCompleto.includes(normalizeText(sinonimo))
+      );
+      return puntuacion + (encontrado ? 1 : 0);
+    }, 0);
+  };
+
   // Mensaje de bienvenida inicial
   useEffect(() => {
     if (showChatbot && conversation.length === 0) {
@@ -116,7 +186,6 @@ const ChatbotComponent = () => {
     addMessage(value || action, 'user');
     setLoading(true);
 
-    // Simular tiempo de procesamiento
     setTimeout(() => {
       switch (action) {
         case 'recomendaciones':
@@ -164,7 +233,6 @@ const ChatbotComponent = () => {
       return;
     }
 
-    // Solo una mascota
     const mascota = mascotas[0];
     handleRecommendationsForMascota(getMascotaId(mascota));
   };
@@ -188,16 +256,55 @@ const ChatbotComponent = () => {
 
     try {
       const nombre = mascota.nombre || 'tu mascota';
-      
-      // Obtener productos recomendados basados en el perfil de la mascota
-      const productosRecomendados = products
-        .filter(p => p.categoria?.toLowerCase().includes('snack') || p.nombre?.toLowerCase().includes('premium'))
-        .sort((a, b) => (b.precio || 0) - (a.precio || 0)) // Ordenar por precio descendente
+      const alergias = mascota.alergias || [];
+      const objetivos = mascota.objetivosNutricionales || [];
+
+      // Lógica mejorada de recomendación
+      const productosFiltrados = products.filter(producto => {
+        // Excluir productos con alergenos
+        if (contieneAlergenos(producto, alergias)) {
+          return false;
+        }
+        return true;
+      });
+
+      const productosRecomendados = productosFiltrados
+        .map(producto => {
+          // Calcular puntuación basada en objetivos
+          const puntuacionObjetivos = calcularPuntuacionObjetivos(producto, objetivos);
+          const esPremium = normalizeText(producto.nombre).includes('premium') || 
+                           normalizeText(producto.categoria).includes('premium') ||
+                           normalizeText(producto.descripcion).includes('premium');
+          
+          // Puntuación adicional por características específicas
+          let puntuacionExtra = 0;
+          if (mascota.especie && normalizeText(producto.descripcion).includes(normalizeText(mascota.especie))) {
+            puntuacionExtra += 1;
+          }
+          if (mascota.raza && normalizeText(producto.descripcion).includes(normalizeText(mascota.raza))) {
+            puntuacionExtra += 0.5;
+          }
+          
+          return {
+            ...producto,
+            puntuacion: (puntuacionObjetivos * 2) + (esPremium ? 1 : 0) + puntuacionExtra
+          };
+        })
+        .sort((a, b) => b.puntuacion - a.puntuacion || (b.precio || 0) - (a.precio || 0))
         .slice(0, 3);
 
       if (productosRecomendados.length === 0) {
+        let mensaje = `Basado en el perfil de ${nombre}`;
+        if (alergias.length > 0) {
+          mensaje += ` (evitando: ${alergias.join(', ')})`;
+        }
+        if (objetivos.length > 0) {
+          mensaje += `, buscando: ${objetivos.join(', ')}`;
+        }
+        mensaje += `, actualmente no tengo recomendaciones específicas disponibles. Te sugiero explorar nuestra sección completa de productos.`;
+
         addMessage(
-          `Basado en el perfil de ${nombre}, actualmente no tengo recomendaciones específicas disponibles. Te sugiero explorar nuestra sección completa de productos.`,
+          mensaje,
           'bot',
           [
             { label: '🛍️ Explorar Productos', action: 'productos' },
@@ -207,19 +314,23 @@ const ChatbotComponent = () => {
         return;
       }
 
-      addMessage(
-        `Basándome en el perfil de **${nombre}**, he seleccionado estos productos que podrían ser perfectos:`,
-        'bot'
-      );
+      let mensajeRecomendacion = `Basándome en el perfil de **${nombre}**`;
+      if (alergias.length > 0) {
+        mensajeRecomendacion += ` (evitando: ${alergias.join(', ')})`;
+      }
+      if (objetivos.length > 0) {
+        mensajeRecomendacion += `, buscando: ${objetivos.join(', ')}`;
+      }
+      mensajeRecomendacion += `, he seleccionado estos productos perfectos:`;
 
-      // Añadir productos recomendados con mejor formato
+      addMessage(mensajeRecomendacion, 'bot');
+
       productosRecomendados.forEach((producto, index) => {
         setTimeout(() => {
           addMessage('', 'bot', { type: 'product', product: producto });
         }, index * 600);
       });
 
-      // Opciones después de mostrar recomendaciones
       setTimeout(() => {
         addMessage(
           '¿Te gustaría explorar más productos o necesitas otra recomendación?',
@@ -263,18 +374,13 @@ const ChatbotComponent = () => {
       'bot'
     );
 
-    // Ordenar productos: primero por categoría, luego por precio
     const sortedProducts = [...products].sort((a, b) => {
-      // Ordenar por categoría primero
       const catA = a.categoria || 'Otros';
       const catB = b.categoria || 'Otros';
       if (catA !== catB) return catA.localeCompare(catB);
-      
-      // Luego por precio (mayor a menor)
       return (b.precio || 0) - (a.precio || 0);
     });
 
-    // Mostrar productos en lotes de 2 para mejor experiencia
     const productBatches = [];
     for (let i = 0; i < sortedProducts.length; i += 2) {
       productBatches.push(sortedProducts.slice(i, i + 2));
@@ -286,7 +392,6 @@ const ChatbotComponent = () => {
           addMessage('', 'bot', { type: 'product', product });
         });
         
-        // Si es el último lote, mostrar opciones
         if (batchIndex === productBatches.length - 1) {
           setTimeout(() => {
             addMessage(
@@ -329,61 +434,108 @@ const ChatbotComponent = () => {
     }
   };
 
+  // Componente ProductCard mejorado con manejo robusto de imágenes
   const ProductCard = ({ product }) => {
     const nombre = product.nombre || product.Nombre || 'Sin nombre';
     const precio = (product.precio ?? product.Precio) !== undefined ? (product.precio ?? product.Precio) : null;
-    const imagen = product.imagen || product.Imagen || product.imagenURL;
+    
+    // Manejo robusto de imágenes
+    const getProductImage = () => {
+      const posiblesPropiedades = [
+        'imagen', 'Imagen', 'imagenURL', 'imagenUrl', 'urlImagen', 
+        'image', 'Image', 'imageURL', 'imageUrl', 'urlImage',
+        'foto', 'Foto', 'fotoURL', 'fotoUrl', 'urlFoto',
+        'img', 'Img', 'imgURL', 'imgUrl', 'urlImg'
+      ];
+      
+      for (let prop of posiblesPropiedades) {
+        if (product[prop] && typeof product[prop] === 'string' && product[prop].trim() !== '') {
+          const url = product[prop].trim();
+          
+          // Si es una URL completa o data URL
+          if (url.startsWith('http') || url.startsWith('//') || url.startsWith('data:')) {
+            return url;
+          }
+          
+          // Si es una ruta relativa
+          if (url.startsWith('./') || url.startsWith('../') || url.startsWith('/')) {
+            return url;
+          }
+          
+          // Si no tiene prefijo, asumimos que es una ruta relativa desde la raíz
+          return `/${url}`;
+        }
+      }
+      return null;
+    };
+
+    const imagen = getProductImage();
 
     return (
-      <Zoom in>
+      <Zoom in timeout={800} style={{ transitionDelay: '200ms' }}>
         <Card 
           sx={{ 
             mb: 2, 
             border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
             borderRadius: 3,
             background: colorPalette.surface,
-            transition: 'all 0.3s ease',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
             '&:hover': {
-              transform: 'translateY(-2px)',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.12)'
+              transform: 'translateY(-4px) scale(1.02)',
+              boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
             }
           }}
         >
           <CardContent sx={{ p: 2 }}>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              {/* Imagen del producto */}
-              {imagen ? (
+              {/* Imagen del producto - Mejorada */}
+              <Box
+                sx={{
+                  position: 'relative',
+                  flexShrink: 0
+                }}
+              >
+                {imagen ? (
+                  <Avatar 
+                    src={imagen}
+                    onError={(e) => {
+                      console.log('Error loading image:', imagen);
+                      e.target.style.display = 'none';
+                      if (e.target.nextSibling) {
+                        e.target.nextSibling.style.display = 'flex';
+                      }
+                    }}
+                    sx={{ 
+                      width: 70, 
+                      height: 70,
+                      borderRadius: 2,
+                      border: `2px solid ${colorPalette.primary}`,
+                      backgroundColor: colorPalette.background
+                    }} 
+                    variant="rounded"
+                  />
+                ) : null}
                 <Avatar 
-                  src={imagen} 
                   sx={{ 
-                    width: 60, 
-                    height: 60,
-                    borderRadius: 2,
-                    border: `2px solid ${colorPalette.primary}`,
-                    flexShrink: 0
-                  }} 
-                  variant="rounded"
-                />
-              ) : (
-                <Avatar 
-                  sx={{ 
-                    width: 60, 
-                    height: 60,
+                    width: 70, 
+                    height: 70,
                     borderRadius: 2,
                     backgroundColor: colorPalette.accent,
                     border: `2px solid ${colorPalette.primary}`,
-                    flexShrink: 0
+                    display: imagen ? 'none' : 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }} 
                   variant="rounded"
                 >
-                  <LocalOfferIcon sx={{ color: colorPalette.text }} />
+                  <LocalOfferIcon sx={{ color: colorPalette.text, fontSize: 30 }} />
                 </Avatar>
-              )}
+              </Box>
               
               {/* Información del producto */}
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
                   <Typography 
                     variant="subtitle2" 
                     fontWeight="600" 
@@ -394,7 +546,9 @@ const ChatbotComponent = () => {
                       textOverflow: 'ellipsis',
                       display: '-webkit-box',
                       WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical'
+                      WebkitBoxOrient: 'vertical',
+                      flex: 1,
+                      mr: 1
                     }}
                   >
                     {nombre}
@@ -408,20 +562,38 @@ const ChatbotComponent = () => {
                         color: colorPalette.text,
                         fontWeight: '600',
                         fontSize: '0.7rem',
-                        ml: 1,
                         flexShrink: 0,
-                        height: 24
+                        height: 24,
+                        minWidth: 'auto',
+                        px: 1
                       }}
                     />
                   )}
                 </Box>
                 
+                {/* Categoría */}
+                {product.categoria && (
+                  <Chip 
+                    label={product.categoria}
+                    size="small"
+                    variant="outlined"
+                    sx={{ 
+                      mb: 1,
+                      fontSize: '0.6rem',
+                      height: 20,
+                      borderColor: colorPalette.primary,
+                      color: colorPalette.textLight
+                    }}
+                  />
+                )}
+                
                 {/* Botones compactos */}
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                   <Button
                     onClick={() => handleProductAction(product, 'view')}
                     variant="outlined"
                     size="small"
+                    startIcon={<VisibilityIcon sx={{ fontSize: 16 }} />}
                     sx={{ 
                       borderRadius: 2,
                       fontSize: '0.7rem',
@@ -429,19 +601,22 @@ const ChatbotComponent = () => {
                       color: colorPalette.primary,
                       '&:hover': {
                         backgroundColor: alpha(colorPalette.primary, 0.1),
-                        borderColor: colorPalette.primary
+                        borderColor: colorPalette.primary,
+                        transform: 'scale(1.05)'
                       },
+                      transition: 'all 0.2s ease',
                       minWidth: 'auto',
                       px: 1.5,
                       height: 28
                     }}
                   >
-                    Detalles
+                    Ver
                   </Button>
                   <Button
                     onClick={() => handleProductAction(product, 'buy')}
                     variant="contained"
                     size="small"
+                    startIcon={<WhatsAppIcon sx={{ fontSize: 16 }} />}
                     sx={{ 
                       borderRadius: 2,
                       fontSize: '0.7rem',
@@ -449,7 +624,9 @@ const ChatbotComponent = () => {
                       color: colorPalette.text,
                       '&:hover': {
                         backgroundColor: alpha(colorPalette.primary, 0.8),
+                        transform: 'scale(1.05)'
                       },
+                      transition: 'all 0.2s ease',
                       minWidth: 'auto',
                       px: 1.5,
                       height: 28
@@ -467,7 +644,7 @@ const ChatbotComponent = () => {
   };
 
   const QuickReplies = ({ options }) => (
-    <Fade in timeout={500}>
+    <Fade in timeout={600} style={{ transitionDelay: '300ms' }}>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
         {options.map((option, index) => (
           <Chip
@@ -482,12 +659,14 @@ const ChatbotComponent = () => {
               color: colorPalette.text,
               backgroundColor: colorPalette.surface,
               '&:hover': {
-                backgroundColor: alpha(colorPalette.primary, 0.1),
-                transform: 'scale(1.05)'
+                backgroundColor: alpha(colorPalette.primary, 0.15),
+                transform: 'scale(1.08)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
               },
-              transition: 'all 0.2s ease',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               fontSize: '0.8rem',
-              height: 32
+              height: 32,
+              animation: `fadeInUp 0.5s ease-out ${index * 100}ms both`
             }}
           />
         ))}
@@ -496,12 +675,13 @@ const ChatbotComponent = () => {
   );
 
   const MessageBubble = ({ message, index }) => (
-    <Slide in direction="up" timeout={500 + index * 100}>
+    <Slide in direction="up" timeout={800} style={{ transitionDelay: `${index * 150}ms` }}>
       <Box
         sx={{
           display: 'flex',
           justifyContent: message.type === 'user' ? 'flex-end' : 'flex-start',
-          mb: 2
+          mb: 2,
+          animation: `messageSlideIn 0.6s ease-out ${index * 150}ms both`
         }}
       >
         <Box
@@ -519,7 +699,8 @@ const ChatbotComponent = () => {
               sx={{
                 width: 32,
                 height: 32,
-                border: `2px solid ${colorPalette.primary}`
+                border: `2px solid ${colorPalette.primary}`,
+                animation: 'bounceIn 0.8s ease-out'
               }}
             />
           )}
@@ -528,13 +709,17 @@ const ChatbotComponent = () => {
               p: 2,
               borderRadius: 3,
               background: message.type === 'user' 
-                ? colorPalette.userBubble
-                : colorPalette.botBubble,
+                ? `linear-gradient(135deg, ${colorPalette.userBubble} 0%, ${alpha(colorPalette.primary, 0.3)} 100%)`
+                : `linear-gradient(135deg, ${colorPalette.botBubble} 0%, ${alpha(colorPalette.accent, 0.1)} 100%)`,
               color: colorPalette.text,
               border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               whiteSpace: 'pre-line',
-              lineHeight: 1.5
+              lineHeight: 1.5,
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+              }
             }}
           >
             <Typography variant="body2" sx={{ lineHeight: 1.5 }}>
@@ -601,7 +786,7 @@ const ChatbotComponent = () => {
   );
 
   const QuickActions = () => (
-    <Fade in>
+    <Fade in timeout={600}>
       <Box sx={{ 
         p: 2, 
         borderTop: `1px solid ${alpha(colorPalette.primary, 0.1)}`,
@@ -627,8 +812,10 @@ const ChatbotComponent = () => {
                 color: colorPalette.text,
                 border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
                 '&:hover': {
-                  backgroundColor: alpha(colorPalette.primary, 0.2)
+                  backgroundColor: alpha(colorPalette.primary, 0.2),
+                  transform: 'scale(1.05)'
                 },
+                transition: 'all 0.2s ease',
                 fontSize: '0.75rem',
                 height: 28
               }}
@@ -639,123 +826,180 @@ const ChatbotComponent = () => {
     </Fade>
   );
 
+  // Agregar estilos CSS para animaciones personalizadas
+  const styles = `
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @keyframes messageSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    @keyframes bounceIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.3);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.05);
+      }
+      70% {
+        transform: scale(0.9);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+    }
+  `;
+
   if (!showChatbot) {
     return (
-      <Tooltip title="¡Habla con Coco!" placement="left" arrow>
-        <Zoom in>
-          <Fab
-            color="primary"
-            aria-label="chat"
-            onClick={() => setShowChatbot(true)}
-            sx={{
-              position: 'fixed',
-              bottom: 16,
-              right: 16,
-              background: `linear-gradient(135deg, ${colorPalette.primary} 0%, ${colorPalette.accent} 100%)`,
-              '&:hover': {
-                transform: 'scale(1.1)',
-                boxShadow: `0 4px 20px ${alpha(colorPalette.primary, 0.3)}`
-              },
-              transition: 'all 0.3s ease',
-              zIndex: 1000
-            }}
-          >
-            <Box
-              component="img"
-              src="/assets/chatbot.png"
-              alt="Coco Assistant"
+      <>
+        <style>{styles}</style>
+        <Tooltip title="¡Habla con Coco!" placement="left" arrow>
+          <Zoom in timeout={800}>
+            <Fab
+              color="primary"
+              aria-label="chat"
+              onClick={() => setShowChatbot(true)}
               sx={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%'
+                position: 'fixed',
+                bottom: 16,
+                right: 16,
+                background: `linear-gradient(135deg, ${colorPalette.primary} 0%, ${colorPalette.accent} 100%)`,
+                '&:hover': {
+                  transform: 'scale(1.15) rotate(5deg)',
+                  boxShadow: `0 6px 25px ${alpha(colorPalette.primary, 0.4)}`,
+                  animation: 'pulse 2s infinite'
+                },
+                transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                zIndex: 1000
               }}
-            />
-          </Fab>
-        </Zoom>
-      </Tooltip>
+            >
+              <Box
+                component="img"
+                src="/assets/chatbot.png"
+                alt="Coco Assistant"
+                sx={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  transition: 'transform 0.3s ease'
+                }}
+              />
+            </Fab>
+          </Zoom>
+        </Tooltip>
+      </>
     );
   }
 
   return (
-    <Slide in direction="up" timeout={500}>
-      <Box
-        sx={{
-          position: 'fixed',
-          bottom: 16,
-          right: 16,
-          width: isMobile ? 'calc(100vw - 32px)' : 400,
-          height: isMinimized ? 60 : 600,
-          maxHeight: isMobile ? '70vh' : 'none',
-          backgroundColor: colorPalette.background,
-          borderRadius: 3,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-          border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          zIndex: 1000,
-          transition: 'all 0.3s ease'
-        }}
-      >
-        <ChatHeader />
-        
-        {!isMinimized && (
-          <>
-            <Box
-              sx={{
-                flex: 1,
-                overflow: 'auto',
-                p: 2,
-                background: colorPalette.background
-              }}
-            >
-              {conversation.map((message, index) => (
-                <MessageBubble 
-                  key={index} 
-                  message={message} 
-                  index={index}
-                />
-              ))}
-              {loading && (
-                <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Avatar
-                      src="/assets/chatbot.png"
-                      sx={{ width: 32, height: 32 }}
-                    />
-                    <Box
-                      sx={{
-                        p: 2,
-                        borderRadius: 3,
-                        background: colorPalette.botBubble,
-                        border: `1px solid ${alpha(colorPalette.primary, 0.2)}`
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        {[0, 1, 2].map(i => (
-                          <Box
-                            key={i}
-                            sx={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: '50%',
-                              backgroundColor: colorPalette.primary,
-                              animation: 'pulse 1.4s ease-in-out infinite both',
-                              animationDelay: `${i * 0.16}s`
-                            }}
-                          />
-                        ))}
+    <>
+      <style>{styles}</style>
+      <Slide in direction="up" timeout={600}>
+        <Box
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            width: isMobile ? 'calc(100vw - 32px)' : 400,
+            height: isMinimized ? 60 : 600,
+            maxHeight: isMobile ? '70vh' : 'none',
+            backgroundColor: colorPalette.background,
+            borderRadius: 3,
+            boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+            border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            zIndex: 1000,
+            transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          }}
+        >
+          <ChatHeader />
+          
+          {!isMinimized && (
+            <>
+              <Box
+                sx={{
+                  flex: 1,
+                  overflow: 'auto',
+                  p: 2,
+                  background: colorPalette.background
+                }}
+              >
+                {conversation.map((message, index) => (
+                  <MessageBubble 
+                    key={index} 
+                    message={message} 
+                    index={index}
+                  />
+                ))}
+                {loading && (
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Avatar
+                        src="/assets/chatbot.png"
+                        sx={{ width: 32, height: 32 }}
+                      />
+                      <Box
+                        sx={{
+                          p: 2,
+                          borderRadius: 3,
+                          background: colorPalette.botBubble,
+                          border: `1px solid ${alpha(colorPalette.primary, 0.2)}`
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          {[0, 1, 2].map(i => (
+                            <Box
+                              key={i}
+                              sx={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                backgroundColor: colorPalette.primary,
+                                animation: 'pulse 1.4s ease-in-out infinite both',
+                                animationDelay: `${i * 0.16}s`
+                              }}
+                            />
+                          ))}
+                        </Box>
                       </Box>
                     </Box>
                   </Box>
-                </Box>
-              )}
-            </Box>
-            <QuickActions />
-          </>
-        )}
-      </Box>
-    </Slide>
+                )}
+              </Box>
+              <QuickActions />
+            </>
+          )}
+        </Box>
+      </Slide>
+    </>
   );
 };
 

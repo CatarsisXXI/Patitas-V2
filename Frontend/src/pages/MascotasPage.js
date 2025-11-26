@@ -32,7 +32,11 @@ import {
   Step,
   StepLabel,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  RadioGroup,
+  Radio,
+  InputAdornment,
+  Box as MuiBox
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -44,8 +48,6 @@ import PetsIcon from '@mui/icons-material/Pets';
 import CakeIcon from '@mui/icons-material/Cake';
 import FemaleIcon from '@mui/icons-material/Female';
 import MaleIcon from '@mui/icons-material/Male';
-import InputAdornment from '@mui/material/InputAdornment';
-
 
 // Avatares mejorados con más opciones
 const petAvatars = {
@@ -109,6 +111,7 @@ const MascotasPage = () => {
 
   useEffect(() => {
     fetchMascotas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const fetchMascotas = async () => {
@@ -121,8 +124,8 @@ const MascotasPage = () => {
       setError('');
       const data = await mascotaService.getMascotas();
       setMascotas(data);
-    } catch (error) {
-      console.error('Error fetching mascotas:', error);
+    } catch (err) {
+      console.error('Error fetching mascotas:', err);
       setError('No se pudieron cargar las mascotas. Por favor, intenta nuevamente.');
     } finally {
       setLoading(false);
@@ -144,9 +147,19 @@ const MascotasPage = () => {
   const handleOpen = (mascota = null) => {
     if (mascota) {
       setEditingMascota(mascota);
+      setActiveStep(0); // iniciar en paso 0 al editar
       const notas = mascota.notasAdicionales || '';
 
-      const getSection = (label) => {
+      // intentar parseo JSON primero (si guardaste en ese formato), sino usar el parsing por regex
+      let parsed = null;
+      try {
+        parsed = JSON.parse(notas);
+      } catch {
+        parsed = null;
+      }
+
+      const getSectionFromNotes = (label) => {
+        if (parsed && parsed[label]) return parsed[label];
         const regex = new RegExp(`${label}:([^|]+)`, 'i');
         const match = notas.match(regex);
         return match ? match[1].split(',').map(s => s.trim()).filter(Boolean) : [];
@@ -161,9 +174,9 @@ const MascotasPage = () => {
         tamaño: mascota.tamaño || '',
         notasAdicionales: mascota.notasAdicionales || '',
         avatar: mascota.avatar || '',
-        alergias: getSection('Alergias'),
-        objetivo: getSection('Objetivo nutricional'),
-        actividad: (notas.match(/Nivel de actividad:([^|]+)/i)?.[1]?.trim()) || ''
+        alergias: getSectionFromNotes('Alergias'),
+        objetivo: getSectionFromNotes('Objetivo nutricional'),
+        actividad: (parsed && parsed.actividad) || (notas.match(/Nivel de actividad:([^|]+)/i)?.[1]?.trim()) || ''
       });
     } else {
       setEditingMascota(null);
@@ -180,7 +193,8 @@ const MascotasPage = () => {
         objetivo: [],
         actividad: ''
       });
-      setActiveStep(0);
+      // pequeño timeout para evitar issues con animaciones del Stepper
+      setTimeout(() => setActiveStep(0), 50);
     }
     setOpen(true);
   };
@@ -188,23 +202,24 @@ const MascotasPage = () => {
   const handleClose = () => {
     setOpen(false);
     setEditingMascota(null);
-    setActiveStep(0);
+    setTimeout(() => setActiveStep(0), 50);
   };
 
   const handleNext = () => {
-    setActiveStep((prev) => prev + 1);
+    setActiveStep((prev) => Math.min(prev + 1, steps.length - 1));
   };
 
   const handleBack = () => {
-    setActiveStep((prev) => prev - 1);
+    setActiveStep((prev) => Math.max(prev - 1, 0));
   };
 
-  const handleCheckboxChange = (field, option) => {
+  // ahora recibe checked explícito
+  const handleCheckboxChange = (field, option, checked) => {
     setFormData(prev => {
-      const current = prev[field];
-      const updated = current.includes(option)
-        ? current.filter(o => o !== option)
-        : [...current, option];
+      const current = Array.isArray(prev[field]) ? prev[field] : [];
+      const updated = checked
+        ? [...current, option]
+        : current.filter(o => o !== option);
       return { ...prev, [field]: updated };
     });
   };
@@ -272,10 +287,10 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
         await mascotaService.createMascota(mascotaPayload);
         showMessage('Mascota agregada exitosamente');
       }
-      fetchMascotas();
+      await fetchMascotas();
       handleClose();
-    } catch (error) {
-      console.error('Error saving mascota:', error);
+    } catch (err) {
+      console.error('Error saving mascota:', err);
       showMessage('Error al guardar la mascota. Por favor, intenta nuevamente.', 'error');
     }
   };
@@ -285,9 +300,9 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
       try {
         await mascotaService.deleteMascota(id);
         showMessage('Mascota eliminada exitosamente');
-        fetchMascotas();
-      } catch (error) {
-        console.error('Error deleting mascota:', error);
+        await fetchMascotas();
+      } catch (err) {
+        console.error('Error deleting mascota:', err);
         showMessage('Error al eliminar la mascota', 'error');
       }
     }
@@ -303,8 +318,9 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
     switch (step) {
       case 0:
         return (
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
+          <Grid container spacing={2} alignItems="center">
+            {/* -------- Fila 1: Nombre | Especie | Sexo | Tamaño -------- */}
+            <Grid item xs={12} md={5}>
               <TextField
                 fullWidth
                 label="Nombre de tu mascota"
@@ -314,88 +330,116 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
                 required
                 helperText="Cómo llamas a tu compañero peludo"
                 variant="outlined"
-      InputProps={{
-        startAdornment: (
-          <InputAdornment position="start">
-            <PetsIcon color="primary" />
-          </InputAdornment>
-        ),
-      }}
-      sx={{
-        '& .MuiOutlinedInput-root': { minHeight: 56 }, // hace el campo más alto
-      }}
-    />
-  </Grid>
-            
-{/* Especie */}
-  <Grid item xs={6} sm={3} md={2}>
-    <FormControl fullWidth variant="outlined" sx={{ minWidth: 150 }}>
-      <InputLabel>Especie</InputLabel>
-      <Select
-        name="especie"
-        value={formData.especie}
-        onChange={(e) => setFormData(prev => ({ ...prev, especie: e.target.value, avatar: '' }))}
-        label="Especie"
-      >
-        <MenuItem value="Perro"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><PetsIcon fontSize="small" />Perro</Box></MenuItem>
-        <MenuItem value="Gato"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><PetsIcon fontSize="small" />Gato</Box></MenuItem>
-      </Select>
-    </FormControl>
-  </Grid>
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PetsIcon color="primary" />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ '& .MuiOutlinedInput-root': { minHeight: 56 } }}
+              />
+            </Grid>
 
-  {/* Sexo */}
-  <Grid item xs={6} sm={3} md={2}>
-    <FormControl fullWidth variant="outlined" sx={{ minWidth: 120 }}>
-      <InputLabel>Sexo</InputLabel>
-      <Select
-        name="sexo"
-        value={formData.sexo}
-        onChange={(e) => setFormData(prev => ({ ...prev, sexo: e.target.value }))}
-        label="Sexo"
-      >
-        <MenuItem value="Hembra">Hembra</MenuItem>
-        <MenuItem value="Macho">Macho</MenuItem>
-      </Select>
-    </FormControl>
-  </Grid>
+            <Grid item xs={6} md={2}>
+              <FormControl fullWidth variant="outlined" sx={{ minWidth: 120 }}>
+                <InputLabel>Especie</InputLabel>
+                <Select
+                  name="especie"
+                  value={formData.especie}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData(prev => ({
+                      ...prev,
+                      especie: value,
+                      // solo limpiar avatar si estamos creando una nueva mascota
+                      avatar: editingMascota ? prev.avatar : ''
+                    }));
+                  }}
+                  label="Especie"
+                >
+                  <MenuItem value="Perro">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <PetsIcon fontSize="small" /> Perro
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="Gato">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <PetsIcon fontSize="small" /> Gato
+                    </Box>
+                  </MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
 
-  {/* Raza */}
-  <Grid item xs={12} sm={6} md={3}>
-    <TextField
-      fullWidth
-      label="Raza o Tipo"
-      name="raza"
-      value={formData.raza}
-      onChange={(e) => setFormData(prev => ({ ...prev, raza: e.target.value }))}
-      helperText="Ej: Labrador, Siames, Mestizo..."
-      variant="outlined"
-      sx={{ '& .MuiOutlinedInput-root': { minHeight: 56 } }}
-    />
-  </Grid>
+            <Grid item xs={6} md={2}>
+              <FormControl fullWidth variant="outlined" sx={{ minWidth: 120 }}>
+                <InputLabel>Sexo</InputLabel>
+                <Select
+                  name="sexo"
+                  value={formData.sexo}
+                  onChange={(e) => setFormData(prev => ({ ...prev, sexo: e.target.value }))}
+                  label="Sexo"
+                >
+                  <MenuItem value="Hembra">Hembra</MenuItem>
+                  <MenuItem value="Macho">Macho</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
 
-  {/* Fecha de nacimiento */}
-  <Grid item xs={12} sm={6} md={5}>
-    <TextField
-      fullWidth
-      label="Fecha de Nacimiento"
-      name="fechaNacimiento"
-      type="date"
-      value={formData.fechaNacimiento}
-      onChange={(e) => setFormData(prev => ({ ...prev, fechaNacimiento: e.target.value }))}
-      InputLabelProps={{ shrink: true }}
-      helperText="Para calcular su edad y necesidades específicas"
-      variant="outlined"
-      InputProps={{
-        startAdornment: (
-          <InputAdornment position="start">
-            <CakeIcon color="primary" />
-          </InputAdornment>
-        ),
-      }}
-      sx={{ '& .MuiOutlinedInput-root': { minHeight: 56 } }}
-    />
-  </Grid>
-</Grid>
+            {/* Tamaño ahora ocupa su propia columna y es fullWidth y consistente */}
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth variant="outlined" sx={{ minWidth: 120 }}>
+                <InputLabel>Tamaño</InputLabel>
+                <Select
+                  name="tamaño"
+                  value={formData.tamaño}
+                  onChange={(e) => setFormData(prev => ({ ...prev, tamaño: e.target.value }))}
+                  label="Tamaño"
+                >
+                  <MenuItem value="Pequeño">Pequeño</MenuItem>
+                  <MenuItem value="Mediano">Mediano</MenuItem>
+                  <MenuItem value="Grande">Grande</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* -------- Fila 2: Raza | Fecha de Nacimiento -------- */}
+            <Grid item xs={12} md={5}>
+              <TextField
+                fullWidth
+                label="Raza o Tipo"
+                name="raza"
+                value={formData.raza}
+                onChange={(e) => setFormData(prev => ({ ...prev, raza: e.target.value }))}
+                helperText="Ej: Labrador, Siames, Mestizo..."
+                variant="outlined"
+                sx={{ '& .MuiOutlinedInput-root': { minHeight: 56 } }}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={7}>
+              <TextField
+                fullWidth
+                label="Fecha de Nacimiento"
+                name="fechaNacimiento"
+                type="date"
+                value={formData.fechaNacimiento}
+                onChange={(e) => setFormData(prev => ({ ...prev, fechaNacimiento: e.target.value }))}
+                InputLabelProps={{ shrink: true }}
+                helperText="Para calcular su edad y necesidades específicas"
+                variant="outlined"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <CakeIcon color="primary" />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ '& .MuiOutlinedInput-root': { minHeight: 56 } }}
+              />
+            </Grid>
+          </Grid>
         );
 
       case 1:
@@ -446,128 +490,126 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
       case 2:
         return (
           <Box>
-      <Typography variant="body1" sx={{ mb: 3 }}>
-        Esta información nos ayuda a recomendar la mejor alimentación para tu compañero
-      </Typography>
+            <Typography variant="body1" sx={{ mb: 3 }}>
+              Esta información nos ayuda a recomendar la mejor alimentación para tu compañero
+            </Typography>
 
-      {/* ==== ALERGIAS 4–3 ==== */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-          Alergias o Intolerancias
-        </Typography>
+            {/* ==== ALERGIAS 4–3 ==== */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                Alergias o Intolerancias
+              </Typography>
 
-        <Grid container spacing={2}>
-          {/* Columna izquierda = 4 opciones */}
-          <Grid item xs={12} sm={6}>
-            <FormGroup>
-              {FORM_OPTIONS.alergias.slice(0, 4).map(option => (
-                <FormControlLabel
-                  key={option}
-                  control={
-                    <Checkbox
-                      checked={formData.alergias.includes(option)}
-                      onChange={() => handleCheckboxChange("alergias", option)}
-                    />
-                  }
-                  label={option}
-                />
-              ))}
-            </FormGroup>
-          </Grid>
+              <Grid container spacing={2}>
+                {/* Columna izquierda = 4 opciones */}
+                <Grid item xs={12} sm={6}>
+                  <FormGroup>
+                    {FORM_OPTIONS.alergias.slice(0, 4).map(option => (
+                      <FormControlLabel
+                        key={option}
+                        control={
+                          <Checkbox
+                            checked={formData.alergias.includes(option)}
+                            onChange={(e) => handleCheckboxChange("alergias", option, e.target.checked)}
+                          />
+                        }
+                        label={option}
+                      />
+                    ))}
+                  </FormGroup>
+                </Grid>
 
-          {/* Columna derecha = resto (3 opciones) */}
-          <Grid item xs={12} sm={6}>
-            <FormGroup>
-              {FORM_OPTIONS.alergias.slice(4).map(option => (
-                <FormControlLabel
-                  key={option}
-                  control={
-                    <Checkbox
-                      checked={formData.alergias.includes(option)}
-                      onChange={() => handleCheckboxChange("alergias", option)}
-                    />
-                  }
-                  label={option}
-                />
-              ))}
-            </FormGroup>
-          </Grid>
-        </Grid>
-      </Box>
+                {/* Columna derecha = resto (3 opciones) */}
+                <Grid item xs={12} sm={6}>
+                  <FormGroup>
+                    {FORM_OPTIONS.alergias.slice(4).map(option => (
+                      <FormControlLabel
+                        key={option}
+                        control={
+                          <Checkbox
+                            checked={formData.alergias.includes(option)}
+                            onChange={(e) => handleCheckboxChange("alergias", option, e.target.checked)}
+                          />
+                        }
+                        label={option}
+                      />
+                    ))}
+                  </FormGroup>
+                </Grid>
+              </Grid>
+            </Box>
 
-      <Divider sx={{ my: 2 }} />
+            <Divider sx={{ my: 2 }} />
 
-      {/* ==== OBJETIVO NUTRICIONAL 4–4 ==== */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-          Objetivo Nutricional
-        </Typography>
+            {/* ==== OBJETIVO NUTRICIONAL 4–4 ==== */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                Objetivo Nutricional
+              </Typography>
 
-        <Grid container spacing={2}>
-          {/* Columna izquierda (4 opciones) */}
-          <Grid item xs={12} sm={6}>
-            <FormGroup>
-              {FORM_OPTIONS.objetivos.slice(0, 4).map(option => (
-                <FormControlLabel
-                  key={option}
-                  control={
-                    <Checkbox
-                      checked={formData.objetivo.includes(option)}
-                      onChange={() => handleCheckboxChange("objetivo", option)}
-                    />
-                  }
-                  label={option}
-                />
-              ))}
-            </FormGroup>
-          </Grid>
+              <Grid container spacing={2}>
+                {/* Columna izquierda (4 opciones) */}
+                <Grid item xs={12} sm={6}>
+                  <FormGroup>
+                    {FORM_OPTIONS.objetivos.slice(0, 4).map(option => (
+                      <FormControlLabel
+                        key={option}
+                        control={
+                          <Checkbox
+                            checked={formData.objetivo.includes(option)}
+                            onChange={(e) => handleCheckboxChange("objetivo", option, e.target.checked)}
+                          />
+                        }
+                        label={option}
+                      />
+                    ))}
+                  </FormGroup>
+                </Grid>
 
-          {/* Columna derecha (4 opciones) */}
-          <Grid item xs={12} sm={6}>
-            <FormGroup>
-              {FORM_OPTIONS.objetivos.slice(4).map(option => (
-                <FormControlLabel
-                  key={option}
-                  control={
-                    <Checkbox
-                      checked={formData.objetivo.includes(option)}
-                      onChange={() => handleCheckboxChange("objetivo", option)}
-                    />
-                  }
-                  label={option}
-                />
-              ))}
-            </FormGroup>
-          </Grid>
-        </Grid>
-      </Box>
+                {/* Columna derecha (4 opciones) */}
+                <Grid item xs={12} sm={6}>
+                  <FormGroup>
+                    {FORM_OPTIONS.objetivos.slice(4).map(option => (
+                      <FormControlLabel
+                        key={option}
+                        control={
+                          <Checkbox
+                            checked={formData.objetivo.includes(option)}
+                            onChange={(e) => handleCheckboxChange("objetivo", option, e.target.checked)}
+                          />
+                        }
+                        label={option}
+                      />
+                    ))}
+                  </FormGroup>
+                </Grid>
+              </Grid>
+            </Box>
 
-      <Divider sx={{ my: 2 }} />
+            <Divider sx={{ my: 2 }} />
 
-      {/* ==== ACTIVIDAD (se mantiene igual) ==== */}
-      <Box>
-        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-          Nivel de Actividad
-        </Typography>
+            {/* ==== ACTIVIDAD (ahora RadioGroup: selección única) ==== */}
+            <Box>
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                Nivel de Actividad
+              </Typography>
 
-        <FormGroup row={!isMobile}>
-          {FORM_OPTIONS.nivelesActividad.map(option => (
-            <FormControlLabel
-              key={option}
-              control={
-                <Checkbox
-                  checked={formData.actividad === option}
-                  onChange={() =>
-                    setFormData(prev => ({ ...prev, actividad: option }))
-                  }
-                />
-              }
-              label={option}
-            />
-          ))}
-        </FormGroup>
-      </Box>
-    </Box>
+              <RadioGroup
+                row={!isMobile}
+                value={formData.actividad}
+                onChange={(e) => setFormData(prev => ({ ...prev, actividad: e.target.value }))}
+              >
+                {FORM_OPTIONS.nivelesActividad.map(option => (
+                  <FormControlLabel
+                    key={option}
+                    value={option}
+                    control={<Radio />}
+                    label={option}
+                  />
+                ))}
+              </RadioGroup>
+            </Box>
+          </Box>
         );
 
       default:
@@ -811,83 +853,82 @@ Nivel de actividad: ${formData.actividad || 'No especificado'}
         </DialogTitle>
 
         <DialogContent sx={{ p: 0 }}>
-          {!editingMascota && (
-            <Stepper activeStep={activeStep} sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-              {steps.map((label) => (
-                <Step key={label}>
-                  <StepLabel>{label}</StepLabel>
-                </Step>
-              ))}
-            </Stepper>
-          )}
-          
+          {/* ahora mostramos siempre el Stepper para permitir editar todas las secciones */}
+          <Stepper activeStep={activeStep} sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
+            {steps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+
           <Box sx={{ p: 3 }}>
-            {renderStepContent(editingMascota ? 0 : activeStep)}
+            {renderStepContent(activeStep)}
           </Box>
         </DialogContent>
 
-<DialogActions sx={{ p: 3, borderTop: 1, borderColor: 'divider', gap: 1 }}>
-  
-  {/* Botón ATRÁS */}
-  {!editingMascota && activeStep > 0 && (
-    <Button 
-      onClick={handleBack} 
-      variant="contained"
-      sx={{ 
-        backgroundColor: '#5D4E37',
-        color: 'white',
-        borderColor: '#5D4E37',
-        '&:hover': { backgroundColor: '#4A3F2D' }
-      }}
-    >
-      Atrás
-    </Button>
-  )}
+        <DialogActions sx={{ p: 3, borderTop: 1, borderColor: 'divider', gap: 1 }}>
+          
+          {/* Botón ATRÁS */}
+          {activeStep > 0 && (
+            <Button 
+              onClick={handleBack} 
+              variant="contained"
+              sx={{ 
+                backgroundColor: '#5D4E37',
+                color: 'white',
+                borderColor: '#5D4E37',
+                '&:hover': { backgroundColor: '#4A3F2D' }
+              }}
+            >
+              Atrás
+            </Button>
+          )}
 
-  <Box sx={{ flex: 1 }} />
+          <Box sx={{ flex: 1 }} />
 
-  {/* Botón CANCELAR */}
-  <Button 
-    onClick={handleClose} 
-    variant="contained"
-    sx={{
-      backgroundColor: '#5D4E37',
-      color: 'white',
-      borderColor: '#5D4E37',
-      '&:hover': { backgroundColor: '#4A3F2D' }
-    }}
-  >
-    Cancelar
-  </Button>
+          {/* Botón CANCELAR */}
+          <Button 
+            onClick={handleClose} 
+            variant="contained"
+            sx={{
+              backgroundColor: '#5D4E37',
+              color: 'white',
+              borderColor: '#5D4E37',
+              '&:hover': { backgroundColor: '#4A3F2D' }
+            }}
+          >
+            Cancelar
+          </Button>
 
-  {/* BOTÓN SIGUIENTE o COMPLETAR */}
-  {!editingMascota && activeStep < steps.length - 1 ? (
-    <Button 
-      onClick={handleNext} 
-      variant="contained"
-      sx={{
-        backgroundColor: '#5D4E37',
-        color: 'white',
-        '&:hover': { backgroundColor: '#4A3F2D' }
-      }}
-    >
-      Siguiente
-    </Button>
-  ) : (
-    <Button 
-      onClick={handleSubmit} 
-      variant="contained" 
-      size="large"
-      sx={{
-        backgroundColor: '#5D4E37',
-        color: 'white',
-        '&:hover': { backgroundColor: '#4A3F2D' }
-      }}
-    >
-      {editingMascota ? 'Actualizar Mascota' : 'Completar Registro'}
-    </Button>
-  )}
-</DialogActions>
+          {/* BOTÓN SIGUIENTE o COMPLETAR */}
+          {activeStep < steps.length - 1 ? (
+            <Button 
+              onClick={handleNext} 
+              variant="contained"
+              sx={{
+                backgroundColor: '#5D4E37',
+                color: 'white',
+                '&:hover': { backgroundColor: '#4A3F2D' }
+              }}
+            >
+              Siguiente
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleSubmit} 
+              variant="contained" 
+              size="large"
+              sx={{
+                backgroundColor: '#5D4E37',
+                color: 'white',
+                '&:hover': { backgroundColor: '#4A3F2D' }
+              }}
+            >
+              {editingMascota ? 'Actualizar Mascota' : 'Completar Registro'}
+            </Button>
+          )}
+        </DialogActions>
       </Dialog>
     </Container>
   );
