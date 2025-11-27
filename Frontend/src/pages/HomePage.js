@@ -147,7 +147,7 @@ const HomePage = () => {
     {
       icon: <HistoryIcon sx={{ fontSize: 40 }} />,
       title: 'Nuestra Historia',
-      content: 'Fundada en 2020 por amantes de los animales, Patitas y Sabores nació de la pasión por cuidar a nuestras mascotas de manera natural y saludable. Comenzamos como un pequeño emprendimiento y hoy llegamos a miles de hogares.',
+      content: 'Fundada en 2025 por amantes de los animales, Patitas y Sabores nació de la pasión por cuidar a nuestras mascotas de manera natural y saludable. Comenzamos como un pequeño emprendimiento y esperamos llegar a miles de hogares.',
       color: '#8A7B5D'
     }
   ];

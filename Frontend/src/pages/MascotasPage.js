@@ -67,7 +67,7 @@ const petAvatars = {
 
 // Opciones predefinidas para formularios
 const FORM_OPTIONS = {
-  alergias: ['Pollo', 'Cereales', 'Soya', 'Papa', 'Camote', 'Legumbres', 'Aceites vegetales'],
+  alergias: ['Pollo', 'Cereales', 'Soya', 'Papa', 'Camote', 'Legumbres', 'Aceite vegetal'],
   objetivos: [
     'Control de peso',
     'Aumento de energía o masa muscular',

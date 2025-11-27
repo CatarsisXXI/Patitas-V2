@@ -34,6 +34,7 @@ const ChatbotComponent = () => {
   const [products, setProducts] = useState([]);
   const [conversation, setConversation] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [typingMessage, setTypingMessage] = useState(null);
   const { user } = useAuth();
 
   const theme = useTheme();
@@ -70,7 +71,7 @@ const ChatbotComponent = () => {
       'Camote': [
         'Galletas CarobFibra (Harina de Algarrobo, Camote y Pollo)'
       ],
-      'Aceites vegetales': [
+      'Aceite vegetal': [ 
         'Galletas Dermosalud (Aceite de Oliva y Plátano)',
         'Vital Omega Crunch (Harina de Linaza y Zapallo)'
       ]
@@ -329,6 +330,34 @@ const ChatbotComponent = () => {
     return productosFiltrados;
   };
 
+  // Función para agregar mensaje con efecto de tipeo
+  const addMessage = (content, type = 'bot', options = null) => {
+    const newMessage = {
+      type,
+      content,
+      timestamp: new Date(),
+      options
+    };
+    
+    setConversation(prev => [...prev, newMessage]);
+    
+    // Si es mensaje del bot, activar efecto de tipeo
+    if (type === 'bot') {
+      setTypingMessage(newMessage);
+    }
+  };
+
+  // Efecto para manejar el efecto de tipeo
+  useEffect(() => {
+    if (typingMessage) {
+      const timer = setTimeout(() => {
+        setTypingMessage(null);
+      }, 500); // Tiempo de "tipeo" antes de mostrar el mensaje completo
+      
+      return () => clearTimeout(timer);
+    }
+  }, [typingMessage]);
+
   // Mensaje de bienvenida inicial
   useEffect(() => {
     if (showChatbot && conversation.length === 0) {
@@ -340,18 +369,9 @@ const ChatbotComponent = () => {
         timestamp: new Date()
       };
       setConversation([welcomeMessage]);
+      setTypingMessage(welcomeMessage);
     }
   }, [showChatbot, user, conversation.length]);
-
-  const addMessage = (content, type = 'bot', options = null) => {
-    const newMessage = {
-      type,
-      content,
-      timestamp: new Date(),
-      options
-    };
-    setConversation(prev => [...prev, newMessage]);
-  };
 
   const handleQuickReply = (action, value = null) => {
     addMessage(value || action, 'user');
@@ -808,9 +828,47 @@ const ChatbotComponent = () => {
     </Fade>
   );
 
-  // Componente MessageBubble
+  // Componente TypingIndicator
+  const TypingIndicator = () => (
+    <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Avatar
+          src="/assets/chatbot.png"
+          sx={{ width: 32, height: 32 }}
+        />
+        <Box
+          sx={{
+            p: 2,
+            borderRadius: 3,
+            background: colorPalette.botBubble,
+            border: `1px solid ${alpha(colorPalette.primary, 0.2)}`
+          }}
+        >
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            {[0, 1, 2].map(i => (
+              <Box
+                key={i}
+                sx={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  backgroundColor: colorPalette.primary,
+                  animation: 'pulse 1.4s ease-in-out infinite both',
+                  animationDelay: `${i * 0.16}s`
+                }}
+              />
+            ))}
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+  );
+
+  // Componente MessageBubble mejorado con efecto de tipeo
   const MessageBubble = ({ message, index }) => {
     const [isVisible, setIsVisible] = useState(false);
+    const [displayedText, setDisplayedText] = useState('');
+    const [isTyping, setIsTyping] = useState(false);
 
     useEffect(() => {
       const timer = setTimeout(() => {
@@ -818,6 +876,35 @@ const ChatbotComponent = () => {
       }, index * 150);
       return () => clearTimeout(timer);
     }, [index]);
+
+    // Efecto para el tipeo
+    useEffect(() => {
+      if (message.type === 'bot' && message === typingMessage) {
+        setIsTyping(true);
+        setDisplayedText('');
+        
+        let currentIndex = 0;
+        const typingInterval = setInterval(() => {
+          if (currentIndex <= message.content.length) {
+            setDisplayedText(message.content.slice(0, currentIndex));
+            currentIndex++;
+          } else {
+            clearInterval(typingInterval);
+            setIsTyping(false);
+          }
+        }, 20); // Velocidad de tipeo
+
+        return () => clearInterval(typingInterval);
+      } else if (message.type === 'bot') {
+        setDisplayedText(message.content);
+      } else {
+        setDisplayedText(message.content);
+      }
+    }, [message, typingMessage]);
+
+    const content = message.type === 'bot' && message === typingMessage && isTyping 
+      ? displayedText 
+      : message.content;
 
     return (
       <Box
@@ -860,17 +947,37 @@ const ChatbotComponent = () => {
               border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
               boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               whiteSpace: 'pre-line',
-              lineHeight: 1.5
+              lineHeight: 1.5,
+              minHeight: message.type === 'bot' ? 'auto' : 'fit-content'
             }}
           >
             <Typography variant="body2" sx={{ lineHeight: 1.5 }}>
-              {message.content}
+              {content}
+              {message.type === 'bot' && message === typingMessage && isTyping && (
+                <Box
+                  component="span"
+                  sx={{
+                    display: 'inline-block',
+                    width: 2,
+                    height: 16,
+                    backgroundColor: colorPalette.primary,
+                    marginLeft: 0.5,
+                    animation: 'blink 1s infinite',
+                    verticalAlign: 'middle'
+                  }}
+                />
+              )}
             </Typography>
+            
             {message.options && message.options.type === 'product' && (
               <ProductCard product={message.options.product} />
             )}
+            
             {message.options && Array.isArray(message.options) && (
-              <QuickReplies options={message.options} />
+              // Solo mostrar opciones cuando el mensaje ha terminado de tipear
+              (!isTyping || message !== typingMessage) && (
+                <QuickReplies options={message.options} />
+              )
             )}
           </Box>
         </Box>
@@ -1036,44 +1143,26 @@ const ChatbotComponent = () => {
                   index={index}
                 />
               ))}
-              {loading && (
-                <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Avatar
-                      src="/assets/chatbot.png"
-                      sx={{ width: 32, height: 32 }}
-                    />
-                    <Box
-                      sx={{
-                        p: 2,
-                        borderRadius: 3,
-                        background: colorPalette.botBubble,
-                        border: `1px solid ${alpha(colorPalette.primary, 0.2)}`
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        {[0, 1, 2].map(i => (
-                          <Box
-                            key={i}
-                            sx={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: '50%',
-                              backgroundColor: colorPalette.primary,
-                              animation: 'pulse 1.4s ease-in-out infinite both',
-                              animationDelay: `${i * 0.16}s`
-                            }}
-                          />
-                        ))}
-                      </Box>
-                    </Box>
-                  </Box>
-                </Box>
-              )}
+              
+              {/* Mostrar indicador de tipeo si está cargando */}
+              {loading && <TypingIndicator />}
             </Box>
             <QuickActions />
           </>
         )}
+        
+        {/* Estilos para las animaciones */}
+        <style>{`
+          @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+          }
+          @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.5; }
+          }
+        `}</style>
       </Box>
     </Fade>
   );
