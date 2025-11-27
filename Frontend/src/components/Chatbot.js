@@ -1,842 +1,1247 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import Chatbot from 'react-chatbot-kit';
-import { createChatBotMessage } from 'react-chatbot-kit';
-import 'react-chatbot-kit/build/main.css';
-import { Fab, Box } from '@mui/material';
-import ChatIcon from '@mui/icons-material/Chat';
-import CloseIcon from '@mui/icons-material/Close';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Fab,
+  Box,
+  Slide,
+  Fade,
+  Zoom,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  Chip,
+  Avatar,
+  IconButton,
+  useTheme,
+  useMediaQuery,
+  alpha,
+  Tooltip
+} from '@mui/material';
+import {
+  Chat as ChatIcon,
+  Close as CloseIcon,
+  Pets as PetsIcon,
+  ShoppingBag as ShoppingBagIcon,
+  Favorite as FavoriteIcon,
+  Star as StarIcon,
+  WhatsApp as WhatsAppIcon,
+  Visibility as VisibilityIcon,
+  ExpandLess as ExpandLessIcon,
+  LocalOffer as LocalOfferIcon
+} from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import mascotaService from '../services/mascotaService';
 import productService from '../services/productService';
 
 const ChatbotComponent = () => {
-  const [showChatbot, setShowChatbot] = useState(true);
+  const [showChatbot, setShowChatbot] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [mascotas, setMascotas] = useState([]);
   const [products, setProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [conversation, setConversation] = useState([]);
+  const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
-  // Helper functions
-  const getMascotaId = useCallback((m) => 
-    (m && (m.MascotaID ?? m.mascotaID ?? m.id ?? m.idMascota ?? m.id_mascota)), []);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const getMascotaNombre = useCallback((m) => 
-    (m?.nombre || m?.Nombre || 'tu mascota'), []);
+  // Paleta de colores pastel para IA
+  const colorPalette = {
+    primary: '#A8D8EA',
+    secondary: '#FFAAA7',
+    accent: '#FFD3B5',
+    background: '#FAFAFA',
+    surface: '#FFFFFF',
+    text: '#424242',
+    textLight: '#757575',
+    userBubble: '#E3F2FD',
+    botBubble: '#F5F5F5',
+    success: '#C8E6C9',
+    warning: '#FFECB3'
+  };
 
-  const whatsappNumber = '51956550376';
+  // Mapeo MEJORADO de alergias y sus sinónimos basado en las relaciones específicas
+  const alergiasMap = {
+    'Pollo': ['pollo', 'gallina', 'ave', 'carne de ave', 'poultry', 'chicken', 'aves', 'pollos', 'gallinas', 'carne de pollo', 'pavo'],
+    'Cereales': ['cereales', 'trigo', 'maíz', 'maiz', 'arroz', 'avena', 'cebada', 'grain', 'cereal', 'wheat', 'corn', 'rice', 'granos', 'granos enteros', 'harina', 'gluten', 'harina de trigo', 'harina de maíz'],
+    'Soya': ['soya', 'soja', 'soja', 'glycine max', 'soy', 'soja', 'soya texturizada', 'proteína de soya', 'lecitina de soya', 'aceite de soya'],
+    'Papa': ['papa', 'patata', 'solanum tuberosum', 'potato', 'papas', 'patatas', 'papa natural'],
+    'Camote': ['camote', 'batata', 'papa dulce', 'ipomoea batatas', 'sweet potato', 'boniatos', 'camotes'],
+    'Legumbres': ['legumbres', 'lentejas', 'garbanzos', 'frijoles', 'judías', 'alubias', 'legumes', 'beans', 'lentils', 'leguminosas', 'guisantes', 'habas'],
+    'Aceites vegetales': ['aceite vegetal', 'aceite de soja', 'aceite de maíz', 'aceite de girasol', 'aceite de canola', 'vegetable oil', 'aceites refinados', 'aceite vegetal refinado', 'aceite de oliva']
+  };
 
-  // Data fetching
+  // Mapeo MEJORADO de objetivos nutricionales basado en las relaciones específicas
+  const objetivosMap = {
+    'Control de peso': ['control de peso', 'peso', 'adelgazar', 'obesidad', 'sobrepeso', 'weight control', 'weight management', 'bajo en calorías', 'mantenimiento de peso', 'dieta', 'reducir peso', 'light', 'bajo en grasa'],
+    'Aumento de energía o masa muscular': ['energía', 'masa muscular', 'proteína', 'musculo', 'energetico', 'energy', 'muscle', 'protein', 'fortalecimiento', 'desarrollo muscular', 'ganancia muscular', 'alto en proteína', 'proteico', 'energético'],
+    'Apoyo Digestivo': ['digestión', 'digestivo', 'sensible', 'prebiótico', 'probiótico', 'fibra', 'digest', 'sensitive stomach', 'digestive health', 'salud intestinal', 'flora intestinal', 'probióticos', 'digestivo sensible'],
+    'Piel y pelaje saludables': ['piel', 'pelaje', 'brillante', 'saludable', 'dermatológico', 'caspa', 'picor', 'skin', 'coat', 'fur', 'pelage', 'pelo brillante', 'dermatitis', 'omega', 'ácidos grasos', 'dermosalud'],
+    'Soporte articular o movilidad': ['articular', 'movilidad', 'articulaciones', 'cartílago', 'artritis', 'huesos', 'joint', 'mobility', 'arthritis', 'condroitín', 'glucosamina', 'flexibilidad', 'soporte articular'],
+    'Soporte inmunológico': ['inmunológico', 'defensas', 'inmunidad', 'resistencia a enfermedades', 'immune', 'defense', 'immunity', 'sistema inmunitario', 'anticuerpos', 'defensas naturales', 'inmunidad'],
+    'Vitalidad y longevidad': ['vitalidad', 'longevidad', 'vejez', 'anciano', 'senior', 'vital', 'longevity', 'vitality', 'adulto mayor', 'tercera edad', 'envejecimiento saludable'],
+    'Control del nivel de azúcar': ['azúcar', 'glucosa', 'diabetes', 'insulina', 'control de azúcar', 'sugar', 'glucose', 'diabetic', 'nivel glucémico', 'glicemia', 'bajo en azúcar', 'yacón']
+  };
+
+  // Mapeo de nivel de actividad
+  const nivelActividadMap = {
+    'Sedentario': ['sedentario', 'poco activo', 'baja actividad', 'sedentaria'],
+    'Moderadamente activo': ['moderado', 'actividad moderada', 'moderadamente activo'],
+    'Muy activo': ['activo', 'muy activo', 'alta actividad', 'energético']
+  };
+
+  // Mapeo de edad
+  const edadMap = {
+    'Cachorro': ['cachorro', 'cachorros', 'joven', 'jóvenes', 'puppy', 'puppies'],
+    'Adulto': ['adulto', 'adultos', 'adult'],
+    'Joven Adulto': ['joven adulto', 'adulto joven'],
+    'Senior': ['senior', 'viejo', 'anciano', 'tercera edad', 'adulto mayor', 'aged']
+  };
+
   useEffect(() => {
     if (user) {
       fetchMascotas();
+      fetchProducts();
     }
   }, [user]);
 
   const fetchMascotas = async () => {
     try {
-      setIsLoading(true);
       const data = await mascotaService.getMascotas();
-      setMascotas(data || []);
+      setMascotas(data);
     } catch (error) {
       console.error('Error fetching mascotas:', error);
-      setMascotas([]);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const fetchProducts = async () => {
     try {
-      setIsLoading(true);
       const data = await productService.getProductos();
-      setProducts(data || []);
-      return data || [];
+      setProducts(data);
     } catch (error) {
       console.error('Error fetching products:', error);
-      setProducts([]);
-      return [];
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  // Comprehensive allergy and synonym mapping
-  const getAllergySynonyms = () => ({
-    'pollo': ['pollo', 'ave', 'gallina', 'pava', 'carne de ave', 'carne ave', 'pollito'],
-    'cereales': ['cereales', 'trigo', 'avena', 'cebada', 'centeno', 'maíz', 'arroz', 'gluten', 'harina', 'grano', 'granos', 'cereal'],
-    'soya': ['soya', 'soja', 'soja', 'glycine max', 'leguminosa', 'soja texturizada'],
-    'papa': ['papa', 'patata', 'solánum tuberósum', 'tubérculo', 'papa blanca'],
-    'camote': ['camote', 'batata', 'boniato', 'ipomoea batatas', 'dulce', 'camote dulce'],
-    'legumbres': ['legumbres', 'leguminosas', 'frijol', 'habas', 'lentejas', 'garbanzos', 'judías', 'poroto', 'alubia', 'legumbre'],
-    'aceites vegetales': ['aceite vegetal', 'aceite de oliva', 'aceite oliva', 'oliva', 'aceite de girasol', 'aceite girasol', 'aceite de linaza', 'aceite linaza', 'aceite de maíz', 'aceite maíz', 'aceite vegetal refinado']
-  });
+  const getMascotaId = (m) => (m && (m.MascotaID ?? m.mascotaID ?? m.id ?? m.idMascota ?? m.id_mascota));
+  const whatsappNumber = '51956550376';
 
-  // Nutritional objectives mapping with synonyms and expected products
-  const getNutritionalObjectivesMapping = () => ({
-    'control de peso': {
-      keywords: ['control peso', 'peso', 'light', 'bajo calorías', 'bajo en calorías', 'adelgazar', 'dieta', 'reducir peso', 'mantenimiento peso', 'fibra', 'saciedad'],
-      expectedProducts: ['Dermosalud', 'Yacon Light', 'Yacón Light']
-    },
-    'aumento de energía o masa muscular': {
-      keywords: ['energía', 'masa muscular', 'muscular', 'proteína', 'fuerza', 'rendimiento', 'actividad', 'ejercicio', 'desarrollo muscular'],
-      expectedProducts: ['Yacon Light', 'Yacón Light', 'CarobFibra', 'Carob Fibra']
-    },
-    'apoyo digestivo (digestión sensible)': {
-      keywords: ['digestivo', 'digestión', 'sensible', 'estómago', 'intestinal', 'fibra', 'probiotico', 'prebiótico', 'digestivo', 'sensibilidad'],
-      expectedProducts: ['Digest Fit', 'CarobFibra', 'Carob Fibra', 'Yacon Light', 'Yacón Light']
-    },
-    'piel y pelaje saludables': {
-      keywords: ['piel', 'pelaje', 'dermosalud', 'dermatológico', 'brillo', 'caída pelo', 'omega', 'grasa saludable', 'derma', 'cutáneo'],
-      expectedProducts: ['Dermosalud', 'Digest Fit', 'Vital Omega Crunch', 'Omega Crunch']
-    },
-    'soporte articular o movilidad': {
-      keywords: ['articular', 'articulaciones', 'movilidad', 'huesos', 'cartílago', 'flexibilidad', 'artritis', 'articulación', 'movimiento'],
-      expectedProducts: ['Yacon Light', 'Yacón Light', 'CarobFibra', 'Carob Fibra', 'Vital Omega Crunch', 'Omega Crunch']
-    },
-    'soporte inmunológico': {
-      keywords: ['inmunológico', 'inmunidad', 'defensas', 'sistema inmune', 'protección', 'anticuerpos', 'inmune', 'defensa'],
-      expectedProducts: ['CarobFibra', 'Carob Fibra', 'Digest Fit', 'Yacon Light', 'Yacón Light']
-    },
-    'vitalidad y longevidad': {
-      keywords: ['vitalidad', 'longevidad', 'vejez', 'senior', 'adulto mayor', 'energía vital', 'calidad vida', 'envejecimiento', 'vital'],
-      expectedProducts: ['Digest Fit', 'Vital Omega Crunch', 'Omega Crunch']
-    },
-    'control del nivel de azúcar': {
-      keywords: ['azúcar', 'glucosa', 'diabetes', 'insulina', 'nivel azúcar', 'control glucémico', 'glicemia', 'azúcar en sangre'],
-      expectedProducts: ['Yacon Light', 'Yacón Light']
-    }
-  });
+  // Función mejorada para normalizar texto
+  const normalizeText = (text) => {
+    return text?.toString().toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^\w\s]/gi, ' ')
+      .trim() || '';
+  };
 
-  // Activity level mapping
-  const getActivityLevelMapping = () => ({
-    'sedentario': ['Digest Fit', 'Yacon Light', 'Yacón Light', 'Vital Omega Crunch', 'Omega Crunch'],
-    'moderadamente activo': [], // No specific restrictions
-    'muy activo': ['Yacon Light', 'Yacón Light', 'CarobFibra', 'Carob Fibra']
-  });
-
-  // Age mapping - ONLY FOR SENIOR
-  const getSeniorProducts = () => [
-    'Digest Fit', 
-    'Yacon Light', 
-    'Yacón Light', 
-    'Vital Omega Crunch', 
-    'Omega Crunch'
-  ];
-
-  // Improved product recommendation logic with hierarchical priority
-  const getProductRecommendations = useCallback((mascota, allProducts) => {
-    if (!allProducts || allProducts.length === 0) return [];
+  // Función para extraer alergias de las notas adicionales
+  const extraerAlergiasDeNotas = (notas) => {
+    if (!notas) return [];
     
-    const notas = mascota.notasAdicionales?.toLowerCase() || '';
+    const alergiasEncontradas = [];
+    const notasNormalizadas = normalizeText(notas);
     
-    // Extract information from notes
-    const alergias = extractSection(notas, 'Alergias');
-    const objetivos = extractSection(notas, 'Objetivo nutricional');
-    const nivelActividad = extractSection(notas, 'Nivel de actividad')[0] || 'moderadamente activo';
-    const edad = extractSection(notas, 'Edad')[0] || '';
-    
-    const objetivoPrincipal = (objetivos[0] || 'mantenimiento general').trim().toLowerCase();
-
-    // Determine if senior (age > 7 years)
-    const esSenior = isMascotaSenior(edad, mascota);
-
-    // Get mappings
-    const allergySynonyms = getAllergySynonyms();
-    const nutritionalMapping = getNutritionalObjectivesMapping();
-    const activityMapping = getActivityLevelMapping();
-    const seniorProducts = getSeniorProducts();
-
-    // STEP 1: FILTER BY ALLERGIES (HIGHEST PRIORITY)
-    const safeProducts = allProducts.filter(product => {
-      const productText = `${product.descripcion || ''} ${product.nombre || ''} ${product.ingredientes || ''}`.toLowerCase();
-      
-      // Check if product contains any allergen
-      const hasAllergen = alergias.some(alergia => {
-        const synonyms = allergySynonyms[alergia] || [alergia];
-        return synonyms.some(synonym => 
-          productText.includes(synonym.toLowerCase())
-        );
+    // Buscar cada alergia en las notas
+    Object.keys(alergiasMap).forEach(alergia => {
+      const sinonimos = alergiasMap[alergia];
+      const encontrado = sinonimos.some(sinonimo => {
+        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
+        return patron.test(notasNormalizadas);
       });
-
-      return !hasAllergen;
-    });
-
-    if (safeProducts.length === 0) {
-      console.warn('No safe products found after allergy filtering');
-      return [];
-    }
-
-    // STEP 2: SCORE BY NUTRITIONAL OBJECTIVES (SECOND PRIORITY)
-    const nutritionScoredProducts = safeProducts.map(product => {
-      let score = 0;
-      const productText = `${product.nombre || ''} ${product.descripcion || ''}`.toLowerCase();
-      const productName = product.nombre || '';
       
-      // Nutritional objective scoring
-      const objectiveConfig = nutritionalMapping[objetivoPrincipal];
-      if (objectiveConfig) {
-        // Score for keywords in product text
-        objectiveConfig.keywords.forEach(keyword => {
-          if (productText.includes(keyword.toLowerCase())) {
-            score += 2;
-          }
-        });
-        
-        // Bonus for expected products by name
-        if (objectiveConfig.expectedProducts.some(expected => 
-          productName.toLowerCase().includes(expected.toLowerCase())
-        )) {
-          score += 3;
-        }
+      if (encontrado) {
+        alergiasEncontradas.push(alergia);
       }
-
-      return { product, score, productName, productText };
     });
+    
+    return alergiasEncontradas;
+  };
 
-    // STEP 3: FILTER BY ACTIVITY LEVEL (THIRD PRIORITY)
-    const activityFilteredProducts = nutritionScoredProducts.filter(item => {
-      const activityProducts = activityMapping[nivelActividad] || [];
+  // Función para extraer objetivos nutricionales de las notas adicionales
+  const extraerObjetivosDeNotas = (notas) => {
+    if (!notas) return [];
+    
+    const objetivosEncontrados = [];
+    const notasNormalizadas = normalizeText(notas);
+    
+    // Buscar cada objetivo en las notas
+    Object.keys(objetivosMap).forEach(objetivo => {
+      const sinonimos = objetivosMap[objetivo];
+      const encontrado = sinonimos.some(sinonimo => {
+        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
+        return patron.test(notasNormalizadas);
+      });
       
-      // If no specific activity products, include all
-      if (activityProducts.length === 0) return true;
-      
-      // Check if product matches activity level
-      return activityProducts.some(activityProd => 
-        item.productName.toLowerCase().includes(activityProd.toLowerCase())
-      );
-    });
-
-    // STEP 4: APPLY SENIOR PREFERENCE (ONLY IF SENIOR)
-    let finalScoredProducts = activityFilteredProducts.map(item => {
-      let finalScore = item.score;
-      
-      // Add senior bonus if applicable
-      if (esSenior) {
-        const isSeniorProduct = seniorProducts.some(seniorProd => 
-          item.productName.toLowerCase().includes(seniorProd.toLowerCase())
-        );
-        if (isSeniorProduct) {
-          finalScore += 2; // Bonus for senior-appropriate products
-        }
+      if (encontrado) {
+        objetivosEncontrados.push(objetivo);
       }
-
-      return { ...item, finalScore };
     });
+    
+    return objetivosEncontrados;
+  };
 
-    // Sort by final score and return top recommendations
-    const sortedProducts = finalScoredProducts
-      .sort((a, b) => b.finalScore - a.finalScore)
-      .map(item => item.product);
-
-    // Return results - if no high-scoring products, return safe products
-    return sortedProducts.length > 0 ? sortedProducts.slice(0, 5) : safeProducts.slice(0, 3);
-  }, []);
-
-  // Helper function to determine if mascota is senior
-  const isMascotaSenior = (edadText, mascota) => {
-    // Try to extract numeric age from text
-    const edadMatch = edadText.match(/(\d+)/);
-    if (edadMatch) {
-      const edadNum = parseInt(edadMatch[0]);
-      return edadNum > 7;
+  // Función para extraer nivel de actividad de las notas adicionales
+  const extraerNivelActividadDeNotas = (notas) => {
+    if (!notas) return '';
+    
+    const notasNormalizadas = normalizeText(notas);
+    
+    // Buscar cada nivel de actividad en las notas
+    for (const [nivel, sinonimos] of Object.entries(nivelActividadMap)) {
+      const encontrado = sinonimos.some(sinonimo => {
+        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
+        return patron.test(notasNormalizadas);
+      });
+      
+      if (encontrado) {
+        return nivel;
+      }
     }
     
-    // Check for senior keywords
-    const seniorKeywords = ['senior', 'viejo', 'anciano', 'mayor', 'adulto mayor'];
-    if (seniorKeywords.some(keyword => edadText.includes(keyword))) {
-      return true;
+    return '';
+  };
+
+  // Función para extraer edad de las notas adicionales
+  const extraerEdadDeNotas = (notas) => {
+    if (!notas) return '';
+    
+    const notasNormalizadas = normalizeText(notas);
+    
+    // Buscar cada edad en las notas
+    for (const [edad, sinonimos] of Object.entries(edadMap)) {
+      const encontrado = sinonimos.some(sinonimo => {
+        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
+        return patron.test(notasNormalizadas);
+      });
+      
+      if (encontrado) {
+        return edad;
+      }
     }
     
-    // Check mascota object directly for age
-    const mascotaEdad = mascota.edad || mascota.Edad;
-    if (mascotaEdad && typeof mascotaEdad === 'number') {
-      return mascotaEdad > 7;
+    return '';
+  };
+
+  // Función para extraer la sección "Recomendado para" de la descripción
+  const extraerSeccionRecomendadoPara = (descripcion) => {
+    if (!descripcion) return '';
+    
+    const descripcionNormalizada = normalizeText(descripcion);
+    
+    // Buscar patrones comunes para "Recomendado para"
+    const patrones = [
+      /recomendado para[\s:]+([^.!?]*)/i,
+      /ideal para[\s:]+([^.!?]*)/i,
+      /recomendado[\s:]+([^.!?]*)/i,
+      /especial para[\s:]+([^.!?]*)/i,
+      /beneficios[\s:]+([^.!?]*)/i,
+      /indicado para[\s:]+([^.!?]*)/i
+    ];
+    
+    for (const patron of patrones) {
+      const match = descripcion.match(patron);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+    
+    return '';
+  };
+
+  // Función MEJORADA para verificar alergias - BUSQUEDA EN NOMBRE Y DESCRIPCIÓN
+  const contieneAlergenos = (producto, alergias) => {
+    if (!alergias || alergias.length === 0) return false;
+    
+    const nombre = normalizeText(producto.nombre || producto.Nombre || '');
+    const descripcion = normalizeText(producto.descripcion || producto.Descripcion || '');
+    const ingredientes = normalizeText(producto.ingredientes || producto.Ingredientes || '');
+    
+    const textoCompleto = `${nombre} ${descripcion} ${ingredientes}`;
+
+    // Buscar en cada alergia y sus sinónimos
+    for (const alergia of alergias) {
+      const sinonimos = alergiasMap[alergia] || [normalizeText(alergia)];
+      for (const sinonimo of sinonimos) {
+        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
+        if (patron.test(textoCompleto)) {
+          console.log(`❌ Producto excluido: "${producto.nombre}" - contiene alergeno: ${alergia} (sinónimo: ${sinonimo})`);
+          return true;
+        }
+      }
     }
     
     return false;
   };
 
-  const extractSection = (text, label) => {
-    const regex = new RegExp(`${label}:([^|]+)`, 'i');
-    const match = text.match(regex);
-    return match ? match[1].split(',').map(s => s.trim().toLowerCase()) : [];
+  // Función MEJORADA para calcular puntuación de objetivos - ENFOCADA EN "RECOMENDADO PARA"
+  const calcularPuntuacionObjetivos = (producto, objetivos) => {
+    if (!objetivos || objetivos.length === 0) return 0;
+    
+    const descripcion = producto.descripcion || producto.Descripcion || '';
+    const nombre = normalizeText(producto.nombre || producto.Nombre || '');
+    
+    // Extraer la sección "Recomendado para" específicamente
+    const seccionRecomendado = extraerSeccionRecomendadoPara(descripcion);
+    const descripcionCompleta = normalizeText(descripcion);
+    const seccionRecomendadoNormalizada = normalizeText(seccionRecomendado);
+    
+    console.log(`📋 Analizando producto: ${producto.nombre}`);
+    console.log(`🔍 Sección "Recomendado para": ${seccionRecomendado}`);
+    
+    return objetivos.reduce((puntuacion, objetivo) => {
+      const sinonimos = objetivosMap[objetivo] || [normalizeText(objetivo)];
+      let puntuacionObjetivo = 0;
+      
+      // Buscar en la sección "Recomendado para" (PRIORIDAD ALTA - 3 puntos)
+      if (seccionRecomendadoNormalizada) {
+        const encontradoEnSeccion = sinonimos.some(sinonimo => {
+          const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
+          return patron.test(seccionRecomendadoNormalizada);
+        });
+        if (encontradoEnSeccion) {
+          console.log(`🎯 Objetivo "${objetivo}" encontrado en sección "Recomendado para"`);
+          puntuacionObjetivo += 3;
+        }
+      }
+      
+      // Buscar en toda la descripción (PRIORIDAD MEDIA - 1 punto)
+      const encontradoEnDescripcion = sinonimos.some(sinonimo => {
+        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
+        return patron.test(descripcionCompleta);
+      });
+      if (encontradoEnDescripcion && puntuacionObjetivo === 0) {
+        console.log(`📝 Objetivo "${objetivo}" encontrado en descripción general`);
+        puntuacionObjetivo += 1;
+      }
+
+      // Buscar en el nombre del producto (PRIORIDAD BAJA - 0.5 puntos)
+      const encontradoEnNombre = sinonimos.some(sinonimo => {
+        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
+        return patron.test(nombre);
+      });
+      if (encontradoEnNombre && puntuacionObjetivo === 0) {
+        console.log(`🏷️ Objetivo "${objetivo}" encontrado en nombre del producto`);
+        puntuacionObjetivo += 0.5;
+      }
+      
+      return puntuacion + puntuacionObjetivo;
+    }, 0);
   };
 
-  // Rest of the component remains the same...
-  const config = useMemo(() => ({
-    initialMessages: [
-      createChatBotMessage('¡Hola! Soy Coco, tu asistente de Patitas y Sabores. ¿En qué puedo ayudarte hoy?', {
-        widget: 'mainOptions',
-      }),
-    ],
-    botName: 'Coco',
-    inputDisabled: true,
-    widgets: [
-      {
-        widgetName: 'mainOptions',
-        widgetFunc: (props) => (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-            <button
-              onClick={() => handleWidgetAction(props, 'recomendaciones')}
-              style={buttonStyle}
-            >
-              Recomendaciones Personalizadas
-            </button>
-            <button
-              onClick={() => handleWidgetAction(props, 'productos')}
-              style={buttonStyle}
-            >
-              Ver Todos los Productos
-            </button>
-          </div>
-        ),
-      },
-      {
-        widgetName: 'mascotaOptions',
-        widgetFunc: (props) => {
-          const mascotaList = props.widgetProps?.mascotas || mascotas || [];
-          
-          if (mascotaList.length === 0) {
-            return (
-              <div style={{ padding: '8px', color: '#666', fontStyle: 'italic' }}>
-                No hay mascotas registradas
-              </div>
-            );
-          }
-
-          return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-              {mascotaList.map((mascota) => {
-                const id = getMascotaId(mascota);
-                const nombre = getMascotaNombre(mascota);
-                const especie = mascota.especie || mascota.Especie || 'sin especie';
-                const edad = mascota.edad || extractSection(mascota.notasAdicionales?.toLowerCase() || '', 'Edad')[0] || '';
-
-                return (
-                  <button
-                    key={id || `${nombre}_${Math.random()}`}
-                    onClick={() => handleWidgetAction(props, `seleccionar_mascota_${id}`)}
-                    style={buttonStyle}
-                  >
-                    {`${nombre} (${especie})${edad ? ` - ${edad}` : ''}`}
-                  </button>
-                );
-              })}
-            </div>
-          );
-        },
-      },
-      {
-        widgetName: 'productCards',
-        widgetFunc: ({ payload }) => {
-          const productList = Array.isArray(payload) ? payload : [];
-          
-          if (productList.length === 0) {
-            return (
-              <div style={{ padding: '8px', color: '#666' }}>
-                No se encontraron productos que cumplan con los requisitos de alergias y objetivos nutricionales.
-              </div>
-            );
-          }
-
-          return (
-            <div style={productContainerStyle}>
-              {productList.map((product, index) => (
-                <ProductCard 
-                  key={product.id || product.productoID || index}
-                  product={product}
-                  whatsappNumber={whatsappNumber}
-                />
-              ))}
-            </div>
-          );
-        },
-      }
-    ],
-    customStyles: {
-      botMessageBox: {
-        backgroundColor: '#A8B5A0',
-        color: '#000',
-      },
-      userMessageBox: {
-        backgroundColor: '#D4A574',
-        color: '#000',
-      },
-      chatButton: {
-        backgroundColor: '#A8B5A0',
-      },
-    },
-    customComponents: {
-      botAvatar: (props) => (
-        <div {...props}>
-          <img
-            src="https://static.vecteezy.com/system/resources/previews/005/055/092/non_2x/cute-australian-shepherd-dog-avatar-cartoon-icon-illustration-vector.jpg"
-            alt="Coco Bot"
-            style={{ width: '40px', height: '40px', borderRadius: '50%' }}
-          />
-        </div>
-      ),
-      input: () => null,
-      quickReply: (props) => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
-          {props.quickReplies.map((reply, index) => (
-            <button
-              key={index}
-              onClick={() => props.onQuickReply(reply.value)}
-              style={quickReplyButtonStyle}
-              onMouseOver={(e) => (e.target.style.backgroundColor = '#8FA68E')}
-              onMouseOut={(e) => (e.target.style.backgroundColor = '#A8B5A0')}
-            >
-              {reply.label}
-            </button>
-          ))}
-        </div>
-      ),
-    },
-  }), [mascotas, getMascotaId, getMascotaNombre]);
-
-  // Action Provider with improved logic
-  const ActionProvider = ({ createChatBotMessage, setState, children }) => {
+  // Función para calcular puntuación adicional por nivel de actividad
+  const calcularPuntuacionNivelActividad = (producto, nivelActividad) => {
+    if (!nivelActividad) return 0;
     
-    const updateChatState = useCallback((newMessages) => {
-      setState(prev => ({
-        ...prev,
-        messages: [...prev.messages, ...(Array.isArray(newMessages) ? newMessages : [newMessages])]
-      }));
-    }, []);
-
-    const sendOptions = useCallback(() => {
-      const optionsMsg = createChatBotMessage('¿En qué más puedo ayudarte?', {
-        widget: 'mainOptions',
+    const descripcion = producto.descripcion || producto.Descripcion || '';
+    const seccionRecomendado = extraerSeccionRecomendadoPara(descripcion);
+    const descripcionCompleta = normalizeText(descripcion);
+    const seccionRecomendadoNormalizada = normalizeText(seccionRecomendado);
+    
+    const sinonimos = nivelActividadMap[nivelActividad] || [normalizeText(nivelActividad)];
+    let puntuacion = 0;
+    
+    // Buscar en sección "Recomendado para"
+    if (seccionRecomendadoNormalizada) {
+      const encontradoEnSeccion = sinonimos.some(sinonimo => {
+        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
+        return patron.test(seccionRecomendadoNormalizada);
       });
-      
-      setTimeout(() => {
-        updateChatState(optionsMsg);
-      }, 1000);
-    }, [createChatBotMessage, updateChatState]);
-
-    const handleRecommendationsForMascota = useCallback(async (mascotaId) => {
-      const mascota = mascotas.find(m => String(getMascotaId(m)) === String(mascotaId));
-      
-      if (!mascota) {
-        const message = createChatBotMessage('No pude encontrar la mascota seleccionada. Intenta de nuevo.');
-        updateChatState(message);
-        return;
+      if (encontradoEnSeccion) {
+        puntuacion += 2;
       }
+    }
+    
+    // Buscar en descripción general
+    const encontradoEnDescripcion = sinonimos.some(sinonimo => {
+      const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
+      return patron.test(descripcionCompleta);
+    });
+    if (encontradoEnDescripcion) {
+      puntuacion += 1;
+    }
+    
+    return puntuacion;
+  };
 
-      try {
-        const allProducts = await fetchProducts();
-        
-        if (!allProducts || allProducts.length === 0) {
-          const message = createChatBotMessage('Lo siento, no hay productos disponibles para recomendar en este momento.');
-          updateChatState(message);
-          return;
-        }
-
-        const recommendedProducts = getProductRecommendations(mascota, allProducts);
-        const mascotaNombre = getMascotaNombre(mascota);
-
-        // Extract info for personalized message
-        const notas = mascota.notasAdicionales?.toLowerCase() || '';
-        const alergias = extractSection(notas, 'Alergias');
-        const objetivos = extractSection(notas, 'Objetivo nutricional');
-        const objetivoPrincipal = (objetivos[0] || 'mantenimiento general').trim();
-        const esSenior = isMascotaSenior(extractSection(notas, 'Edad')[0] || '', mascota);
-
-        if (recommendedProducts.length === 0) {
-          const message = createChatBotMessage(
-            `No encontré productos adecuados para ${mascotaNombre} que cumplan con sus alergias (${alergias.join(', ')}) y objetivo de ${objetivoPrincipal}. Te recomiendo consultar con nuestro equipo para opciones especiales.`
-          );
-          updateChatState(message);
-          sendOptions();
-          return;
-        }
-
-        // Create personalized recommendation message
-        let personalizedMessage = `¡Perfecto! Para ${mascotaNombre} `;
-        
-        if (alergias.length > 0) {
-          personalizedMessage += `(evitando: ${alergias.join(', ')}) `;
-        }
-        
-        personalizedMessage += `con objetivo de ${objetivoPrincipal} `;
-        
-        if (esSenior) {
-          personalizedMessage += `y considerando su edad senior, `;
-        }
-        
-        personalizedMessage += `he seleccionado estos productos:`;
-
-        const introMessage = createChatBotMessage(personalizedMessage);
-
-        const productMessage = createChatBotMessage(
-          `Encontré ${recommendedProducts.length} producto(s) ideales para ${mascotaNombre}:`,
-          {
-            widget: 'productCards',
-            payload: recommendedProducts,
-          }
-        );
-
-        updateChatState([introMessage, productMessage]);
-        sendOptions();
-
-      } catch (error) {
-        console.error('Error generating recommendations:', error);
-        const message = createChatBotMessage('Ocurrió un error al generar las recomendaciones. Inténtalo de nuevo.');
-        updateChatState(message);
-        sendOptions();
-      }
-    }, [mascotas, getProductRecommendations, getMascotaNombre, getMascotaId, createChatBotMessage, updateChatState, sendOptions]);
-
-    // Rest of ActionProvider remains the same...
-    const handleRecommendations = useCallback(() => {
-      if (!mascotas || mascotas.length === 0) {
-        const message = createChatBotMessage(
-          <span style={{ color: '#886137', fontWeight: 'bold' }}>
-            No tienes mascotas registradas. ¡Registra a tu mascota en la sección de Mascotas para recibir recomendaciones personalizadas!
-          </span>
-        );
-        updateChatState(message);
-        sendOptions();
-        return;
-      }
-
-      if (mascotas.length > 1) {
-        const askMessage = createChatBotMessage('Tienes varias mascotas registradas. ¿Para cuál deseas la recomendación?', {
-          widget: 'mascotaOptions',
-          widgetProps: { mascotas },
-        });
-        updateChatState(askMessage);
-        return;
-      }
-
-      // Single mascota case
-      const mascota = mascotas[0];
-      handleRecommendationsForMascota(getMascotaId(mascota));
-    }, [mascotas, handleRecommendationsForMascota, getMascotaId, createChatBotMessage, updateChatState, sendOptions]);
-
-    const handleProductos = useCallback(async () => {
-      try {
-        const allProducts = await fetchProducts();
-        
-        if (!allProducts || allProducts.length === 0) {
-          const message = createChatBotMessage('No hay productos disponibles en este momento.');
-          updateChatState(message);
-          sendOptions();
-          return;
-        }
-
-        const productMessage = createChatBotMessage(
-          `¡Aquí tienes todos nuestros productos disponibles! Tenemos ${allProducts.length} producto(s) para ti:`,
-          {
-            widget: 'productCards',
-            payload: allProducts.slice(0, 15),
-          }
-        );
-
-        updateChatState(productMessage);
-        sendOptions();
-
-      } catch (error) {
-        console.error('Error getting products:', error);
-        const message = createChatBotMessage('Lo siento, hubo un error al obtener la lista de productos. Inténtalo de nuevo.');
-        updateChatState(message);
-        sendOptions();
-      }
-    }, [createChatBotMessage, updateChatState, sendOptions]);
-
-    useEffect(() => {
-      const greetingText = user
-        ? `¡Hola ${user.name}! Soy Coco, tu asistente de Patitas y Sabores. ¿En qué puedo ayudarte hoy?`
-        : '¡Hola! Soy Coco, tu asistente de Patitas y Sabores. ¿En qué puedo ayudarte hoy?';
-
-      const greeting = createChatBotMessage(greetingText, {
-        widget: 'mainOptions',
+  // Función para calcular puntuación adicional por edad
+  const calcularPuntuacionEdad = (producto, edad) => {
+    if (!edad) return 0;
+    
+    const descripcion = producto.descripcion || producto.Descripcion || '';
+    const seccionRecomendado = extraerSeccionRecomendadoPara(descripcion);
+    const descripcionCompleta = normalizeText(descripcion);
+    const seccionRecomendadoNormalizada = normalizeText(seccionRecomendado);
+    
+    const sinonimos = edadMap[edad] || [normalizeText(edad)];
+    let puntuacion = 0;
+    
+    // Buscar en sección "Recomendado para"
+    if (seccionRecomendadoNormalizada) {
+      const encontradoEnSeccion = sinonimos.some(sinonimo => {
+        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
+        return patron.test(seccionRecomendadoNormalizada);
       });
+      if (encontradoEnSeccion) {
+        puntuacion += 2;
+      }
+    }
+    
+    // Buscar en descripción general
+    const encontradoEnDescripcion = sinonimos.some(sinonimo => {
+      const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
+      return patron.test(descripcionCompleta);
+    });
+    if (encontradoEnDescripcion) {
+      puntuacion += 1;
+    }
+    
+    return puntuacion;
+  };
 
-      setState(prev => {
-        const hasGreeting = prev.messages.some(m => 
-          m.message?.includes?.('¿En qué puedo ayudarte hoy?')
-        );
-        return hasGreeting ? prev : { ...prev, messages: [...prev.messages, greeting] };
-      });
-    }, [user, createChatBotMessage, setState]);
-
-    useEffect(() => {
-      const handler = (e) => {
-        const value = e?.detail;
-        if (!value) return;
-
-        const action = value.toString().toLowerCase();
-        
-        switch (action) {
-          case 'recomendaciones':
-            handleRecommendations();
-            break;
-          case 'productos':
-            handleProductos();
-            break;
-          default:
-            if (action.startsWith('seleccionar_mascota_')) {
-              const mascotaId = action.replace('seleccionar_mascota_', '');
-              handleRecommendationsForMascota(mascotaId);
-            }
-            break;
-        }
+  // Mensaje de bienvenida inicial
+  useEffect(() => {
+    if (showChatbot && conversation.length === 0) {
+      const welcomeMessage = {
+        type: 'bot',
+        content: user 
+          ? `¡Hola ${user.name}! 👋 Soy Coco AI, tu asistente virtual de Patitas y Sabores.\n\nPuedo ayudarte a encontrar productos perfectos para tus mascotas y ofrecerte recomendaciones personalizadas. ¿Por dónde empezamos?`
+          : '¡Hola! 👋 Soy Coco AI, tu asistente virtual de Patitas y Sabores.\n\nPuedo ayudarte a encontrar productos perfectos para tus mascotas y ofrecerte recomendaciones personalizadas. ¿Por dónde empezamos?',
+        timestamp: new Date()
       };
+      setConversation([welcomeMessage]);
+    }
+  }, [showChatbot, user, conversation.length]);
 
-      window.addEventListener('chatbot-option', handler);
-      return () => window.removeEventListener('chatbot-option', handler);
-    }, [handleRecommendations, handleProductos, handleRecommendationsForMascota]);
+  const addMessage = (content, type = 'bot', options = null) => {
+    const newMessage = {
+      type,
+      content,
+      timestamp: new Date(),
+      options
+    };
+    setConversation(prev => [...prev, newMessage]);
+  };
 
-    return (
-      <div>
-        {React.Children.map(children, (child, index) =>
-          React.cloneElement(child, {
-            key: index,
-            actions: {
-              handleRecommendations,
-              handleProductos,
-              handleRecommendationsForMascota,
-            },
-          })
-        )}
-      </div>
+  const handleQuickReply = (action, value = null) => {
+    addMessage(value || action, 'user');
+    setLoading(true);
+
+    setTimeout(() => {
+      switch (action) {
+        case 'recomendaciones':
+          handleRecommendations();
+          break;
+        case 'productos':
+          handleProductos();
+          break;
+        case 'seleccionar_mascota':
+          handleSelectMascota(value);
+          break;
+        case 'inicio':
+          handleDefault();
+          break;
+        default:
+          handleDefault();
+      }
+      setLoading(false);
+    }, 800);
+  };
+
+  const handleRecommendations = () => {
+    if (!mascotas || mascotas.length === 0) {
+      addMessage(
+        `No veo mascotas registradas en tu perfil aún. 📝\n\nPara obtener recomendaciones personalizadas, primero registra a tu mascota en la sección "Mis Mascotas". Luego podré analizar sus necesidades específicas y sugerirte los productos más adecuados.`,
+        'bot',
+        [
+          { label: '🛍️ Explorar Productos', action: 'productos' },
+          { label: '💬 Menú Principal', action: 'inicio' }
+        ]
+      );
+      return;
+    }
+
+    if (mascotas.length > 1) {
+      addMessage(
+        'Veo que tienes varias mascotas registradas. 🐕🐈\n\n¿Para cuál de ellas te gustaría que prepare recomendaciones personalizadas?',
+        'bot',
+        mascotas.map(mascota => ({
+          label: `${mascota.nombre} (${mascota.especie})`,
+          action: 'seleccionar_mascota',
+          value: getMascotaId(mascota)
+        }))
+      );
+      return;
+    }
+
+    const mascota = mascotas[0];
+    handleRecommendationsForMascota(getMascotaId(mascota));
+  };
+
+  const handleSelectMascota = (mascotaId) => {
+    const mascota = mascotas.find(m => String(getMascotaId(m)) === String(mascotaId));
+    if (mascota) {
+      addMessage(`Perfecto! Preparando recomendaciones personalizadas para ${mascota.nombre}... 🎯`, 'bot');
+      setTimeout(() => {
+        handleRecommendationsForMascota(mascotaId);
+      }, 1200);
+    }
+  };
+
+  const handleRecommendationsForMascota = async (mascotaId) => {
+    const mascota = mascotas.find(m => String(getMascotaId(m)) === String(mascotaId));
+    if (!mascota) {
+      addMessage('No pude encontrar la mascota seleccionada. ¿Podrías intentarlo de nuevo?', 'bot');
+      return;
+    }
+
+    try {
+      const nombre = mascota.nombre || 'tu mascota';
+      const notasAdicionales = mascota.notas_adicionales || mascota.notasAdicionales || mascota.NotasAdicionales || '';
+      
+      // Extraer información de las notas adicionales
+      const alergias = extraerAlergiasDeNotas(notasAdicionales);
+      const objetivos = extraerObjetivosDeNotas(notasAdicionales);
+      const nivelActividad = extraerNivelActividadDeNotas(notasAdicionales);
+      const edad = extraerEdadDeNotas(notasAdicionales);
+
+      console.log('🔍 Información extraída de notas:', {
+        notasAdicionales,
+        alergias,
+        objetivos,
+        nivelActividad,
+        edad
+      });
+
+      // Mostrar criterios de recomendación ANTES de generar las recomendaciones
+      let criteriosMessage = `📋 Estoy generando recomendaciones para ${nombre} basándome en:\n\n`;
+      
+      criteriosMessage += `🔍 Alergias a excluir: ${alergias.length > 0 ? alergias.join(', ') : 'Ninguna detectada'}\n`;
+      criteriosMessage += `🎯 Objetivos nutricionales: ${objetivos.length > 0 ? objetivos.join(', ') : 'Ninguno detectado'}\n`;
+      criteriosMessage += `⚡ Nivel de actividad: ${nivelActividad || 'No especificado'}\n`;
+      criteriosMessage += `📅 Edad: ${edad || 'No especificada'}\n\n`;
+      
+      if (notasAdicionales) {
+        criteriosMessage += `📝 Notas adicionales analizadas: ${notasAdicionales}\n\n`;
+      }
+      
+      criteriosMessage += `🔄 Procesando recomendaciones...`;
+
+      addMessage(criteriosMessage, 'bot');
+
+      // Pequeña pausa para que el usuario pueda leer los criterios
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      console.log(`🔍 Generando recomendaciones para ${nombre}:`, { alergias, objetivos, nivelActividad, edad });
+
+      // FILTRADO ESTRICTO POR ALERGIAS - PRIORIDAD MÁXIMA
+      const productosSinAlergenos = products.filter(producto => {
+        return !contieneAlergenos(producto, alergias);
+      });
+
+      console.log(`📊 Productos después de filtrar alergias: ${productosSinAlergenos.length} de ${products.length}`);
+
+      // Si no hay productos después del filtrado por alergias
+      if (productosSinAlergenos.length === 0) {
+        let mensaje = `Basado en el perfil de ${nombre}`;
+        if (alergias.length > 0) {
+          mensaje += ` (excluyendo productos con: ${alergias.join(', ')})`;
+        }
+        mensaje += `, no encontré productos seguros que cumplan con las restricciones de alergias. 😔\n\nTe recomiendo explorar todos nuestros productos o ajustar las alergias registradas.`;
+
+        addMessage(
+          mensaje,
+          'bot',
+          [
+            { label: '🛍️ Explorar Todos los Productos', action: 'productos' },
+            { label: '💬 Menú Principal', action: 'inicio' }
+          ]
+        );
+        return;
+      }
+
+      // CALCULAR PUNTUACIÓN TOTAL PARA PRODUCTOS SEGUROS
+      const productosRecomendados = productosSinAlergenos
+        .map(producto => {
+          const puntuacionObjetivos = calcularPuntuacionObjetivos(producto, objetivos);
+          const puntuacionActividad = calcularPuntuacionNivelActividad(producto, nivelActividad);
+          const puntuacionEdad = calcularPuntuacionEdad(producto, edad);
+          
+          const puntuacionTotal = puntuacionObjetivos + puntuacionActividad + puntuacionEdad;
+          
+          console.log(`📦 Producto: ${producto.nombre}, Puntos objetivos: ${puntuacionObjetivos}, Actividad: ${puntuacionActividad}, Edad: ${puntuacionEdad}, TOTAL: ${puntuacionTotal}`);
+          
+          return {
+            ...producto,
+            puntuacion: puntuacionTotal,
+            puntuacionObjetivos,
+            puntuacionActividad,
+            puntuacionEdad
+          };
+        })
+        .filter(producto => producto.puntuacion > 0) // Solo productos que cumplan al menos un criterio
+        .sort((a, b) => {
+          // Primero por puntuación total (mayor a menor)
+          if (b.puntuacion !== a.puntuacion) {
+            return b.puntuacion - a.puntuacion;
+          }
+          // Luego por puntuación de objetivos (mayor a menor)
+          if (b.puntuacionObjetivos !== a.puntuacionObjetivos) {
+            return b.puntuacionObjetivos - a.puntuacionObjetivos;
+          }
+          // Finalmente por precio (mayor a menor)
+          return (b.precio || 0) - (a.precio || 0);
+        })
+        .slice(0, 3); // MÁXIMO 3 PRODUCTOS
+
+      console.log('🎯 Productos recomendados finales:', productosRecomendados);
+
+      // Mensaje de recomendación
+      let mensajeRecomendacion = `✨ He encontrado ${productosRecomendados.length} productos perfectos para ${nombre}:\n\n`;
+      mensajeRecomendacion += `✅ Filtrado por alergias: ${alergias.length > 0 ? `Excluyendo: ${alergias.join(', ')}` : 'Sin restricciones'}\n`;
+      mensajeRecomendacion += `🎯 Objetivos priorizados: ${objetivos.length > 0 ? objetivos.join(', ') : 'Búsqueda general'}\n`;
+      
+      if (productosRecomendados.length === 0) {
+        mensajeRecomendacion = `Basándome en los criterios establecidos para ${nombre}, no encontré productos que cumplan con todas las especificaciones. 😔\n\nTe sugiero explorar todos nuestros productos disponibles o ajustar algunos criterios.`;
+        
+        addMessage(
+          mensajeRecomendacion,
+          'bot',
+          [
+            { label: '🛍️ Explorar Productos', action: 'productos' },
+            { label: '💬 Menú Principal', action: 'inicio' }
+          ]
+        );
+        return;
+      }
+
+      addMessage(mensajeRecomendacion, 'bot');
+
+      // Mostrar productos recomendados con delay suave
+      productosRecomendados.forEach((producto, index) => {
+        setTimeout(() => {
+          addMessage('', 'bot', { type: 'product', product: producto });
+        }, index * 800);
+      });
+
+      // Mensaje final con opciones
+      setTimeout(() => {
+        addMessage(
+          '¿Te gustaría explorar más opciones o necesitas ayuda con algo más?',
+          'bot',
+          [
+            { label: '🛍️ Ver Más Productos', action: 'productos' },
+            { label: '🎯 Otra Recomendación', action: 'recomendaciones' },
+            { label: '💬 Menú Principal', action: 'inicio' }
+          ]
+        );
+      }, productosRecomendados.length * 800 + 500);
+
+    } catch (error) {
+      console.error('Error generating recommendations:', error);
+      addMessage(
+        'Lo siento, hubo un error al generar las recomendaciones. Por favor, intenta de nuevo.',
+        'bot',
+        [
+          { label: '🔄 Intentar Nuevamente', action: 'recomendaciones' },
+          { label: '🛍️ Explorar Productos', action: 'productos' }
+        ]
+      );
+    }
+  };
+
+  const handleProductos = () => {
+    if (products.length === 0) {
+      addMessage(
+        'Actualmente no hay productos disponibles. Estamos trabajando para agregar nuevos productos muy pronto! ⏳',
+        'bot',
+        [
+          { label: '🎯 Obtener Recomendaciones', action: 'recomendaciones' },
+          { label: '💬 Menú Principal', action: 'inicio' }
+        ]
+      );
+      return;
+    }
+
+    addMessage(
+      'Aquí tienes nuestros productos disponibles: 🛍️',
+      'bot'
+    );
+
+    const sortedProducts = [...products].sort((a, b) => {
+      const catA = a.categoria || 'Otros';
+      const catB = b.categoria || 'Otros';
+      if (catA !== catB) return catA.localeCompare(catB);
+      return (b.precio || 0) - (a.precio || 0);
+    });
+
+    // Mostrar productos en grupos de 2 con animaciones suaves
+    const productBatches = [];
+    for (let i = 0; i < sortedProducts.length; i += 2) {
+      productBatches.push(sortedProducts.slice(i, i + 2));
+    }
+
+    productBatches.forEach((batch, batchIndex) => {
+      setTimeout(() => {
+        batch.forEach((product, productIndex) => {
+          setTimeout(() => {
+            addMessage('', 'bot', { type: 'product', product });
+          }, productIndex * 400);
+        });
+        
+        if (batchIndex === productBatches.length - 1) {
+          setTimeout(() => {
+            addMessage(
+              '¿En qué más puedo ayudarte?',
+              'bot',
+              [
+                { label: '🎯 Recomendaciones Personalizadas', action: 'recomendaciones' },
+                { label: '💬 Menú Principal', action: 'inicio' }
+              ]
+            );
+          }, 1000);
+        }
+      }, batchIndex * 1000);
+    });
+  };
+
+  const handleDefault = () => {
+    addMessage(
+      '¡Hola de nuevo! ¿En qué puedo ayudarte hoy? 😊\n\nPuedo ofrecerte recomendaciones personalizadas para tus mascotas o mostrarte nuestro catálogo completo de productos.',
+      'bot',
+      [
+        { label: '🎯 Recomendaciones', action: 'recomendaciones' },
+        { label: '🛍️ Ver Productos', action: 'productos' }
+      ]
     );
   };
 
-  // Rest of the component (MessageParser, styles, etc.) remains the same...
-  const MessageParser = ({ children, actions }) => {
-    const parse = (message) => {
-      if (!message) return;
-      
-      const msg = message.toString().toLowerCase();
-      
-      if (msg === 'recomendaciones' || msg === 'recomendacion') {
-        actions.handleRecommendations();
-      } else if (msg === 'productos') {
-        actions.handleProductos();
-      } else if (msg.startsWith('seleccionar_mascota_')) {
-        const id = msg.replace('seleccionar_mascota_', '');
-        actions.handleRecommendationsForMascota?.(id);
+  const handleProductAction = (product, action) => {
+    if (action === 'view') {
+      const productId = product.productoID || product.ProductoID || product.id;
+      if (productId) {
+        window.open(`/productos/${productId}`, '_blank');
       }
+    } else if (action === 'buy') {
+      const nombre = product.nombre || product.Nombre || 'Producto';
+      const precio = product.precio ?? product.Precio;
+      const text = `Hola! Estoy interesado en comprar: ${nombre}${precio ? ` (S/${precio})` : ''}. ¿Pueden brindarme más información?`;
+      const url = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+    }
+  };
+
+  // Componente ProductCard MEJORADO con manejo simple y efectivo de imágenes
+  const ProductCard = ({ product }) => {
+    const nombre = product.nombre || product.Nombre || 'Sin nombre';
+    const precio = (product.precio ?? product.Precio) !== undefined ? (product.precio ?? product.Precio) : null;
+    
+    // Función SIMPLIFICADA para obtener imágenes - Asume que las imágenes están en /images/products/
+    const getProductImage = () => {
+      // Buscar en las propiedades comunes de imagen
+      const propiedadesImagen = ['imagen', 'Imagen', 'imagenURL', 'image', 'Image', 'fileName', 'nombreImagen'];
+      
+      for (let prop of propiedadesImagen) {
+        if (product[prop] && typeof product[prop] === 'string' && product[prop].trim() !== '') {
+          let imagenUrl = product[prop].trim();
+          
+          // Si ya es una URL completa, usar directamente
+          if (imagenUrl.startsWith('http') || imagenUrl.startsWith('//') || imagenUrl.startsWith('data:')) {
+            return imagenUrl;
+          }
+          
+          // Si ya es una ruta absoluta, usar directamente
+          if (imagenUrl.startsWith('/')) {
+            return imagenUrl;
+          }
+          
+          // Para cualquier otro caso, asumir que es un nombre de archivo en /images/products/
+          // Extraer solo el nombre del archivo (por si viene con rutas relativas)
+          const nombreArchivo = imagenUrl.split('/').pop() || imagenUrl.split('\\').pop() || imagenUrl;
+          return `/images/products/${nombreArchivo}`;
+        }
+      }
+      
+      return null;
     };
 
+    const imagenUrl = getProductImage();
+    const [imageError, setImageError] = useState(false);
+
+    console.log(`🖼️ Imagen para ${nombre}:`, imagenUrl);
+
     return (
-      <div>
-        {React.Children.map(children, (child, index) =>
-          React.cloneElement(child, {
-            key: index,
-            parse: parse,
-            actions: actions,
-          })
-        )}
-      </div>
+      <Fade in timeout={800}>
+        <Card 
+          sx={{ 
+            mb: 2, 
+            border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
+            borderRadius: 3,
+            background: colorPalette.surface,
+            transition: 'all 0.3s ease',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+            '&:hover': {
+              transform: 'translateY(-2px)',
+              boxShadow: '0 6px 20px rgba(0,0,0,0.12)'
+            }
+          }}
+        >
+          <CardContent sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              {/* Imagen del producto - ENFOQUE SIMPLIFICADO */}
+              <Box sx={{ position: 'relative', flexShrink: 0 }}>
+                {imagenUrl && !imageError ? (
+                  <Avatar 
+                    src={imagenUrl}
+                    onError={() => {
+                      console.log('❌ Error cargando imagen:', imagenUrl);
+                      setImageError(true);
+                    }}
+                    sx={{ 
+                      width: 70, 
+                      height: 70,
+                      borderRadius: 2,
+                      border: `2px solid ${colorPalette.primary}`,
+                      backgroundColor: colorPalette.background
+                    }} 
+                    variant="rounded"
+                  />
+                ) : (
+                  <Avatar 
+                    sx={{ 
+                      width: 70, 
+                      height: 70,
+                      borderRadius: 2,
+                      backgroundColor: colorPalette.accent,
+                      border: `2px solid ${colorPalette.primary}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }} 
+                    variant="rounded"
+                  >
+                    <LocalOfferIcon sx={{ color: colorPalette.text, fontSize: 30 }} />
+                  </Avatar>
+                )}
+              </Box>
+              
+              {/* Información del producto */}
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography 
+                    variant="subtitle2" 
+                    fontWeight="600" 
+                    color={colorPalette.text}
+                    sx={{ 
+                      lineHeight: 1.2,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      flex: 1,
+                      mr: 1
+                    }}
+                  >
+                    {nombre}
+                  </Typography>
+                  {precio && (
+                    <Chip 
+                      label={`S/ ${precio}`} 
+                      size="small"
+                      sx={{ 
+                        backgroundColor: colorPalette.success,
+                        color: colorPalette.text,
+                        fontWeight: '600',
+                        fontSize: '0.7rem',
+                        flexShrink: 0,
+                        height: 24,
+                        minWidth: 'auto',
+                        px: 1
+                      }}
+                    />
+                  )}
+                </Box>
+                
+                {/* Categoría */}
+                {product.categoria && (
+                  <Chip 
+                    label={product.categoria}
+                    size="small"
+                    variant="outlined"
+                    sx={{ 
+                      mb: 1,
+                      fontSize: '0.6rem',
+                      height: 20,
+                      borderColor: colorPalette.primary,
+                      color: colorPalette.textLight
+                    }}
+                  />
+                )}
+                
+                {/* Botones compactos */}
+                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                  <Button
+                    onClick={() => handleProductAction(product, 'view')}
+                    variant="outlined"
+                    size="small"
+                    startIcon={<VisibilityIcon sx={{ fontSize: 16 }} />}
+                    sx={{ 
+                      borderRadius: 2,
+                      fontSize: '0.7rem',
+                      borderColor: colorPalette.primary,
+                      color: colorPalette.primary,
+                      '&:hover': {
+                        backgroundColor: alpha(colorPalette.primary, 0.1),
+                        borderColor: colorPalette.primary,
+                        transform: 'scale(1.05)'
+                      },
+                      transition: 'all 0.2s ease',
+                      minWidth: 'auto',
+                      px: 1.5,
+                      height: 28
+                    }}
+                  >
+                    Ver
+                  </Button>
+                  <Button
+                    onClick={() => handleProductAction(product, 'buy')}
+                    variant="contained"
+                    size="small"
+                    startIcon={<WhatsAppIcon sx={{ fontSize: 16 }} />}
+                    sx={{ 
+                      borderRadius: 2,
+                      fontSize: '0.7rem',
+                      backgroundColor: colorPalette.primary,
+                      color: colorPalette.text,
+                      '&:hover': {
+                        backgroundColor: alpha(colorPalette.primary, 0.8),
+                        transform: 'scale(1.05)'
+                      },
+                      transition: 'all 0.2s ease',
+                      minWidth: 'auto',
+                      px: 1.5,
+                      height: 28
+                    }}
+                  >
+                    Comprar
+                  </Button>
+                </Box>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      </Fade>
     );
   };
 
-  // Hide input field
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.innerHTML = `
-      .custom-chatbot-container input, 
-      .custom-chatbot-container textarea, 
-      .custom-chatbot-container .react-chatbot-kit-chat-input { 
-        display: none !important; 
-      }
-    `;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
-  }, []);
+  const QuickReplies = ({ options }) => (
+    <Fade in timeout={800}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+        {options.map((option, index) => (
+          <Chip
+            key={index}
+            label={option.label}
+            onClick={() => handleQuickReply(option.action, option.value)}
+            clickable
+            variant="outlined"
+            sx={{
+              borderRadius: 2,
+              borderColor: colorPalette.primary,
+              color: colorPalette.text,
+              backgroundColor: colorPalette.surface,
+              '&:hover': {
+                backgroundColor: alpha(colorPalette.primary, 0.15),
+                transform: 'scale(1.05)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              },
+              transition: 'all 0.3s ease',
+              fontSize: '0.8rem',
+              height: 32
+            }}
+          />
+        ))}
+      </Box>
+    </Fade>
+  );
 
-  if (!showChatbot) {
+  // Componente MessageBubble MEJORADO con animaciones suaves sin parpadeo
+  const MessageBubble = ({ message, index }) => {
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        setIsVisible(true);
+      }, index * 150); // Delay escalonado más suave
+
+      return () => clearTimeout(timer);
+    }, [index]);
+
     return (
-      <Fab
-        color="primary"
-        aria-label="chat"
-        onClick={() => setShowChatbot(true)}
-        sx={fabStyle}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: message.type === 'user' ? 'flex-end' : 'flex-start',
+          mb: 2,
+          opacity: isVisible ? 1 : 0,
+          transform: isVisible ? 'translateY(0)' : 'translateY(5px)',
+          transition: 'all 0.5s ease'
+        }}
       >
-        <img
-          src="/assets/chatbot.png"
-          alt="Coco Bot"
-          style={{ width: '56px', height: '56px', borderRadius: '50%' }}
-        />
-      </Fab>
-    );
-  }
-
-  return (
-    <Box sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 1000 }}>
-      <Box sx={{ position: 'relative' }}>
-        <Fab
-          size="small"
-          onClick={() => setShowChatbot(false)}
-          sx={closeButtonStyle}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 1,
+            flexDirection: message.type === 'user' ? 'row-reverse' : 'row',
+            maxWidth: '85%'
+          }}
         >
-          <CloseIcon />
-        </Fab>
-        <Box sx={{ width: 350, height: 500 }}>
-          <div className="custom-chatbot-container">
-            <Chatbot
-              key={showChatbot ? 'open' : 'closed'}
-              config={config}
-              actionProvider={ActionProvider}
-              messageParser={MessageParser}
+          {message.type === 'bot' && (
+            <Avatar
+              src="/assets/chatbot.png"
+              sx={{
+                width: 32,
+                height: 32,
+                border: `2px solid ${colorPalette.primary}`
+              }}
             />
-          </div>
+          )}
+          <Box
+            sx={{
+              p: 2,
+              borderRadius: 3,
+              background: message.type === 'user' 
+                ? `linear-gradient(135deg, ${colorPalette.userBubble} 0%, ${alpha(colorPalette.primary, 0.3)} 100%)`
+                : `linear-gradient(135deg, ${colorPalette.botBubble} 0%, ${alpha(colorPalette.accent, 0.1)} 100%)`,
+              color: colorPalette.text,
+              border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              whiteSpace: 'pre-line',
+              lineHeight: 1.5
+            }}
+          >
+            <Typography variant="body2" sx={{ lineHeight: 1.5 }}>
+              {message.content}
+            </Typography>
+            {message.options && message.options.type === 'product' && (
+              <ProductCard product={message.options.product} />
+            )}
+            {message.options && Array.isArray(message.options) && (
+              <QuickReplies options={message.options} />
+            )}
+          </Box>
+        </Box>
+      </Box>
+    );
+  };
+
+  const ChatHeader = () => (
+    <Box
+      sx={{
+        p: 2,
+        borderBottom: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
+        background: `linear-gradient(135deg, ${colorPalette.primary} 0%, ${colorPalette.accent} 100%)`,
+        color: colorPalette.text,
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Avatar
+          src="/assets/chatbot.png"
+          sx={{ 
+            width: 40, 
+            height: 40,
+            border: `2px solid ${colorPalette.surface}`
+          }}
+        />
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="h6" fontWeight="bold">
+            Conversa con Coco AI
+          </Typography>
+          <Typography variant="caption" sx={{ opacity: 0.8 }}>
+            Patitas y Sabores • En línea
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <IconButton
+            size="small"
+            onClick={() => setIsMinimized(!isMinimized)}
+            sx={{ color: colorPalette.text }}
+          >
+            <ExpandLessIcon />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => setShowChatbot(false)}
+            sx={{ color: colorPalette.text }}
+          >
+            <CloseIcon />
+          </IconButton>
         </Box>
       </Box>
     </Box>
   );
-};
 
-// Helper components and styles (remain the same)...
-const ProductCard = ({ product, whatsappNumber }) => {
-  const id = product.productoID || product.ProductoID || product.id || product.productId;
-  const nombre = product.nombre || product.Nombre || product.NombreProducto || 'Sin nombre';
-  const desc = product.descripcion || product.Descripcion || product.DescripcionCorta || '';
-  const precio = (product.precio ?? product.Precio) !== undefined ? (product.precio ?? product.Precio) : null;
+  const QuickActions = () => (
+    <Fade in timeout={800}>
+      <Box sx={{ 
+        p: 2, 
+        borderTop: `1px solid ${alpha(colorPalette.primary, 0.1)}`,
+        backgroundColor: colorPalette.background
+      }}>
+        <Typography variant="caption" color={colorPalette.textLight} gutterBottom>
+          Acciones rápidas:
+        </Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          {[
+            { label: '🎯 Recomendaciones', action: 'recomendaciones' },
+            { label: '🛍️ Productos', action: 'productos' }
+          ].map((action, index) => (
+            <Chip
+              key={index}
+              label={action.label}
+              onClick={() => handleQuickReply(action.action)}
+              size="small"
+              clickable
+              sx={{
+                borderRadius: 2,
+                backgroundColor: alpha(colorPalette.primary, 0.1),
+                color: colorPalette.text,
+                border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
+                '&:hover': {
+                  backgroundColor: alpha(colorPalette.primary, 0.2),
+                  transform: 'scale(1.05)'
+                },
+                transition: 'all 0.2s ease',
+                fontSize: '0.75rem',
+                height: 28
+              }}
+            />
+          ))}
+        </Box>
+      </Box>
+    </Fade>
+  );
 
-  const handleComprar = () => {
-    const text = `Hola! Estoy interesado en comprar: ${nombre} ${precio ? `(S/${precio})` : ''}. Puedes coordinar conmigo?`;
-    const url = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
-  };
-
-  const handleVerDetalle = () => {
-    if (id) window.location.href = `/productos/${id}`;
-  };
+  if (!showChatbot) {
+    return (
+      <Tooltip title="Conversa con Coco AI!" placement="left" arrow>
+        <Fade in timeout={800}>
+          <Fab
+            color="primary"
+            aria-label="chat"
+            onClick={() => setShowChatbot(true)}
+            sx={{
+              position: 'fixed',
+              bottom: 16,
+              right: 16,
+              background: `linear-gradient(135deg, ${colorPalette.primary} 0%, ${colorPalette.accent} 100%)`,
+              '&:hover': {
+                transform: 'scale(1.1)',
+                boxShadow: `0 4px 20px ${alpha(colorPalette.primary, 0.3)}`
+              },
+              transition: 'all 0.3s ease',
+              zIndex: 1000
+            }}
+          >
+            <Box
+              component="img"
+              src="/assets/chatbot.png"
+              alt="Coco AI Assistant"
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%'
+              }}
+            />
+          </Fab>
+        </Fade>
+      </Tooltip>
+    );
+  }
 
   return (
-    <div style={productCardStyle}>
-      <div style={productNameStyle}>
-        {nombre} {precio ? `- S/${precio}` : ''}
-      </div>
-      <div style={productDescriptionStyle}>
-        {desc}
-      </div>
-      <div style={productActionsStyle}>
-        <button onClick={handleVerDetalle} style={detailButtonStyle}>
-          Ver detalle
-        </button>
-        <button onClick={handleComprar} style={buyButtonStyle}>
-          Comprar
-        </button>
-      </div>
-    </div>
+    <Fade in timeout={500}>
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: 16,
+          right: 16,
+          width: isMobile ? 'calc(100vw - 32px)' : 400,
+          height: isMinimized ? 60 : 600,
+          maxHeight: isMobile ? '70vh' : 'none',
+          backgroundColor: colorPalette.background,
+          borderRadius: 3,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          zIndex: 1000
+        }}
+      >
+        <ChatHeader />
+        
+        {!isMinimized && (
+          <>
+            <Box
+              sx={{
+                flex: 1,
+                overflow: 'auto',
+                p: 2,
+                background: colorPalette.background
+              }}
+            >
+              {conversation.map((message, index) => (
+                <MessageBubble 
+                  key={index} 
+                  message={message} 
+                  index={index}
+                />
+              ))}
+              {loading && (
+                <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Avatar
+                      src="/assets/chatbot.png"
+                      sx={{ width: 32, height: 32 }}
+                    />
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: 3,
+                        background: colorPalette.botBubble,
+                        border: `1px solid ${alpha(colorPalette.primary, 0.2)}`
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        {[0, 1, 2].map(i => (
+                          <Box
+                            key={i}
+                            sx={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: '50%',
+                              backgroundColor: colorPalette.primary,
+                              animation: 'pulse 1.4s ease-in-out infinite both',
+                              animationDelay: `${i * 0.16}s`
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  </Box>
+                </Box>
+              )}
+            </Box>
+            <QuickActions />
+          </>
+        )}
+      </Box>
+    </Fade>
   );
-};
-
-// Styles (remain the same)...
-const buttonStyle = {
-  backgroundColor: '#A8B5A0',
-  color: '#000',
-  border: 'none',
-  borderRadius: 20,
-  padding: '8px 12px',
-  cursor: 'pointer',
-  fontWeight: 'bold',
-  textAlign: 'left'
-};
-
-const quickReplyButtonStyle = {
-  backgroundColor: '#A8B5A0',
-  color: '#000',
-  border: 'none',
-  borderRadius: '20px',
-  padding: '8px 16px',
-  cursor: 'pointer',
-  fontSize: '14px',
-  fontWeight: 'bold',
-};
-
-const productContainerStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 12,
-  marginTop: 8,
-  maxWidth: '100%',
-  overflowX: 'hidden'
-};
-
-const productCardStyle = {
-  borderRadius: 8,
-  padding: 8,
-  border: '1px solid #ddd',
-  background: '#fff',
-  margin: '4px 0',
-  width: '100%',
-  boxSizing: 'border-box'
-};
-
-const productNameStyle = {
-  fontWeight: 'bold',
-  wordBreak: 'break-word'
-};
-
-const productDescriptionStyle = {
-  fontSize: 12,
-  color: '#444',
-  marginTop: 6,
-  wordBreak: 'break-word',
-  maxHeight: '3em',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis'
-};
-
-const productActionsStyle = {
-  display: 'flex',
-  gap: 8,
-  marginTop: 8,
-  flexWrap: 'wrap'
-};
-
-const detailButtonStyle = {
-  backgroundColor: '#A8B5A0',
-  color: '#000',
-  border: 'none',
-  borderRadius: 6,
-  padding: '6px 10px',
-  cursor: 'pointer',
-  flex: '1 1 auto',
-  minWidth: 'fit-content'
-};
-
-const buyButtonStyle = {
-  backgroundColor: '#D4A574',
-  color: '#000',
-  border: 'none',
-  borderRadius: 6,
-  padding: '6px 10px',
-  cursor: 'pointer',
-  flex: '1 1 auto',
-  minWidth: 'fit-content'
-};
-
-const fabStyle = {
-  position: 'fixed',
-  bottom: 16,
-  right: 16,
-  backgroundColor: '#A8B5A0',
-  '&:hover': { backgroundColor: '#8FA68E' },
-};
-
-const closeButtonStyle = {
-  position: 'absolute',
-  top: -10,
-  right: -10,
-  backgroundColor: '#D4A574',
-  '&:hover': { backgroundColor: '#C49A6A' },
-};
-
-const handleWidgetAction = (props, action) => {
-  if (props.onQuickReply) return props.onQuickReply(action);
-  if (props.widgetProps && props.widgetProps.handleSelectMascota && action.startsWith('seleccionar_mascota_')) {
-    const mascotaId = action.replace('seleccionar_mascota_', '');
-    return props.widgetProps.handleSelectMascota(mascotaId);
-  }
-  window.dispatchEvent(new CustomEvent('chatbot-option', { detail: action }));
 };
 
 export default ChatbotComponent;

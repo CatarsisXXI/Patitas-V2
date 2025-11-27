@@ -271,7 +271,8 @@ const MascotasPage = () => {
     const notasTexto = `
 Alergias: ${formData.alergias?.join(', ') || 'Ninguna'} | 
 Objetivo nutricional: ${formData.objetivo?.join(', ') || 'No especificado'} | 
-Nivel de actividad: ${formData.actividad || 'No especificado'}
+Nivel de actividad: ${formData.actividad || 'No especificado'} |
+Edad: ${getAgeRange(formData.fechaNacimiento) || 'No especificado'}
 `.trim();
 
     const mascotaPayload = {

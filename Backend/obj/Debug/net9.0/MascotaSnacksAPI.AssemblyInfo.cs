@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MascotaSnacksAPI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cde8b94b48ac08dfbf10208cc125efce37319376")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+057c198d50d2945ed87632e4398d4880c7b47d14")]
 [assembly: System.Reflection.AssemblyProductAttribute("MascotaSnacksAPI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MascotaSnacksAPI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
