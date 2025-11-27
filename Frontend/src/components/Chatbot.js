@@ -403,8 +403,11 @@ const ChatbotComponent = () => {
     }
   }, [showChatbot, user, conversation.length]);
 
-  const handleQuickReply = (action, value = null) => {
-    addMessage(value || action, 'user');
+  // MODIFICADO: Ahora recibe un objeto con id y nombre
+  const handleQuickReply = (action, value = null, displayName = null) => {
+    // Si es selección de mascota, mostrar el nombre en lugar del ID
+    const messageContent = action === 'seleccionar_mascota' && displayName ? displayName : (value || action);
+    addMessage(messageContent, 'user');
     setLoading(true);
 
     setTimeout(() => {
@@ -416,7 +419,7 @@ const ChatbotComponent = () => {
           handleProductos();
           break;
         case 'seleccionar_mascota':
-          handleSelectMascota(value);
+          handleSelectMascota(value, displayName);
           break;
         case 'inicio':
           handleDefault();
@@ -448,27 +451,30 @@ const ChatbotComponent = () => {
         mascotas.map(mascota => ({
           label: `${mascota.nombre} (${mascota.especie})`,
           action: 'seleccionar_mascota',
-          value: getMascotaId(mascota)
+          value: getMascotaId(mascota),
+          displayName: mascota.nombre // NUEVO: agregamos el nombre para mostrar
         }))
       );
       return;
     }
 
     const mascota = mascotas[0];
-    handleRecommendationsForMascota(getMascotaId(mascota));
+    handleRecommendationsForMascota(getMascotaId(mascota), mascota.nombre);
   };
 
-  const handleSelectMascota = (mascotaId) => {
+  // MODIFICADO: Ahora recibe también el nombre de la mascota
+  const handleSelectMascota = (mascotaId, mascotaNombre = null) => {
     const mascota = mascotas.find(m => String(getMascotaId(m)) === String(mascotaId));
     if (mascota) {
-      addMessage(`Perfecto! Preparando recomendaciones personalizadas para ${mascota.nombre}... 🎯`, 'bot');
+      const nombre = mascotaNombre || mascota.nombre;
+      addMessage(`Perfecto! Preparando recomendaciones personalizadas para ${nombre}... 🎯`, 'bot');
       setTimeout(() => {
-        handleRecommendationsForMascota(mascotaId);
+        handleRecommendationsForMascota(mascotaId, nombre);
       }, 1200);
     }
   };
 
-  const handleRecommendationsForMascota = async (mascotaId) => {
+  const handleRecommendationsForMascota = async (mascotaId, mascotaNombre = null) => {
     const mascota = mascotas.find(m => String(getMascotaId(m)) === String(mascotaId));
     if (!mascota) {
       addMessage('No pude encontrar la mascota seleccionada. ¿Podrías intentarlo de nuevo?', 'bot');
@@ -476,7 +482,7 @@ const ChatbotComponent = () => {
     }
 
     try {
-      const nombre = mascota.nombre || 'tu mascota';
+      const nombre = mascotaNombre || mascota.nombre || 'tu mascota';
       
       // Extraer información de las notas adicionales
       const notasInfo = parseNotasAdicionales(mascota.notas_adicionales || mascota.notasAdicionales);
@@ -875,13 +881,14 @@ const ChatbotComponent = () => {
     );
   };
 
+  // MODIFICADO: QuickReplies ahora pasa displayName cuando está disponible
   const QuickReplies = ({ options }) => (
     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
       {options.map((option, index) => (
         <Chip
           key={index}
           label={option.label}
-          onClick={() => handleQuickReply(option.action, option.value)}
+          onClick={() => handleQuickReply(option.action, option.value, option.displayName)}
           clickable
           variant="outlined"
           sx={{
