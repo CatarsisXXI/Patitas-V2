@@ -79,7 +79,7 @@ const ChatbotComponent = () => {
     'Piel y pelaje saludables': ['piel', 'pelaje', 'brillante', 'saludable', 'dermatológico', 'caspa', 'picor', 'skin', 'coat', 'fur', 'pelage', 'pelo brillante', 'dermatitis', 'omega', 'ácidos grasos', 'dermosalud'],
     'Soporte articular o movilidad': ['articular', 'movilidad', 'articulaciones', 'cartílago', 'artritis', 'huesos', 'joint', 'mobility', 'arthritis', 'condroitín', 'glucosamina', 'flexibilidad', 'soporte articular'],
     'Soporte inmunológico': ['inmunológico', 'defensas', 'inmunidad', 'resistencia a enfermedades', 'immune', 'defense', 'immunity', 'sistema inmunitario', 'anticuerpos', 'defensas naturales', 'inmunidad'],
-    'Vitalidad y longevidad': ['vitalidad', 'longevidad', 'vejez', 'anciano', 'senior', 'vital', 'longevity', 'vitality', 'adulto mayor', 'tercera edad', 'envejecimiento saludable'],
+    'Vitalidad y longevidad': ['vitalidad', 'longevidad', 'vejez', 'anciano', 'vital', 'longevity', 'vitality', 'adulto mayor', 'tercera edad', 'envejecimiento saludable'],
     'Control del nivel de azúcar': ['azúcar', 'glucosa', 'diabetes', 'insulina', 'control de azúcar', 'sugar', 'glucose', 'diabetic', 'nivel glucémico', 'glicemia', 'bajo en azúcar', 'yacón']
   };
 
@@ -520,11 +520,6 @@ const ChatbotComponent = () => {
       criteriosMessage += `🎯 Objetivos nutricionales: ${objetivos.length > 0 ? objetivos.join(', ') : 'Ninguno detectado'}\n`;
       criteriosMessage += `⚡ Nivel de actividad: ${nivelActividad || 'No especificado'}\n`;
       criteriosMessage += `📅 Edad: ${edad || 'No especificada'}\n\n`;
-      
-      if (notasAdicionales) {
-        criteriosMessage += `📝 Notas adicionales analizadas: ${notasAdicionales}\n\n`;
-      }
-      
       criteriosMessage += `🔄 Procesando recomendaciones...`;
 
       addMessage(criteriosMessage, 'bot');
@@ -1065,13 +1060,7 @@ const ChatbotComponent = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <IconButton
-            size="small"
-            onClick={() => setIsMinimized(!isMinimized)}
-            sx={{ color: colorPalette.text }}
-          >
-            <ExpandLessIcon />
-          </IconButton>
+
           <IconButton
             size="small"
             onClick={() => setShowChatbot(false)}
