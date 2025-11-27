@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Fab,
   Box,
-  Fade,
   Card,
   CardContent,
   Typography,
@@ -19,7 +18,6 @@ import {
   Chat as ChatIcon,
   Close as CloseIcon,
   Visibility as VisibilityIcon,
-  ExpandLess as ExpandLessIcon,
   LocalOffer as LocalOfferIcon,
   WhatsApp as WhatsAppIcon
 } from '@mui/icons-material';
@@ -35,6 +33,8 @@ const ChatbotComponent = () => {
   const [conversation, setConversation] = useState([]);
   const [loading, setLoading] = useState(false);
   const [typingMessage, setTypingMessage] = useState(null);
+  const [displayedText, setDisplayedText] = useState('');
+  const messagesEndRef = useRef(null);
   const { user } = useAuth();
 
   const theme = useTheme();
@@ -151,6 +151,15 @@ const ChatbotComponent = () => {
     'Galletas Dermosalud (Aceite de Oliva y Plátano)',
     'Bocaditos Digest Fit (Plátano y Cúrcuma)'
   ];
+
+  // Scroll automático al final del chat
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [conversation]);
 
   useEffect(() => {
     if (user) {
@@ -344,21 +353,34 @@ const ChatbotComponent = () => {
     // Si es mensaje del bot, activar efecto de tipeo
     if (type === 'bot') {
       setTypingMessage(newMessage);
+      setDisplayedText('');
     }
   };
 
   // Efecto para manejar el efecto de tipeo
   useEffect(() => {
-    if (typingMessage) {
-      const timer = setTimeout(() => {
-        setTypingMessage(null);
-      }, 500); // Tiempo de "tipeo" antes de mostrar el mensaje completo
+    if (typingMessage && typingMessage.content) {
+      let currentIndex = 0;
+      const messageContent = typingMessage.content;
       
-      return () => clearTimeout(timer);
+      const typingInterval = setInterval(() => {
+        if (currentIndex <= messageContent.length) {
+          setDisplayedText(messageContent.slice(0, currentIndex));
+          currentIndex++;
+        } else {
+          clearInterval(typingInterval);
+          setTimeout(() => {
+            setTypingMessage(null);
+            setDisplayedText('');
+          }, 500);
+        }
+      }, 30); // Velocidad de tipeo
+
+      return () => clearInterval(typingInterval);
     }
   }, [typingMessage]);
 
-  // Mensaje de bienvenida inicial
+  // Mensaje de bienvenida inicial con opciones
   useEffect(() => {
     if (showChatbot && conversation.length === 0) {
       const welcomeMessage = {
@@ -366,7 +388,11 @@ const ChatbotComponent = () => {
         content: user 
           ? `¡Hola ${user.name}! 👋 Soy Coco AI, tu asistente virtual de Patitas y Sabores.\n\nPuedo ayudarte a encontrar productos perfectos para tus mascotas y ofrecerte recomendaciones personalizadas. ¿Por dónde empezamos?`
           : '¡Hola! 👋 Soy Coco AI, tu asistente virtual de Patitas y Sabores.\n\nPuedo ayudarte a encontrar productos perfectos para tus mascotas y ofrecerte recomendaciones personalizadas. ¿Por dónde empezamos?',
-        timestamp: new Date()
+        timestamp: new Date(),
+        options: [
+          { label: '🎯 Recomendaciones', action: 'recomendaciones' },
+          { label: '🛍️ Ver Productos', action: 'productos' }
+        ]
       };
       setConversation([welcomeMessage]);
       setTypingMessage(welcomeMessage);
@@ -502,7 +528,7 @@ const ChatbotComponent = () => {
 
       addMessage(mensajeRecomendacion, 'bot');
 
-      // Mostrar productos recomendados
+      // Mostrar productos recomendados con efecto de tipeo
       productosRecomendados.forEach((nombreProducto, index) => {
         setTimeout(() => {
           // Buscar el producto real en la base de datos por nombre
@@ -558,7 +584,7 @@ const ChatbotComponent = () => {
       'bot'
     );
 
-    // Mostrar todos los productos
+    // Mostrar todos los productos con efecto de tipeo
     products.forEach((product, index) => {
       setTimeout(() => {
         addMessage('', 'bot', { type: 'product', product });
@@ -637,195 +663,179 @@ const ChatbotComponent = () => {
     const [imageError, setImageError] = useState(false);
 
     return (
-      <Fade in timeout={800}>
-        <Card 
-          sx={{ 
-            mb: 2, 
-            border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
-            borderRadius: 3,
-            background: colorPalette.surface,
-            transition: 'all 0.3s ease',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-            '&:hover': {
-              transform: 'translateY(-2px)',
-              boxShadow: '0 6px 20px rgba(0,0,0,0.12)'
-            }
-          }}
-        >
-          <CardContent sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              {/* Imagen del producto */}
-              <Box sx={{ position: 'relative', flexShrink: 0 }}>
-                {imagenUrl && !imageError ? (
-                  <Avatar 
-                    src={imagenUrl}
-                    onError={() => setImageError(true)}
+      <Card 
+        sx={{ 
+          mb: 2, 
+          border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
+          borderRadius: 3,
+          background: colorPalette.surface,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+        }}
+      >
+        <CardContent sx={{ p: 2 }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            {/* Imagen del producto */}
+            <Box sx={{ position: 'relative', flexShrink: 0 }}>
+              {imagenUrl && !imageError ? (
+                <Avatar 
+                  src={imagenUrl}
+                  onError={() => setImageError(true)}
+                  sx={{ 
+                    width: 70, 
+                    height: 70,
+                    borderRadius: 2,
+                    border: `2px solid ${colorPalette.primary}`,
+                    backgroundColor: colorPalette.background
+                  }} 
+                  variant="rounded"
+                />
+              ) : (
+                <Avatar 
+                  sx={{ 
+                    width: 70, 
+                    height: 70,
+                    borderRadius: 2,
+                    backgroundColor: colorPalette.accent,
+                    border: `2px solid ${colorPalette.primary}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }} 
+                  variant="rounded"
+                >
+                  <LocalOfferIcon sx={{ color: colorPalette.text, fontSize: 30 }} />
+                </Avatar>
+              )}
+            </Box>
+            
+            {/* Información del producto */}
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+                <Typography 
+                  variant="subtitle2" 
+                  fontWeight="600" 
+                  color={colorPalette.text}
+                  sx={{ 
+                    lineHeight: 1.2,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    flex: 1,
+                    mr: 1
+                  }}
+                >
+                  {nombre}
+                </Typography>
+                {precio && (
+                  <Chip 
+                    label={`S/ ${precio}`} 
+                    size="small"
                     sx={{ 
-                      width: 70, 
-                      height: 70,
-                      borderRadius: 2,
-                      border: `2px solid ${colorPalette.primary}`,
-                      backgroundColor: colorPalette.background
-                    }} 
-                    variant="rounded"
+                      backgroundColor: colorPalette.success,
+                      color: colorPalette.text,
+                      fontWeight: '600',
+                      fontSize: '0.7rem',
+                      flexShrink: 0,
+                      height: 24,
+                      minWidth: 'auto',
+                      px: 1
+                    }}
                   />
-                ) : (
-                  <Avatar 
-                    sx={{ 
-                      width: 70, 
-                      height: 70,
-                      borderRadius: 2,
-                      backgroundColor: colorPalette.accent,
-                      border: `2px solid ${colorPalette.primary}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }} 
-                    variant="rounded"
-                  >
-                    <LocalOfferIcon sx={{ color: colorPalette.text, fontSize: 30 }} />
-                  </Avatar>
                 )}
               </Box>
               
-              {/* Información del producto */}
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography 
-                    variant="subtitle2" 
-                    fontWeight="600" 
-                    color={colorPalette.text}
-                    sx={{ 
-                      lineHeight: 1.2,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      flex: 1,
-                      mr: 1
-                    }}
-                  >
-                    {nombre}
-                  </Typography>
-                  {precio && (
-                    <Chip 
-                      label={`S/ ${precio}`} 
-                      size="small"
-                      sx={{ 
-                        backgroundColor: colorPalette.success,
-                        color: colorPalette.text,
-                        fontWeight: '600',
-                        fontSize: '0.7rem',
-                        flexShrink: 0,
-                        height: 24,
-                        minWidth: 'auto',
-                        px: 1
-                      }}
-                    />
-                  )}
-                </Box>
-                
-                {/* Categoría */}
-                {product.categoria && (
-                  <Chip 
-                    label={product.categoria}
-                    size="small"
-                    variant="outlined"
-                    sx={{ 
-                      mb: 1,
-                      fontSize: '0.6rem',
-                      height: 20,
+              {/* Categoría */}
+              {product.categoria && (
+                <Chip 
+                  label={product.categoria}
+                  size="small"
+                  variant="outlined"
+                  sx={{ 
+                    mb: 1,
+                    fontSize: '0.6rem',
+                    height: 20,
+                    borderColor: colorPalette.primary,
+                    color: colorPalette.textLight
+                  }}
+                />
+              )}
+              
+              {/* Botones compactos */}
+              <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                <Button
+                  onClick={() => handleProductAction(product, 'view')}
+                  variant="outlined"
+                  size="small"
+                  startIcon={<VisibilityIcon sx={{ fontSize: 16 }} />}
+                  sx={{ 
+                    borderRadius: 2,
+                    fontSize: '0.7rem',
+                    borderColor: colorPalette.primary,
+                    color: colorPalette.primary,
+                    '&:hover': {
+                      backgroundColor: alpha(colorPalette.primary, 0.1),
                       borderColor: colorPalette.primary,
-                      color: colorPalette.textLight
-                    }}
-                  />
-                )}
-                
-                {/* Botones compactos */}
-                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                  <Button
-                    onClick={() => handleProductAction(product, 'view')}
-                    variant="outlined"
-                    size="small"
-                    startIcon={<VisibilityIcon sx={{ fontSize: 16 }} />}
-                    sx={{ 
-                      borderRadius: 2,
-                      fontSize: '0.7rem',
-                      borderColor: colorPalette.primary,
-                      color: colorPalette.primary,
-                      '&:hover': {
-                        backgroundColor: alpha(colorPalette.primary, 0.1),
-                        borderColor: colorPalette.primary,
-                        transform: 'scale(1.05)'
-                      },
-                      transition: 'all 0.2s ease',
-                      minWidth: 'auto',
-                      px: 1.5,
-                      height: 28
-                    }}
-                  >
-                    Ver
-                  </Button>
-                  <Button
-                    onClick={() => handleProductAction(product, 'buy')}
-                    variant="contained"
-                    size="small"
-                    startIcon={<WhatsAppIcon sx={{ fontSize: 16 }} />}
-                    sx={{ 
-                      borderRadius: 2,
-                      fontSize: '0.7rem',
-                      backgroundColor: colorPalette.primary,
-                      color: colorPalette.text,
-                      '&:hover': {
-                        backgroundColor: alpha(colorPalette.primary, 0.8),
-                        transform: 'scale(1.05)'
-                      },
-                      transition: 'all 0.2s ease',
-                      minWidth: 'auto',
-                      px: 1.5,
-                      height: 28
-                    }}
-                  >
-                    Comprar
-                  </Button>
-                </Box>
+                    },
+                    minWidth: 'auto',
+                    px: 1.5,
+                    height: 28
+                  }}
+                >
+                  Ver
+                </Button>
+                <Button
+                  onClick={() => handleProductAction(product, 'buy')}
+                  variant="contained"
+                  size="small"
+                  startIcon={<WhatsAppIcon sx={{ fontSize: 16 }} />}
+                  sx={{ 
+                    borderRadius: 2,
+                    fontSize: '0.7rem',
+                    backgroundColor: colorPalette.primary,
+                    color: colorPalette.text,
+                    '&:hover': {
+                      backgroundColor: alpha(colorPalette.primary, 0.8),
+                    },
+                    minWidth: 'auto',
+                    px: 1.5,
+                    height: 28
+                  }}
+                >
+                  Comprar
+                </Button>
               </Box>
             </Box>
-          </CardContent>
-        </Card>
-      </Fade>
+          </Box>
+        </CardContent>
+      </Card>
     );
   };
 
   const QuickReplies = ({ options }) => (
-    <Fade in timeout={800}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-        {options.map((option, index) => (
-          <Chip
-            key={index}
-            label={option.label}
-            onClick={() => handleQuickReply(option.action, option.value)}
-            clickable
-            variant="outlined"
-            sx={{
-              borderRadius: 2,
-              borderColor: colorPalette.primary,
-              color: colorPalette.text,
-              backgroundColor: colorPalette.surface,
-              '&:hover': {
-                backgroundColor: alpha(colorPalette.primary, 0.15),
-                transform: 'scale(1.05)',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-              },
-              transition: 'all 0.3s ease',
-              fontSize: '0.8rem',
-              height: 32
-            }}
-          />
-        ))}
-      </Box>
-    </Fade>
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+      {options.map((option, index) => (
+        <Chip
+          key={index}
+          label={option.label}
+          onClick={() => handleQuickReply(option.action, option.value)}
+          clickable
+          variant="outlined"
+          sx={{
+            borderRadius: 2,
+            borderColor: colorPalette.primary,
+            color: colorPalette.text,
+            backgroundColor: colorPalette.surface,
+            '&:hover': {
+              backgroundColor: alpha(colorPalette.primary, 0.15),
+            },
+            fontSize: '0.8rem',
+            height: 32
+          }}
+        />
+      ))}
+    </Box>
   );
 
   // Componente TypingIndicator
@@ -844,7 +854,10 @@ const ChatbotComponent = () => {
             border: `1px solid ${alpha(colorPalette.primary, 0.2)}`
           }}
         >
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+            <Typography variant="caption" sx={{ color: colorPalette.textLight, mr: 1 }}>
+              Coco está escribiendo...
+            </Typography>
             {[0, 1, 2].map(i => (
               <Box
                 key={i}
@@ -864,57 +877,14 @@ const ChatbotComponent = () => {
     </Box>
   );
 
-  // Componente MessageBubble mejorado con efecto de tipeo
+  // Componente MessageBubble con efecto de tipeo
   const MessageBubble = ({ message, index }) => {
-    const [isVisible, setIsVisible] = useState(false);
-    const [displayedText, setDisplayedText] = useState('');
-    const [isTyping, setIsTyping] = useState(false);
-
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        setIsVisible(true);
-      }, index * 150);
-      return () => clearTimeout(timer);
-    }, [index]);
-
-    // Efecto para el tipeo
-    useEffect(() => {
-      if (message.type === 'bot' && message === typingMessage) {
-        setIsTyping(true);
-        setDisplayedText('');
-        
-        let currentIndex = 0;
-        const typingInterval = setInterval(() => {
-          if (currentIndex <= message.content.length) {
-            setDisplayedText(message.content.slice(0, currentIndex));
-            currentIndex++;
-          } else {
-            clearInterval(typingInterval);
-            setIsTyping(false);
-          }
-        }, 20); // Velocidad de tipeo
-
-        return () => clearInterval(typingInterval);
-      } else if (message.type === 'bot') {
-        setDisplayedText(message.content);
-      } else {
-        setDisplayedText(message.content);
-      }
-    }, [message, typingMessage]);
-
-    const content = message.type === 'bot' && message === typingMessage && isTyping 
-      ? displayedText 
-      : message.content;
-
     return (
       <Box
         sx={{
           display: 'flex',
           justifyContent: message.type === 'user' ? 'flex-end' : 'flex-start',
-          mb: 2,
-          opacity: isVisible ? 1 : 0,
-          transform: isVisible ? 'translateY(0)' : 'translateY(5px)',
-          transition: 'all 0.5s ease'
+          mb: 2
         }}
       >
         <Box
@@ -941,19 +911,18 @@ const ChatbotComponent = () => {
               p: 2,
               borderRadius: 3,
               background: message.type === 'user' 
-                ? `linear-gradient(135deg, ${colorPalette.userBubble} 0%, ${alpha(colorPalette.primary, 0.3)} 100%)`
-                : `linear-gradient(135deg, ${colorPalette.botBubble} 0%, ${alpha(colorPalette.accent, 0.1)} 100%)`,
+                ? colorPalette.userBubble
+                : colorPalette.botBubble,
               color: colorPalette.text,
               border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
               boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               whiteSpace: 'pre-line',
-              lineHeight: 1.5,
-              minHeight: message.type === 'bot' ? 'auto' : 'fit-content'
+              lineHeight: 1.5
             }}
           >
             <Typography variant="body2" sx={{ lineHeight: 1.5 }}>
-              {content}
-              {message.type === 'bot' && message === typingMessage && isTyping && (
+              {typingMessage && typingMessage === message ? displayedText : message.content}
+              {typingMessage && typingMessage === message && (
                 <Box
                   component="span"
                   sx={{
@@ -975,7 +944,7 @@ const ChatbotComponent = () => {
             
             {message.options && Array.isArray(message.options) && (
               // Solo mostrar opciones cuando el mensaje ha terminado de tipear
-              (!isTyping || message !== typingMessage) && (
+              (!typingMessage || typingMessage !== message) && (
                 <QuickReplies options={message.options} />
               )
             )}
@@ -1027,144 +996,137 @@ const ChatbotComponent = () => {
   );
 
   const QuickActions = () => (
-    <Fade in timeout={800}>
-      <Box sx={{ 
-        p: 2, 
-        borderTop: `1px solid ${alpha(colorPalette.primary, 0.1)}`,
-        backgroundColor: colorPalette.background
-      }}>
-        <Typography variant="caption" color={colorPalette.textLight} gutterBottom>
-          Acciones rápidas:
-        </Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {[
-            { label: '🎯 Recomendaciones', action: 'recomendaciones' },
-            { label: '🛍️ Productos', action: 'productos' }
-          ].map((action, index) => (
-            <Chip
-              key={index}
-              label={action.label}
-              onClick={() => handleQuickReply(action.action)}
-              size="small"
-              clickable
-              sx={{
-                borderRadius: 2,
-                backgroundColor: alpha(colorPalette.primary, 0.1),
-                color: colorPalette.text,
-                border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
-                '&:hover': {
-                  backgroundColor: alpha(colorPalette.primary, 0.2),
-                  transform: 'scale(1.05)'
-                },
-                transition: 'all 0.2s ease',
-                fontSize: '0.75rem',
-                height: 28
-              }}
-            />
-          ))}
-        </Box>
+    <Box sx={{ 
+      p: 2, 
+      borderTop: `1px solid ${alpha(colorPalette.primary, 0.1)}`,
+      backgroundColor: colorPalette.background
+    }}>
+      <Typography variant="caption" color={colorPalette.textLight} gutterBottom>
+        Acciones rápidas:
+      </Typography>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+        {[
+          { label: '🎯 Recomendaciones', action: 'recomendaciones' },
+          { label: '🛍️ Productos', action: 'productos' }
+        ].map((action, index) => (
+          <Chip
+            key={index}
+            label={action.label}
+            onClick={() => handleQuickReply(action.action)}
+            size="small"
+            clickable
+            sx={{
+              borderRadius: 2,
+              backgroundColor: alpha(colorPalette.primary, 0.1),
+              color: colorPalette.text,
+              border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
+              '&:hover': {
+                backgroundColor: alpha(colorPalette.primary, 0.2),
+              },
+              fontSize: '0.75rem',
+              height: 28
+            }}
+          />
+        ))}
       </Box>
-    </Fade>
+    </Box>
   );
 
   if (!showChatbot) {
     return (
       <Tooltip title="Conversa con Coco AI!" placement="left" arrow>
-        <Fade in timeout={800}>
-          <Fab
-            color="primary"
-            aria-label="chat"
-            onClick={() => setShowChatbot(true)}
+        <Fab
+          color="primary"
+          aria-label="chat"
+          onClick={() => setShowChatbot(true)}
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            background: `linear-gradient(135deg, ${colorPalette.primary} 0%, ${colorPalette.accent} 100%)`,
+            '&:hover': {
+              backgroundColor: alpha(colorPalette.primary, 0.8),
+            },
+            zIndex: 1000
+          }}
+        >
+          <Box
+            component="img"
+            src="/assets/chatbot.png"
+            alt="Coco AI Assistant"
             sx={{
-              position: 'fixed',
-              bottom: 16,
-              right: 16,
-              background: `linear-gradient(135deg, ${colorPalette.primary} 0%, ${colorPalette.accent} 100%)`,
-              '&:hover': {
-                transform: 'scale(1.1)',
-                boxShadow: `0 4px 20px ${alpha(colorPalette.primary, 0.3)}`
-              },
-              transition: 'all 0.3s ease',
-              zIndex: 1000
+              width: 32,
+              height: 32,
+              borderRadius: '50%'
             }}
-          >
-            <Box
-              component="img"
-              src="/assets/chatbot.png"
-              alt="Coco AI Assistant"
-              sx={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%'
-              }}
-            />
-          </Fab>
-        </Fade>
+          />
+        </Fab>
       </Tooltip>
     );
   }
 
   return (
-    <Fade in timeout={500}>
-      <Box
-        sx={{
-          position: 'fixed',
-          bottom: 16,
-          right: 16,
-          width: isMobile ? 'calc(100vw - 32px)' : 400,
-          height: isMinimized ? 60 : 600,
-          maxHeight: isMobile ? '70vh' : 'none',
-          backgroundColor: colorPalette.background,
-          borderRadius: 3,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-          border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          zIndex: 1000
-        }}
-      >
-        <ChatHeader />
-        
-        {!isMinimized && (
-          <>
-            <Box
-              sx={{
-                flex: 1,
-                overflow: 'auto',
-                p: 2,
-                background: colorPalette.background
-              }}
-            >
-              {conversation.map((message, index) => (
-                <MessageBubble 
-                  key={index} 
-                  message={message} 
-                  index={index}
-                />
-              ))}
-              
-              {/* Mostrar indicador de tipeo si está cargando */}
-              {loading && <TypingIndicator />}
-            </Box>
-            <QuickActions />
-          </>
-        )}
-        
-        {/* Estilos para las animaciones */}
-        <style>{`
-          @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0; }
-          }
-          @keyframes pulse {
-            0% { transform: scale(0.8); opacity: 0.5; }
-            50% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(0.8); opacity: 0.5; }
-          }
-        `}</style>
-      </Box>
-    </Fade>
+    <Box
+      sx={{
+        position: 'fixed',
+        bottom: 16,
+        right: 16,
+        width: isMobile ? 'calc(100vw - 32px)' : 400,
+        height: isMinimized ? 60 : 600,
+        maxHeight: isMobile ? '70vh' : 'none',
+        backgroundColor: colorPalette.background,
+        borderRadius: 3,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+        border: `1px solid ${alpha(colorPalette.primary, 0.2)}`,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        zIndex: 1000
+      }}
+    >
+      <ChatHeader />
+      
+      {!isMinimized && (
+        <>
+          <Box
+            sx={{
+              flex: 1,
+              overflow: 'auto',
+              p: 2,
+              background: colorPalette.background
+            }}
+          >
+            {conversation.map((message, index) => (
+              <MessageBubble 
+                key={index} 
+                message={message} 
+                index={index}
+              />
+            ))}
+            
+            {/* Mostrar indicador de tipeo si está cargando */}
+            {loading && <TypingIndicator />}
+            
+            {/* Elemento para scroll automático */}
+            <div ref={messagesEndRef} />
+          </Box>
+          <QuickActions />
+        </>
+      )}
+      
+      {/* Estilos para las animaciones */}
+      <style>{`
+        @keyframes blink {
+          0%, 50% { opacity: 1; }
+          51%, 100% { opacity: 0; }
+        }
+        @keyframes pulse {
+          0% { transform: scale(0.8); opacity: 0.5; }
+          50% { transform: scale(1); opacity: 1; }
+          100% { transform: scale(0.8); opacity: 0.5; }
+        }
+      `}</style>
+    </Box>
   );
 };
 
