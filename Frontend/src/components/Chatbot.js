@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Fab,
   Box,
-  Slide,
   Fade,
-  Zoom,
   Card,
   CardContent,
   Typography,
@@ -20,14 +18,10 @@ import {
 import {
   Chat as ChatIcon,
   Close as CloseIcon,
-  Pets as PetsIcon,
-  ShoppingBag as ShoppingBagIcon,
-  Favorite as FavoriteIcon,
-  Star as StarIcon,
-  WhatsApp as WhatsAppIcon,
   Visibility as VisibilityIcon,
   ExpandLess as ExpandLessIcon,
-  LocalOffer as LocalOfferIcon
+  LocalOffer as LocalOfferIcon,
+  WhatsApp as WhatsAppIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import mascotaService from '../services/mascotaService';
@@ -60,43 +54,102 @@ const ChatbotComponent = () => {
     warning: '#FFECB3'
   };
 
-  // Mapeo MEJORADO de alergias y sus sinónimos basado en las relaciones específicas
-  const alergiasMap = {
-    'Pollo': ['pollo', 'gallina', 'ave', 'carne de ave', 'poultry', 'chicken', 'aves', 'pollos', 'gallinas', 'carne de pollo', 'pavo'],
-    'Cereales': ['cereales', 'trigo', 'maíz', 'maiz', 'arroz', 'avena', 'cebada', 'grain', 'cereal', 'wheat', 'corn', 'rice', 'granos', 'granos enteros', 'harina', 'gluten', 'harina de trigo', 'harina de maíz'],
-    'Soya': ['soya', 'soja', 'soja', 'glycine max', 'soy', 'soja', 'soya texturizada', 'proteína de soya', 'lecitina de soya', 'aceite de soya'],
-    'Papa': ['papa', 'patata', 'solanum tuberosum', 'potato', 'papas', 'patatas', 'papa natural'],
-    'Camote': ['camote', 'batata', 'papa dulce', 'ipomoea batatas', 'sweet potato', 'boniatos', 'camotes'],
-    'Legumbres': ['legumbres', 'lentejas', 'garbanzos', 'frijoles', 'judías', 'alubias', 'legumes', 'beans', 'lentils', 'leguminosas', 'guisantes', 'habas'],
-    'Aceites vegetales': ['aceite vegetal', 'aceite de soja', 'aceite de maíz', 'aceite de girasol', 'aceite de canola', 'vegetable oil', 'aceites refinados', 'aceite vegetal refinado', 'aceite de oliva']
+  // Mapeo directo de productos según tu lógica específica
+  const productRelations = {
+    // Alergias - productos a EXCLUIR
+    alergias: {
+      'Pollo': [
+        'Galletas CarobFibra (Harina de Algarrobo, Camote y Pollo)',
+        'Galletas Yacon Light (Calabaza, Yacón y Pollo)'
+      ],
+      'Cereales': [
+        'Vital Omega Crunch (Harina de Linaza y Zapallo)',
+        'Galletas Dermosalud (Aceite de Oliva y Plátano)',
+        'Bocaditos Digest Fit (Plátano y Cúrcuma)'
+      ],
+      'Camote': [
+        'Galletas CarobFibra (Harina de Algarrobo, Camote y Pollo)'
+      ],
+      'Aceites vegetales': [
+        'Galletas Dermosalud (Aceite de Oliva y Plátano)',
+        'Vital Omega Crunch (Harina de Linaza y Zapallo)'
+      ]
+    },
+    
+    // Objetivos nutricionales - productos a RECOMENDAR
+    objetivos: {
+      'Control de peso': [
+        'Galletas Dermosalud (Aceite de Oliva y Plátano)',
+        'Galletas Yacon Light (Calabaza, Yacón y Pollo)'
+      ],
+      'Aumento de energía o masa muscular': [
+        'Galletas Yacon Light (Calabaza, Yacón y Pollo)',
+        'Galletas CarobFibra (Harina de Algarrobo, Camote y Pollo)'
+      ],
+      'Apoyo Digestivo': [
+        'Bocaditos Digest Fit (Plátano y Cúrcuma)',
+        'Galletas CarobFibra (Harina de Algarrobo, Camote y Pollo)',
+        'Galletas Yacon Light (Calabaza, Yacón y Pollo)'
+      ],
+      'Piel y pelaje saludables': [
+        'Galletas Dermosalud (Aceite de Oliva y Plátano)',
+        'Bocaditos Digest Fit (Plátano y Cúrcuma)',
+        'Vital Omega Crunch (Harina de Linaza y Zapallo)'
+      ],
+      'Soporte articular o movilidad': [
+        'Galletas Yacon Light (Calabaza, Yacón y Pollo)',
+        'Galletas CarobFibra (Harina de Algarrobo, Camote y Pollo)',
+        'Vital Omega Crunch (Harina de Linaza y Zapallo)'
+      ],
+      'Soporte inmunológico': [
+        'Galletas CarobFibra (Harina de Algarrobo, Camote y Pollo)',
+        'Bocaditos Digest Fit (Plátano y Cúrcuma)',
+        'Galletas Yacon Light (Calabaza, Yacón y Pollo)'
+      ],
+      'Vitalidad y longevidad': [
+        'Bocaditos Digest Fit (Plátano y Cúrcuma)',
+        'Vital Omega Crunch (Harina de Linaza y Zapallo)'
+      ],
+      'Control del nivel de azúcar': [
+        'Galletas Yacon Light (Calabaza, Yacón y Pollo)'
+      ]
+    },
+    
+    // Nivel de actividad
+    nivelActividad: {
+      'Sedentario': [
+        'Bocaditos Digest Fit (Plátano y Cúrcuma)',
+        'Galletas Yacon Light (Calabaza, Yacón y Pollo)',
+        'Vital Omega Crunch (Harina de Linaza y Zapallo)'
+      ],
+      'Moderadamente activo': [], // Todos los productos
+      'Muy activo': [
+        'Galletas Yacon Light (Calabaza, Yacón y Pollo)',
+        'Galletas CarobFibra (Harina de Algarrobo, Camote y Pollo)'
+      ]
+    },
+    
+    // Edad
+    edad: {
+      'Cachorro': [], // Todos los productos
+      'Adulto': [], // Todos los productos
+      'Joven Adulto': [], // Todos los productos
+      'Senior': [
+        'Bocaditos Digest Fit (Plátano y Cúrcuma)',
+        'Galletas Yacon Light (Calabaza, Yacón y Pollo)',
+        'Vital Omega Crunch (Harina de Linaza y Zapallo)'
+      ]
+    }
   };
 
-  // Mapeo MEJORADO de objetivos nutricionales basado en las relaciones específicas - CORREGIDO
-  const objetivosMap = {
-    'Control de peso': ['control de peso', 'peso', 'adelgazar', 'obesidad', 'sobrepeso', 'weight control', 'weight management', 'bajo en calorías', 'mantenimiento de peso', 'dieta', 'reducir peso', 'light', 'bajo en grasa'],
-    'Aumento de energía o masa muscular': ['energía', 'masa muscular', 'proteína', 'musculo', 'energetico', 'energy', 'muscle', 'protein', 'fortalecimiento', 'desarrollo muscular', 'ganancia muscular', 'alto en proteína', 'proteico', 'energético'],
-    'Apoyo Digestivo': ['digestión', 'digestivo', 'sensible', 'prebiótico', 'probiótico', 'fibra', 'digest', 'sensitive stomach', 'digestive health', 'salud intestinal', 'flora intestinal', 'probióticos', 'digestivo sensible'],
-    'Piel y pelaje saludables': ['piel', 'pelaje', 'brillante', 'saludable', 'dermatológico', 'caspa', 'picor', 'skin', 'coat', 'fur', 'pelage', 'pelo brillante', 'dermatitis', 'omega', 'ácidos grasos', 'dermosalud'],
-    'Soporte articular o movilidad': ['articular', 'movilidad', 'articulaciones', 'cartílago', 'artritis', 'huesos', 'joint', 'mobility', 'arthritis', 'condroitín', 'glucosamina', 'flexibilidad', 'soporte articular'],
-    'Soporte inmunológico': ['inmunológico', 'defensas', 'inmunidad', 'resistencia a enfermedades', 'immune', 'defense', 'immunity', 'sistema inmunitario', 'anticuerpos', 'defensas naturales', 'inmunidad'],
-    'Vitalidad y longevidad': ['vitalidad', 'longevidad', 'vejez', 'anciano', 'vital', 'longevity', 'vitality', 'adulto mayor', 'tercera edad', 'envejecimiento saludable'],
-    'Control del nivel de azúcar': ['azúcar', 'glucosa', 'diabetes', 'insulina', 'control de azúcar', 'sugar', 'glucose', 'diabetic', 'nivel glucémico', 'glicemia', 'bajo en azúcar', 'yacón']
-  };
-
-  // Mapeo de nivel de actividad
-  const nivelActividadMap = {
-    'Sedentario': ['sedentario', 'poco activo', 'baja actividad', 'sedentaria'],
-    'Moderadamente activo': ['moderado', 'actividad moderada', 'moderadamente activo'],
-    'Muy activo': ['activo', 'muy activo', 'alta actividad', 'energético']
-  };
-
-  // Mapeo de edad
-  const edadMap = {
-    'Cachorro': ['cachorro', 'cachorros', 'joven', 'jóvenes', 'puppy', 'puppies'],
-    'Adulto': ['adulto', 'adultos', 'adult'],
-    'Joven Adulto': ['joven adulto', 'adulto joven'],
-    'Senior': ['senior', 'viejo', 'anciano', 'tercera edad', 'adulto mayor', 'aged']
-  };
+  // Lista de todos los productos disponibles
+  const allProducts = [
+    'Galletas CarobFibra (Harina de Algarrobo, Camote y Pollo)',
+    'Galletas Yacon Light (Calabaza, Yacón y Pollo)',
+    'Vital Omega Crunch (Harina de Linaza y Zapallo)',
+    'Galletas Dermosalud (Aceite de Oliva y Plátano)',
+    'Bocaditos Digest Fit (Plátano y Cúrcuma)'
+  ];
 
   useEffect(() => {
     if (user) {
@@ -126,7 +179,7 @@ const ChatbotComponent = () => {
   const getMascotaId = (m) => (m && (m.MascotaID ?? m.mascotaID ?? m.id ?? m.idMascota ?? m.id_mascota));
   const whatsappNumber = '51956550376';
 
-  // Función mejorada para normalizar texto
+  // Función para normalizar texto (solo para nombres de productos)
   const normalizeText = (text) => {
     return text?.toString().toLowerCase()
       .normalize("NFD")
@@ -135,268 +188,145 @@ const ChatbotComponent = () => {
       .trim() || '';
   };
 
-  // Función para extraer alergias de las notas adicionales
-  const extraerAlergiasDeNotas = (notas) => {
-    if (!notas) return [];
-    
-    const alergiasEncontradas = [];
-    const notasNormalizadas = normalizeText(notas);
-    
-    // Buscar cada alergia en las notas
-    Object.keys(alergiasMap).forEach(alergia => {
-      const sinonimos = alergiasMap[alergia];
-      const encontrado = sinonimos.some(sinonimo => {
-        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
-        return patron.test(notasNormalizadas);
-      });
-      
-      if (encontrado) {
-        alergiasEncontradas.push(alergia);
-      }
-    });
-    
-    return alergiasEncontradas;
-  };
-
-  // Función para extraer objetivos nutricionales de las notas adicionales - CORREGIDA
-  const extraerObjetivosDeNotas = (notas) => {
-    if (!notas) return [];
-    
-    const objetivosEncontrados = [];
-    const notasNormalizadas = normalizeText(notas);
-    
-    // Buscar cada objetivo en las notas
-    Object.keys(objetivosMap).forEach(objetivo => {
-      const sinonimos = objetivosMap[objetivo];
-      const encontrado = sinonimos.some(sinonimo => {
-        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
-        return patron.test(notasNormalizadas);
-      });
-      
-      if (encontrado) {
-        objetivosEncontrados.push(objetivo);
-      }
-    });
-    
-    return objetivosEncontrados;
-  };
-
-  // Función para extraer nivel de actividad de las notas adicionales
-  const extraerNivelActividadDeNotas = (notas) => {
-    if (!notas) return '';
-    
-    const notasNormalizadas = normalizeText(notas);
-    
-    // Buscar cada nivel de actividad en las notas
-    for (const [nivel, sinonimos] of Object.entries(nivelActividadMap)) {
-      const encontrado = sinonimos.some(sinonimo => {
-        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
-        return patron.test(notasNormalizadas);
-      });
-      
-      if (encontrado) {
-        return nivel;
-      }
+  // Función para extraer información de las notas adicionales
+  const parseNotasAdicionales = (notas) => {
+    if (!notas) {
+      return {
+        alergias: [],
+        objetivos: [],
+        nivelActividad: '',
+        edad: ''
+      };
     }
-    
-    return '';
-  };
 
-  // Función para extraer edad de las notas adicionales
-  const extraerEdadDeNotas = (notas) => {
-    if (!notas) return '';
-    
-    const notasNormalizadas = normalizeText(notas);
-    
-    // Buscar cada edad en las notas
-    for (const [edad, sinonimos] of Object.entries(edadMap)) {
-      const encontrado = sinonimos.some(sinonimo => {
-        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
-        return patron.test(notasNormalizadas);
+    const result = {
+      alergias: [],
+      objetivos: [],
+      nivelActividad: '',
+      edad: ''
+    };
+
+    try {
+      // Dividir por | para separar las secciones
+      const secciones = notas.split('|').map(sec => sec.trim());
+
+      secciones.forEach(seccion => {
+        // Alergias
+        if (seccion.toLowerCase().includes('alergias:')) {
+          const contenido = seccion.split(':')[1]?.trim() || '';
+          if (contenido.toLowerCase() !== 'ninguna') {
+            // Dividir por comas y limpiar cada alergia
+            result.alergias = contenido.split(',')
+              .map(a => a.trim())
+              .filter(a => a && a.toLowerCase() !== 'ninguna');
+          }
+        }
+
+        // Objetivo nutricional
+        if (seccion.toLowerCase().includes('objetivo nutricional:')) {
+          const contenido = seccion.split(':')[1]?.trim() || '';
+          if (contenido.toLowerCase() !== 'no especificado') {
+            // Extraer los objetivos principales (antes del paréntesis si existe)
+            const objetivos = contenido.split(',')
+              .map(obj => {
+                // Remover contenido entre paréntesis
+                const objetivoLimpio = obj.replace(/\([^)]*\)/g, '').trim();
+                return objetivoLimpio;
+              })
+              .filter(obj => obj && obj.toLowerCase() !== 'no especificado');
+            
+            result.objetivos = objetivos;
+          }
+        }
+
+        // Nivel de actividad
+        if (seccion.toLowerCase().includes('nivel de actividad:')) {
+          result.nivelActividad = seccion.split(':')[1]?.trim() || '';
+        }
+
+        // Edad
+        if (seccion.toLowerCase().includes('edad:')) {
+          result.edad = seccion.split(':')[1]?.trim() || '';
+        }
       });
-      
-      if (encontrado) {
-        return edad;
-      }
+
+      console.log('📝 Notas parseadas:', result);
+      return result;
+    } catch (error) {
+      console.error('Error parsing notas adicionales:', error);
+      return result;
     }
-    
-    return '';
   };
 
-  // Función para extraer la sección "Recomendado para" de la descripción
-  const extraerSeccionRecomendadoPara = (descripcion) => {
-    if (!descripcion) return '';
-    
-    const descripcionNormalizada = normalizeText(descripcion);
-    
-    // Buscar patrones comunes para "Recomendado para"
-    const patrones = [
-      /recomendado para[\s:]+([^.!?]*)/i,
-      /ideal para[\s:]+([^.!?]*)/i,
-      /recomendado[\s:]+([^.!?]*)/i,
-      /especial para[\s:]+([^.!?]*)/i,
-      /beneficios[\s:]+([^.!?]*)/i,
-      /indicado para[\s:]+([^.!?]*)/i
-    ];
-    
-    for (const patron of patrones) {
-      const match = descripcion.match(patron);
-      if (match && match[1]) {
-        return match[1].trim();
-      }
-    }
-    
-    return '';
-  };
+  // Función principal de recomendación basada en tu lógica
+  const generarRecomendaciones = (alergias = [], objetivos = [], nivelActividad = '', edad = '') => {
+    console.log('🔍 Criterios de búsqueda:', { alergias, objetivos, nivelActividad, edad });
 
-  // Función MEJORADA para verificar alergias - BUSQUEDA EN NOMBRE Y DESCRIPCIÓN
-  const contieneAlergenos = (producto, alergias) => {
-    if (!alergias || alergias.length === 0) return false;
-    
-    const nombre = normalizeText(producto.nombre || producto.Nombre || '');
-    const descripcion = normalizeText(producto.descripcion || producto.Descripcion || '');
-    const ingredientes = normalizeText(producto.ingredientes || producto.Ingredientes || '');
-    
-    const textoCompleto = `${nombre} ${descripcion} ${ingredientes}`;
-
-    // Buscar en cada alergia y sus sinónimos
-    for (const alergia of alergias) {
-      const sinonimos = alergiasMap[alergia] || [normalizeText(alergia)];
-      for (const sinonimo of sinonimos) {
-        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
-        if (patron.test(textoCompleto)) {
-          console.log(`❌ Producto excluido: "${producto.nombre}" - contiene alergeno: ${alergia} (sinónimo: ${sinonimo})`);
-          return true;
+    // PASO 1: Filtrar por alergias (EXCLUSIÓN)
+    let productosFiltrados = allProducts.filter(producto => {
+      // Para cada alergia, excluir los productos asociados
+      for (const alergia of alergias) {
+        const productosExcluir = productRelations.alergias[alergia] || [];
+        if (productosExcluir.includes(producto)) {
+          console.log(`❌ Excluyendo "${producto}" por alergia a ${alergia}`);
+          return false;
         }
       }
-    }
-    
-    return false;
-  };
+      return true;
+    });
 
-  // Función MEJORADA para calcular puntuación de objetivos - ENFOCADA EN "RECOMENDADO PARA"
-  const calcularPuntuacionObjetivos = (producto, objetivos) => {
-    if (!objetivos || objetivos.length === 0) return 0;
-    
-    const descripcion = producto.descripcion || producto.Descripcion || '';
-    const nombre = normalizeText(producto.nombre || producto.Nombre || '');
-    
-    // Extraer la sección "Recomendado para" específicamente
-    const seccionRecomendado = extraerSeccionRecomendadoPara(descripcion);
-    const descripcionCompleta = normalizeText(descripcion);
-    const seccionRecomendadoNormalizada = normalizeText(seccionRecomendado);
-    
-    console.log(`📋 Analizando producto: ${producto.nombre}`);
-    console.log(`🔍 Sección "Recomendado para": ${seccionRecomendado}`);
-    
-    return objetivos.reduce((puntuacion, objetivo) => {
-      const sinonimos = objetivosMap[objetivo] || [normalizeText(objetivo)];
-      let puntuacionObjetivo = 0;
+    console.log(`📊 Productos después de alergias: ${productosFiltrados.length}`);
+
+    // Si no hay productos después de filtrar alergias
+    if (productosFiltrados.length === 0) {
+      return [];
+    }
+
+    // PASO 2: Filtrar por objetivos nutricionales (si existen)
+    if (objetivos.length > 0) {
+      const productosPorObjetivo = new Set();
       
-      // Buscar en la sección "Recomendado para" (PRIORIDAD ALTA - 3 puntos)
-      if (seccionRecomendadoNormalizada) {
-        const encontradoEnSeccion = sinonimos.some(sinonimo => {
-          const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
-          return patron.test(seccionRecomendadoNormalizada);
+      // Para cada objetivo, agregar los productos recomendados
+      objetivos.forEach(objetivo => {
+        const productosObjetivo = productRelations.objetivos[objetivo] || [];
+        productosObjetivo.forEach(producto => {
+          if (productosFiltrados.includes(producto)) {
+            productosPorObjetivo.add(producto);
+          }
         });
-        if (encontradoEnSeccion) {
-          console.log(`🎯 Objetivo "${objetivo}" encontrado en sección "Recomendado para"`);
-          puntuacionObjetivo += 3;
-        }
-      }
-      
-      // Buscar en toda la descripción (PRIORIDAD MEDIA - 1 punto)
-      const encontradoEnDescripcion = sinonimos.some(sinonimo => {
-        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
-        return patron.test(descripcionCompleta);
       });
-      if (encontradoEnDescripcion && puntuacionObjetivo === 0) {
-        console.log(`📝 Objetivo "${objetivo}" encontrado en descripción general`);
-        puntuacionObjetivo += 1;
-      }
 
-      // Buscar en el nombre del producto (PRIORIDAD BAJA - 0.5 puntos)
-      const encontradoEnNombre = sinonimos.some(sinonimo => {
-        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
-        return patron.test(nombre);
-      });
-      if (encontradoEnNombre && puntuacionObjetivo === 0) {
-        console.log(`🏷️ Objetivo "${objetivo}" encontrado en nombre del producto`);
-        puntuacionObjetivo += 0.5;
+      // Si encontramos productos para los objetivos, actualizar la lista
+      if (productosPorObjetivo.size > 0) {
+        productosFiltrados = Array.from(productosPorObjetivo);
+        console.log(`🎯 Productos después de objetivos: ${productosFiltrados.length}`);
       }
-      
-      return puntuacion + puntuacionObjetivo;
-    }, 0);
-  };
+    }
 
-  // Función para calcular puntuación adicional por nivel de actividad
-  const calcularPuntuacionNivelActividad = (producto, nivelActividad) => {
-    if (!nivelActividad) return 0;
-    
-    const descripcion = producto.descripcion || producto.Descripcion || '';
-    const seccionRecomendado = extraerSeccionRecomendadoPara(descripcion);
-    const descripcionCompleta = normalizeText(descripcion);
-    const seccionRecomendadoNormalizada = normalizeText(seccionRecomendado);
-    
-    const sinonimos = nivelActividadMap[nivelActividad] || [normalizeText(nivelActividad)];
-    let puntuacion = 0;
-    
-    // Buscar en sección "Recomendado para"
-    if (seccionRecomendadoNormalizada) {
-      const encontradoEnSeccion = sinonimos.some(sinonimo => {
-        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
-        return patron.test(seccionRecomendadoNormalizada);
-      });
-      if (encontradoEnSeccion) {
-        puntuacion += 2;
+    // PASO 3: Filtrar por nivel de actividad (si existe)
+    if (nivelActividad && nivelActividad !== 'Moderadamente activo') {
+      const productosActividad = productRelations.nivelActividad[nivelActividad] || [];
+      if (productosActividad.length > 0) {
+        productosFiltrados = productosFiltrados.filter(producto => 
+          productosActividad.includes(producto)
+        );
+        console.log(`⚡ Productos después de actividad: ${productosFiltrados.length}`);
       }
     }
-    
-    // Buscar en descripción general
-    const encontradoEnDescripcion = sinonimos.some(sinonimo => {
-      const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
-      return patron.test(descripcionCompleta);
-    });
-    if (encontradoEnDescripcion) {
-      puntuacion += 1;
-    }
-    
-    return puntuacion;
-  };
 
-  // Función para calcular puntuación adicional por edad
-  const calcularPuntuacionEdad = (producto, edad) => {
-    if (!edad) return 0;
-    
-    const descripcion = producto.descripcion || producto.Descripcion || '';
-    const seccionRecomendado = extraerSeccionRecomendadoPara(descripcion);
-    const descripcionCompleta = normalizeText(descripcion);
-    const seccionRecomendadoNormalizada = normalizeText(seccionRecomendado);
-    
-    const sinonimos = edadMap[edad] || [normalizeText(edad)];
-    let puntuacion = 0;
-    
-    // Buscar en sección "Recomendado para"
-    if (seccionRecomendadoNormalizada) {
-      const encontradoEnSeccion = sinonimos.some(sinonimo => {
-        const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
-        return patron.test(seccionRecomendadoNormalizada);
-      });
-      if (encontradoEnSeccion) {
-        puntuacion += 2;
+    // PASO 4: Filtrar por edad (si existe)
+    if (edad && edad !== 'Cachorro' && edad !== 'Adulto' && edad !== 'Joven Adulto') {
+      const productosEdad = productRelations.edad[edad] || [];
+      if (productosEdad.length > 0) {
+        productosFiltrados = productosFiltrados.filter(producto => 
+          productosEdad.includes(producto)
+        );
+        console.log(`📅 Productos después de edad: ${productosFiltrados.length}`);
       }
     }
-    
-    // Buscar en descripción general
-    const encontradoEnDescripcion = sinonimos.some(sinonimo => {
-      const patron = new RegExp(`\\b${normalizeText(sinonimo)}\\b`, 'i');
-      return patron.test(descripcionCompleta);
-    });
-    if (encontradoEnDescripcion) {
-      puntuacion += 1;
-    }
-    
-    return puntuacion;
+
+    console.log('🎯 Productos recomendados finales:', productosFiltrados);
+    return productosFiltrados;
   };
 
   // Mensaje de bienvenida inicial
@@ -497,27 +427,22 @@ const ChatbotComponent = () => {
 
     try {
       const nombre = mascota.nombre || 'tu mascota';
-      const notasAdicionales = mascota.notas_adicionales || mascota.notasAdicionales || mascota.NotasAdicionales || '';
       
       // Extraer información de las notas adicionales
-      const alergias = extraerAlergiasDeNotas(notasAdicionales);
-      const objetivos = extraerObjetivosDeNotas(notasAdicionales);
-      const nivelActividad = extraerNivelActividadDeNotas(notasAdicionales);
-      const edad = extraerEdadDeNotas(notasAdicionales);
+      const notasInfo = parseNotasAdicionales(mascota.notas_adicionales || mascota.notasAdicionales);
+      
+      const alergias = notasInfo.alergias;
+      const objetivos = notasInfo.objetivos;
+      const nivelActividad = notasInfo.nivelActividad;
+      const edad = notasInfo.edad;
 
-      console.log('🔍 Información extraída de notas:', {
-        notasAdicionales,
-        alergias,
-        objetivos,
-        nivelActividad,
-        edad
-      });
+      console.log('🔍 Información extraída de notas:', { alergias, objetivos, nivelActividad, edad });
 
-      // Mostrar criterios de recomendación ANTES de generar las recomendaciones
+      // Mostrar criterios de recomendación
       let criteriosMessage = `📋 Estoy generando recomendaciones para ${nombre} basándome en:\n\n`;
       
-      criteriosMessage += `🔍 Alergias a excluir: ${alergias.length > 0 ? alergias.join(', ') : 'Ninguna detectada'}\n`;
-      criteriosMessage += `🎯 Objetivos nutricionales: ${objetivos.length > 0 ? objetivos.join(', ') : 'Ninguno detectado'}\n`;
+      criteriosMessage += `🔍 Alergias a excluir: ${alergias.length > 0 ? alergias.join(', ') : 'Ninguna'}\n`;
+      criteriosMessage += `🎯 Objetivos nutricionales: ${objetivos.length > 0 ? objetivos.join(', ') : 'Ninguno'}\n`;
       criteriosMessage += `⚡ Nivel de actividad: ${nivelActividad || 'No especificado'}\n`;
       criteriosMessage += `📅 Edad: ${edad || 'No especificada'}\n\n`;
       
@@ -528,87 +453,13 @@ const ChatbotComponent = () => {
       // Pequeña pausa para que el usuario pueda leer los criterios
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      console.log(`🔍 Generando recomendaciones para ${nombre}:`, { alergias, objetivos, nivelActividad, edad });
+      // Generar recomendaciones basadas en la lógica específica
+      const productosRecomendados = generarRecomendaciones(alergias, objetivos, nivelActividad, edad);
 
-      // FILTRADO ESTRICTO POR ALERGIAS - PRIORIDAD MÁXIMA
-      const productosSinAlergenos = products.filter(producto => {
-        return !contieneAlergenos(producto, alergias);
-      });
-
-      console.log(`📊 Productos después de filtrar alergias: ${productosSinAlergenos.length} de ${products.length}`);
-
-      // Si no hay productos después del filtrado por alergias
-      if (productosSinAlergenos.length === 0) {
-        let mensaje = `Basado en el perfil de ${nombre}`;
-        if (alergias.length > 0) {
-          mensaje += ` (excluyendo productos con: ${alergias.join(', ')})`;
-        }
-        mensaje += `, no encontré productos seguros que cumplan con las restricciones de alergias. 😔\n\nTe recomiendo explorar todos nuestros productos o ajustar las alergias registradas.`;
-
-        addMessage(
-          mensaje,
-          'bot',
-          [
-            { label: '🛍️ Explorar Todos los Productos', action: 'productos' },
-            { label: '💬 Menú Principal', action: 'inicio' }
-          ]
-        );
-        return;
-      }
-
-      // CALCULAR PUNTUACIÓN TOTAL PARA PRODUCTOS SEGUROS - CORREGIDO
-      const productosRecomendados = productosSinAlergenos
-        .map(producto => {
-          const puntuacionObjetivos = calcularPuntuacionObjetivos(producto, objetivos);
-          const puntuacionActividad = calcularPuntuacionNivelActividad(producto, nivelActividad);
-          const puntuacionEdad = calcularPuntuacionEdad(producto, edad);
-          
-          // PUNTUACIÓN BASE: Si no hay criterios específicos, dar puntuación base de 1
-          const puntuacionBase = (objetivos.length === 0 && !nivelActividad && !edad) ? 1 : 0;
-          
-          const puntuacionTotal = puntuacionObjetivos + puntuacionActividad + puntuacionEdad + puntuacionBase;
-          
-          console.log(`📦 Producto: ${producto.nombre}, Puntos objetivos: ${puntuacionObjetivos}, Actividad: ${puntuacionActividad}, Edad: ${puntuacionEdad}, Base: ${puntuacionBase}, TOTAL: ${puntuacionTotal}`);
-          
-          return {
-            ...producto,
-            puntuacion: puntuacionTotal,
-            puntuacionObjetivos,
-            puntuacionActividad,
-            puntuacionEdad,
-            puntuacionBase
-          };
-        })
-        // CORRECCIÓN PRINCIPAL: Si no hay objetivos, nivel de actividad ni edad, incluir todos los productos
-        .filter(producto => {
-          // Si no hay criterios específicos, incluir todos los productos (puntuación base 1)
-          if (objetivos.length === 0 && !nivelActividad && !edad) {
-            return true;
-          }
-          // Si hay criterios, solo incluir productos con puntuación > 0
-          return producto.puntuacion > 0;
-        })
-        .sort((a, b) => {
-          // Primero por puntuación total (mayor a menor)
-          if (b.puntuacion !== a.puntuacion) {
-            return b.puntuacion - a.puntuacion;
-          }
-          // Luego por puntuación de objetivos (mayor a menor)
-          if (b.puntuacionObjetivos !== a.puntuacionObjetivos) {
-            return b.puntuacionObjetivos - a.puntuacionObjetivos;
-          }
-          // Finalmente por precio (mayor a menor)
-          return (b.precio || 0) - (a.precio || 0);
-        })
-        .slice(0, 3); // MÁXIMO 3 PRODUCTOS
-
-      console.log('🎯 Productos recomendados finales:', productosRecomendados);
-
-      // Mensaje de recomendación - CORREGIDO
+      // Mensaje de recomendación
       let mensajeRecomendacion = `✨ He encontrado ${productosRecomendados.length} productos perfectos para ${nombre}:\n\n`;
       mensajeRecomendacion += `✅ Filtrado por alergias: ${alergias.length > 0 ? `Excluyendo: ${alergias.join(', ')}` : 'Sin restricciones'}\n`;
       
-      // Solo mostrar objetivos si hay objetivos detectados
       if (objetivos.length > 0) {
         mensajeRecomendacion += `🎯 Objetivos priorizados: ${objetivos.join(', ')}\n`;
       } else {
@@ -631,10 +482,15 @@ const ChatbotComponent = () => {
 
       addMessage(mensajeRecomendacion, 'bot');
 
-      // Mostrar productos recomendados con delay suave
-      productosRecomendados.forEach((producto, index) => {
+      // Mostrar productos recomendados
+      productosRecomendados.forEach((nombreProducto, index) => {
         setTimeout(() => {
-          addMessage('', 'bot', { type: 'product', product: producto });
+          // Buscar el producto real en la base de datos por nombre
+          const productoReal = products.find(p => 
+            normalizeText(p.nombre || p.Nombre) === normalizeText(nombreProducto)
+          ) || { nombre: nombreProducto };
+          
+          addMessage('', 'bot', { type: 'product', product: productoReal });
         }, index * 800);
       });
 
@@ -682,41 +538,24 @@ const ChatbotComponent = () => {
       'bot'
     );
 
-    const sortedProducts = [...products].sort((a, b) => {
-      const catA = a.categoria || 'Otros';
-      const catB = b.categoria || 'Otros';
-      if (catA !== catB) return catA.localeCompare(catB);
-      return (b.precio || 0) - (a.precio || 0);
-    });
-
-    // Mostrar productos en grupos de 2 con animaciones suaves
-    const productBatches = [];
-    for (let i = 0; i < sortedProducts.length; i += 2) {
-      productBatches.push(sortedProducts.slice(i, i + 2));
-    }
-
-    productBatches.forEach((batch, batchIndex) => {
+    // Mostrar todos los productos
+    products.forEach((product, index) => {
       setTimeout(() => {
-        batch.forEach((product, productIndex) => {
-          setTimeout(() => {
-            addMessage('', 'bot', { type: 'product', product });
-          }, productIndex * 400);
-        });
-        
-        if (batchIndex === productBatches.length - 1) {
-          setTimeout(() => {
-            addMessage(
-              '¿En qué más puedo ayudarte?',
-              'bot',
-              [
-                { label: '🎯 Recomendaciones Personalizadas', action: 'recomendaciones' },
-                { label: '💬 Menú Principal', action: 'inicio' }
-              ]
-            );
-          }, 1000);
-        }
-      }, batchIndex * 1000);
+        addMessage('', 'bot', { type: 'product', product });
+      }, index * 400);
     });
+
+    // Mensaje final
+    setTimeout(() => {
+      addMessage(
+        '¿En qué más puedo ayudarte?',
+        'bot',
+        [
+          { label: '🎯 Recomendaciones Personalizadas', action: 'recomendaciones' },
+          { label: '💬 Menú Principal', action: 'inicio' }
+        ]
+      );
+    }, products.length * 400 + 500);
   };
 
   const handleDefault = () => {
@@ -740,37 +579,32 @@ const ChatbotComponent = () => {
       const nombre = product.nombre || product.Nombre || 'Producto';
       const precio = product.precio ?? product.Precio;
       const text = `Hola! Estoy interesado en comprar: ${nombre}${precio ? ` (S/${precio})` : ''}. ¿Pueden brindarme más información?`;
-      const url = `https://api.whatapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(text)}`;
+      const url = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(text)}`;
       window.open(url, '_blank');
     }
   };
 
-  // Componente ProductCard MEJORADO con manejo simple y efectivo de imágenes
+  // Componente ProductCard
   const ProductCard = ({ product }) => {
     const nombre = product.nombre || product.Nombre || 'Sin nombre';
     const precio = (product.precio ?? product.Precio) !== undefined ? (product.precio ?? product.Precio) : null;
     
-    // Función SIMPLIFICADA para obtener imágenes - Asume que las imágenes están en /images/products/
+    // Función para obtener imágenes
     const getProductImage = () => {
-      // Buscar en las propiedades comunes de imagen
       const propiedadesImagen = ['imagen', 'Imagen', 'imagenURL', 'image', 'Image', 'fileName', 'nombreImagen'];
       
       for (let prop of propiedadesImagen) {
         if (product[prop] && typeof product[prop] === 'string' && product[prop].trim() !== '') {
           let imagenUrl = product[prop].trim();
           
-          // Si ya es una URL completa, usar directamente
           if (imagenUrl.startsWith('http') || imagenUrl.startsWith('//') || imagenUrl.startsWith('data:')) {
             return imagenUrl;
           }
           
-          // Si ya es una ruta absoluta, usar directamente
           if (imagenUrl.startsWith('/')) {
             return imagenUrl;
           }
           
-          // Para cualquier otro caso, asumir que es un nombre de archivo en /images/products/
-          // Extraer solo el nombre del archivo (por si viene con rutas relativas)
           const nombreArchivo = imagenUrl.split('/').pop() || imagenUrl.split('\\').pop() || imagenUrl;
           return `/images/products/${nombreArchivo}`;
         }
@@ -781,8 +615,6 @@ const ChatbotComponent = () => {
 
     const imagenUrl = getProductImage();
     const [imageError, setImageError] = useState(false);
-
-    console.log(`🖼️ Imagen para ${nombre}:`, imagenUrl);
 
     return (
       <Fade in timeout={800}>
@@ -802,15 +634,12 @@ const ChatbotComponent = () => {
         >
           <CardContent sx={{ p: 2 }}>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              {/* Imagen del producto - ENFOQUE SIMPLIFICADO */}
+              {/* Imagen del producto */}
               <Box sx={{ position: 'relative', flexShrink: 0 }}>
                 {imagenUrl && !imageError ? (
                   <Avatar 
                     src={imagenUrl}
-                    onError={() => {
-                      console.log('❌ Error cargando imagen:', imagenUrl);
-                      setImageError(true);
-                    }}
+                    onError={() => setImageError(true)}
                     sx={{ 
                       width: 70, 
                       height: 70,
@@ -979,15 +808,14 @@ const ChatbotComponent = () => {
     </Fade>
   );
 
-  // Componente MessageBubble MEJORADO con animaciones suaves sin parpadeo
+  // Componente MessageBubble
   const MessageBubble = ({ message, index }) => {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
       const timer = setTimeout(() => {
         setIsVisible(true);
-      }, index * 150); // Delay escalonado más suave
-
+      }, index * 150);
       return () => clearTimeout(timer);
     }, [index]);
 
@@ -1079,7 +907,6 @@ const ChatbotComponent = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 0.5 }}>
-
           <IconButton
             size="small"
             onClick={() => setShowChatbot(false)}
