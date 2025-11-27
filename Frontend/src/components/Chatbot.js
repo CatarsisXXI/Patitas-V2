@@ -40,6 +40,9 @@ const ChatbotComponent = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+  // URL base del backend - MODIFICADO
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:7000'; // Ajusta según tu backend
+
   // Paleta de colores pastel para IA
   const colorPalette = {
     primary: '#A8D8EA',
@@ -87,7 +90,7 @@ const ChatbotComponent = () => {
         'Galletas Yacon Light (Calabaza, Yacón y Pollo)',
         'Galletas CarobFibra (Harina de Algarrobo, Camote y Pollo)'
       ],
-      'Apoyo Digestivo': [
+      'Apoyo Digestive': [
         'Bocaditos Digest Fit (Plátano y Cúrcuma)',
         'Galletas CarobFibra (Harina de Algarrobo, Camote y Pollo)',
         'Galletas Yacon Light (Calabaza, Yacón y Pollo)'
@@ -180,6 +183,7 @@ const ChatbotComponent = () => {
   const fetchProducts = async () => {
     try {
       const data = await productService.getProductos();
+      console.log('🛍️ Datos crudos de productos:', data);
       setProducts(data);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -484,6 +488,9 @@ const ChatbotComponent = () => {
 
       console.log('🔍 Información extraída de notas:', { alergias, objetivos, nivelActividad, edad });
 
+      // DEBUG: Ver productos disponibles
+      console.log('📦 Productos disponibles desde BD:', products);
+
       // Mostrar criterios de recomendación
       let criteriosMessage = `📋 Estoy generando recomendaciones para ${nombre} basándome en:\n\n`;
       
@@ -630,37 +637,60 @@ const ChatbotComponent = () => {
     }
   };
 
-  // Componente ProductCard
+  // Componente ProductCard - CORREGIDO para usar backend URL
   const ProductCard = ({ product }) => {
     const nombre = product.nombre || product.Nombre || 'Sin nombre';
     const precio = (product.precio ?? product.Precio) !== undefined ? (product.precio ?? product.Precio) : null;
     
-    // Función para obtener imágenes
+    // Función para obtener imágenes - CORREGIDA
     const getProductImage = () => {
-      const propiedadesImagen = ['imagen', 'Imagen', 'imagenURL', 'image', 'Image', 'fileName', 'nombreImagen'];
+      const propiedadesImagen = [
+        'ImagenURL', // Agregado específicamente para tu columna de BD
+        'imagenURL', 
+        'imagen', 
+        'Imagen', 
+        'imagenUrl',
+        'image', 
+        'Image', 
+        'fileName', 
+        'nombreImagen'
+      ];
       
       for (let prop of propiedadesImagen) {
         if (product[prop] && typeof product[prop] === 'string' && product[prop].trim() !== '') {
           let imagenUrl = product[prop].trim();
           
+          console.log(`🖼️ Encontrada imagen en propiedad "${prop}":`, imagenUrl);
+          
+          // Si ya es una URL completa, retornarla directamente
           if (imagenUrl.startsWith('http') || imagenUrl.startsWith('//') || imagenUrl.startsWith('data:')) {
             return imagenUrl;
           }
           
+          // Si empieza con /, construir URL completa del backend
           if (imagenUrl.startsWith('/')) {
-            return imagenUrl;
+            return `${backendUrl}${imagenUrl}`;
           }
           
+          // Si es solo un nombre de archivo, construir la ruta completa en el backend
           const nombreArchivo = imagenUrl.split('/').pop() || imagenUrl.split('\\').pop() || imagenUrl;
-          return `/images/products/${nombreArchivo}`;
+          return `${backendUrl}/images/products/${nombreArchivo}`;
         }
       }
       
+      console.log('❌ No se encontró imagen para el producto:', product);
       return null;
     };
 
     const imagenUrl = getProductImage();
     const [imageError, setImageError] = useState(false);
+    const [imageLoading, setImageLoading] = useState(true);
+
+    // Debug: ver qué información tiene el producto
+    useEffect(() => {
+      console.log('📦 Producto recibido:', product);
+      console.log('🖼️ URL de imagen generada:', imagenUrl);
+    }, [product, imagenUrl]);
 
     return (
       <Card 
@@ -674,21 +704,53 @@ const ChatbotComponent = () => {
       >
         <CardContent sx={{ p: 2 }}>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            {/* Imagen del producto */}
+            {/* Imagen del producto - MEJORADA */}
             <Box sx={{ position: 'relative', flexShrink: 0 }}>
               {imagenUrl && !imageError ? (
-                <Avatar 
-                  src={imagenUrl}
-                  onError={() => setImageError(true)}
-                  sx={{ 
-                    width: 70, 
-                    height: 70,
-                    borderRadius: 2,
-                    border: `2px solid ${colorPalette.primary}`,
-                    backgroundColor: colorPalette.background
-                  }} 
-                  variant="rounded"
-                />
+                <Box sx={{ position: 'relative' }}>
+                  {imageLoading && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: 70,
+                        height: 70,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: colorPalette.background,
+                        borderRadius: 2,
+                        zIndex: 1
+                      }}
+                    >
+                      <Typography variant="caption" sx={{ color: colorPalette.textLight }}>
+                        Cargando...
+                      </Typography>
+                    </Box>
+                  )}
+                  <Avatar 
+                    src={imagenUrl}
+                    onError={() => {
+                      console.error('❌ Error cargando imagen:', imagenUrl);
+                      setImageError(true);
+                      setImageLoading(false);
+                    }}
+                    onLoad={() => {
+                      console.log('✅ Imagen cargada correctamente:', imagenUrl);
+                      setImageLoading(false);
+                    }}
+                    sx={{ 
+                      width: 70, 
+                      height: 70,
+                      borderRadius: 2,
+                      border: `2px solid ${colorPalette.primary}`,
+                      backgroundColor: colorPalette.background,
+                      opacity: imageLoading ? 0.3 : 1
+                    }} 
+                    variant="rounded"
+                  />
+                </Box>
               ) : (
                 <Avatar 
                   sx={{ 
