@@ -71,7 +71,7 @@ const ChatbotComponent = () => {
     'Aceites vegetales': ['aceite vegetal', 'aceite de soja', 'aceite de maíz', 'aceite de girasol', 'aceite de canola', 'vegetable oil', 'aceites refinados', 'aceite vegetal refinado', 'aceite de oliva']
   };
 
-  // Mapeo MEJORADO de objetivos nutricionales basado en las relaciones específicas
+  // Mapeo MEJORADO de objetivos nutricionales basado en las relaciones específicas - CORREGIDO
   const objetivosMap = {
     'Control de peso': ['control de peso', 'peso', 'adelgazar', 'obesidad', 'sobrepeso', 'weight control', 'weight management', 'bajo en calorías', 'mantenimiento de peso', 'dieta', 'reducir peso', 'light', 'bajo en grasa'],
     'Aumento de energía o masa muscular': ['energía', 'masa muscular', 'proteína', 'musculo', 'energetico', 'energy', 'muscle', 'protein', 'fortalecimiento', 'desarrollo muscular', 'ganancia muscular', 'alto en proteína', 'proteico', 'energético'],
@@ -158,7 +158,7 @@ const ChatbotComponent = () => {
     return alergiasEncontradas;
   };
 
-  // Función para extraer objetivos nutricionales de las notas adicionales
+  // Función para extraer objetivos nutricionales de las notas adicionales - CORREGIDA
   const extraerObjetivosDeNotas = (notas) => {
     if (!notas) return [];
     
@@ -520,6 +520,7 @@ const ChatbotComponent = () => {
       criteriosMessage += `🎯 Objetivos nutricionales: ${objetivos.length > 0 ? objetivos.join(', ') : 'Ninguno detectado'}\n`;
       criteriosMessage += `⚡ Nivel de actividad: ${nivelActividad || 'No especificado'}\n`;
       criteriosMessage += `📅 Edad: ${edad || 'No especificada'}\n\n`;
+      
       criteriosMessage += `🔄 Procesando recomendaciones...`;
 
       addMessage(criteriosMessage, 'bot');
@@ -555,26 +556,38 @@ const ChatbotComponent = () => {
         return;
       }
 
-      // CALCULAR PUNTUACIÓN TOTAL PARA PRODUCTOS SEGUROS
+      // CALCULAR PUNTUACIÓN TOTAL PARA PRODUCTOS SEGUROS - CORREGIDO
       const productosRecomendados = productosSinAlergenos
         .map(producto => {
           const puntuacionObjetivos = calcularPuntuacionObjetivos(producto, objetivos);
           const puntuacionActividad = calcularPuntuacionNivelActividad(producto, nivelActividad);
           const puntuacionEdad = calcularPuntuacionEdad(producto, edad);
           
-          const puntuacionTotal = puntuacionObjetivos + puntuacionActividad + puntuacionEdad;
+          // PUNTUACIÓN BASE: Si no hay criterios específicos, dar puntuación base de 1
+          const puntuacionBase = (objetivos.length === 0 && !nivelActividad && !edad) ? 1 : 0;
           
-          console.log(`📦 Producto: ${producto.nombre}, Puntos objetivos: ${puntuacionObjetivos}, Actividad: ${puntuacionActividad}, Edad: ${puntuacionEdad}, TOTAL: ${puntuacionTotal}`);
+          const puntuacionTotal = puntuacionObjetivos + puntuacionActividad + puntuacionEdad + puntuacionBase;
+          
+          console.log(`📦 Producto: ${producto.nombre}, Puntos objetivos: ${puntuacionObjetivos}, Actividad: ${puntuacionActividad}, Edad: ${puntuacionEdad}, Base: ${puntuacionBase}, TOTAL: ${puntuacionTotal}`);
           
           return {
             ...producto,
             puntuacion: puntuacionTotal,
             puntuacionObjetivos,
             puntuacionActividad,
-            puntuacionEdad
+            puntuacionEdad,
+            puntuacionBase
           };
         })
-        .filter(producto => producto.puntuacion > 0) // Solo productos que cumplan al menos un criterio
+        // CORRECCIÓN PRINCIPAL: Si no hay objetivos, nivel de actividad ni edad, incluir todos los productos
+        .filter(producto => {
+          // Si no hay criterios específicos, incluir todos los productos (puntuación base 1)
+          if (objetivos.length === 0 && !nivelActividad && !edad) {
+            return true;
+          }
+          // Si hay criterios, solo incluir productos con puntuación > 0
+          return producto.puntuacion > 0;
+        })
         .sort((a, b) => {
           // Primero por puntuación total (mayor a menor)
           if (b.puntuacion !== a.puntuacion) {
@@ -591,10 +604,16 @@ const ChatbotComponent = () => {
 
       console.log('🎯 Productos recomendados finales:', productosRecomendados);
 
-      // Mensaje de recomendación
+      // Mensaje de recomendación - CORREGIDO
       let mensajeRecomendacion = `✨ He encontrado ${productosRecomendados.length} productos perfectos para ${nombre}:\n\n`;
       mensajeRecomendacion += `✅ Filtrado por alergias: ${alergias.length > 0 ? `Excluyendo: ${alergias.join(', ')}` : 'Sin restricciones'}\n`;
-      mensajeRecomendacion += `🎯 Objetivos priorizados: ${objetivos.length > 0 ? objetivos.join(', ') : 'Búsqueda general'}\n`;
+      
+      // Solo mostrar objetivos si hay objetivos detectados
+      if (objetivos.length > 0) {
+        mensajeRecomendacion += `🎯 Objetivos priorizados: ${objetivos.join(', ')}\n`;
+      } else {
+        mensajeRecomendacion += `🎯 Objetivos: Búsqueda general de productos seguros\n`;
+      }
       
       if (productosRecomendados.length === 0) {
         mensajeRecomendacion = `Basándome en los criterios establecidos para ${nombre}, no encontré productos que cumplan con todas las especificaciones. 😔\n\nTe sugiero explorar todos nuestros productos disponibles o ajustar algunos criterios.`;
@@ -721,7 +740,7 @@ const ChatbotComponent = () => {
       const nombre = product.nombre || product.Nombre || 'Producto';
       const precio = product.precio ?? product.Precio;
       const text = `Hola! Estoy interesado en comprar: ${nombre}${precio ? ` (S/${precio})` : ''}. ¿Pueden brindarme más información?`;
-      const url = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(text)}`;
+      const url = `https://api.whatapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(text)}`;
       window.open(url, '_blank');
     }
   };
