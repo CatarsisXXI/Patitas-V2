@@ -1,279 +1,169 @@
-import React, { useState, useContext, forwardRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { forwardRef, useState } from 'react';
+import { Alert, Box, Button, CircularProgress, Container, TextField, Typography } from '@mui/material';
+import { Link, useNavigate } from 'react-router-dom';
 import { PatternFormat } from 'react-number-format';
-import { Container, Typography, Button, Box, Grid, TextField, Card, CardContent, CircularProgress, Alert } from '@mui/material';
-import { CartContext } from '../context/CartContext';
-import { formatCurrency } from '../utils/formatCurrency';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
+import { useCart } from '../context/CartContext';
 import pedidoService from '../services/pedidoService';
+import { errorMessage } from '../config/api';
+import { formatCurrency } from '../utils/formatCurrency';
+import { splitNombre } from '../lib/productCopy';
+import { color, radius } from '../theme/tokens';
+import PageHeader from '../components/ui/PageHeader';
+import EmptyState from '../components/ui/EmptyState';
 
-// Custom format components for react-number-format with Material-UI
-const CardNumberFormat = forwardRef(function CardNumberFormat(props, ref) {
-    const { onChange, ...other } = props;
-    return (
-        <PatternFormat
-            {...other}
-            getInputRef={ref}
-            onValueChange={(values) => {
-                onChange({
-                    target: {
-                        name: props.name,
-                        value: values.value, // unformatted value
-                    },
-                });
-            }}
-            format="#### #### #### ####"
-            placeholder="0000 0000 0000 0000"
-        />
-    );
-});
+/** Adapta PatternFormat a los TextField de MUI entregando el valor sin máscara. */
+const masked = (format, placeholder) =>
+  forwardRef(function MaskedInput({ onChange, name, ...other }, ref) {
+    return <PatternFormat {...other} name={name} getInputRef={ref} format={format} placeholder={placeholder} onValueChange={(values) => onChange({ target: { name, value: values.value } })} />;
+  });
 
-const CardExpiryFormat = forwardRef(function CardExpiryFormat(props, ref) {
-    const { onChange, ...other } = props;
-    return (
-        <PatternFormat
-            {...other}
-            getInputRef={ref}
-            onValueChange={(values) => {
-                onChange({
-                    target: {
-                        name: props.name,
-                        value: values.value,
-                    },
-                });
-            }}
-            format="##/##"
-            placeholder="MM/YY"
-        />
-    );
-});
+const CardNumberInput = masked('#### #### #### ####', '0000 0000 0000 0000');
+const CardExpiryInput = masked('##/##', 'MM/AA');
+const CardCvvInput = masked('###', '123');
 
-const CardCvvFormat = forwardRef(function CardCvvFormat(props, ref) {
-    const { onChange, ...other } = props;
-    return (
-        <PatternFormat
-            {...other}
-            getInputRef={ref}
-            onValueChange={(values) => {
-                onChange({
-                    target: {
-                        name: props.name,
-                        value: values.value,
-                    },
-                });
-            }}
-            format="###"
-            placeholder="123"
-        />
-    );
-});
-
+const validate = (form) => {
+  const errors = {};
+  if (!form.direccionEnvio.trim()) errors.direccionEnvio = 'Indica la dirección de envío.';
+  else if (form.direccionEnvio.trim().length < 10) errors.direccionEnvio = 'Escribe la dirección completa (mínimo 10 caracteres).';
+  if (!form.nombreTitular.trim()) errors.nombreTitular = 'Indica el nombre del titular.';
+  if (form.numeroTarjeta.length !== 16) errors.numeroTarjeta = 'El número de tarjeta tiene 16 dígitos.';
+  if (form.fechaExpiracion.length !== 4) errors.fechaExpiracion = 'Usa el formato MM/AA.';
+  if (form.cvv.length !== 3) errors.cvv = 'El CVV tiene 3 dígitos.';
+  return errors;
+};
 
 const CheckoutPage = () => {
-    const { cart, fetchCart } = useContext(CartContext);
-    const navigate = useNavigate();
+  const { items, total, fetchCart } = useCart();
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ direccionEnvio: '', nombreTitular: '', numeroTarjeta: '', fechaExpiracion: '', cvv: '' });
+  const [errors, setErrors] = useState({});
+  const [processing, setProcessing] = useState(false);
+  const [serverError, setServerError] = useState('');
 
-    const [formData, setFormData] = useState({
-        direccionEnvio: '',
-        nombreTitular: '',
-        numeroTarjeta: '',
-        fechaExpiracion: '',
-        cvv: ''
-    });
-    const [errors, setErrors] = useState({});
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [serverError, setServerError] = useState('');
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: undefined }));
+  };
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
-    };
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setServerError('');
+    const found = validate(form);
+    setErrors(found);
+    if (Object.keys(found).length > 0) return;
 
-    const validate = () => {
-        const newErrors = {};
-        if (!formData.direccionEnvio.trim()) newErrors.direccionEnvio = 'La dirección de envío es obligatoria.';
-        if (!formData.nombreTitular.trim()) newErrors.nombreTitular = 'El nombre del titular es obligatorio.';
-        if (formData.numeroTarjeta.length !== 16) newErrors.numeroTarjeta = 'El número de tarjeta debe tener 16 dígitos.';
-        if (formData.fechaExpiracion.length !== 4) newErrors.fechaExpiracion = 'La fecha debe tener el formato MM/YY.';
-        if (formData.cvv.length !== 3) newErrors.cvv = 'El CVV debe tener 3 dígitos.';
-        
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setServerError('');
-
-        if (!validate()) {
-            return;
-        }
-
-        // Check stock availability before processing
-        const stockIssues = cart.items.filter(item => item.cantidad > item.stock);
-        if (stockIssues.length > 0) {
-            const productNames = stockIssues.map(item => item.nombreProducto).join(', ');
-            setServerError(`No hay suficiente stock para los siguientes productos: ${productNames}. Por favor, actualiza tu carrito.`);
-            return;
-        }
-
-        setIsProcessing(true);
-
-        // We send the unformatted data
-        const pedidoData = {
-            direccionEnvio: formData.direccionEnvio,
-            metodoPago: {
-                nombreTitular: formData.nombreTitular,
-                numeroTarjeta: formData.numeroTarjeta,
-                fechaExpiracion: formData.fechaExpiracion.replace('/', ''), // Remove slash for backend
-                cvv: formData.cvv
-            }
-        };
-
-        try {
-            const response = await pedidoService.crearPedido(pedidoData);
-            fetchCart(); // Clear cart in the context
-            navigate(`/pedido-confirmado/${response.pedidoId}`); // Redirect to confirmation page
-        } catch (err) {
-            const errorMessage = (typeof err.response?.data === 'string' && err.response.data)
-                || err.response?.data?.message
-                || 'Error al procesar el pago.';
-            setServerError(errorMessage);
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-    if (!cart || cart.items.length === 0) {
-        return (
-            <Container sx={{ py: 4, textAlign: 'center' }}>
-                <Typography variant="h4" gutterBottom>Tu carrito está vacío</Typography>
-                <Button onClick={() => navigate('/productos')} variant="contained" sx={{ mt: 2 }}>
-                    Ir a comprar
-                </Button>
-            </Container>
-        );
+    const sinStock = items.filter((item) => item.stock != null && item.cantidad > item.stock);
+    if (sinStock.length > 0) {
+      setServerError(`No hay stock suficiente de: ${sinStock.map((item) => item.nombreProducto).join(', ')}. Actualiza tu carrito.`);
+      return;
     }
 
+    setProcessing(true);
+    try {
+      const response = await pedidoService.crearPedido({
+        direccionEnvio: form.direccionEnvio.trim(),
+        metodoPago: { nombreTitular: form.nombreTitular.trim(), numeroTarjeta: form.numeroTarjeta, fechaExpiracion: form.fechaExpiracion, cvv: form.cvv },
+      });
+      await fetchCart();
+      navigate(`/pedido-confirmado/${response.pedidoId}`);
+    } catch (error) {
+      setServerError(errorMessage(error, 'No pudimos procesar el pago.'));
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  if (items.length === 0) {
     return (
-        <Container sx={{ py: 4 }}>
-            <Typography variant="h4" component="h1" gutterBottom>
-                Finalizar Compra
-            </Typography>
-            <Grid container spacing={4}>
-                <Grid item xs={12} md={7}>
-                    <Typography variant="h6" gutterBottom>
-                        Información de Envío y Pago
-                    </Typography>
-                    <Box component="form" onSubmit={handleSubmit} noValidate>
-                        <TextField
-                            label="Dirección de Envío"
-                            name="direccionEnvio"
-                            value={formData.direccionEnvio}
-                            onChange={handleChange}
-                            fullWidth
-                            required
-                            margin="normal"
-                            error={!!errors.direccionEnvio}
-                            helperText={errors.direccionEnvio}
-                        />
-                        <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                            Tarjeta de Crédito/Débito
-                        </Typography>
-                        <TextField
-                            label="Nombre del Titular"
-                            name="nombreTitular"
-                            value={formData.nombreTitular}
-                            onChange={handleChange}
-                            fullWidth
-                            required
-                            margin="normal"
-                            error={!!errors.nombreTitular}
-                            helperText={errors.nombreTitular}
-                        />
-                        <TextField
-                            label="Número de Tarjeta"
-                            name="numeroTarjeta"
-                            value={formData.numeroTarjeta}
-                            onChange={handleChange}
-                            fullWidth
-                            required
-                            margin="normal"
-                            error={!!errors.numeroTarjeta}
-                            helperText={errors.numeroTarjeta}
-                            InputProps={{
-                                inputComponent: CardNumberFormat,
-                            }}
-                        />
-                        <Grid container spacing={2}>
-                            <Grid item xs={6}>
-                                <TextField
-                                    label="Fecha de Expiración"
-                                    name="fechaExpiracion"
-                                    value={formData.fechaExpiracion}
-                                    onChange={handleChange}
-                                    fullWidth
-                                    required
-                                    margin="normal"
-                                    error={!!errors.fechaExpiracion}
-                                    helperText={errors.fechaExpiracion}
-                                    InputProps={{
-                                        inputComponent: CardExpiryFormat,
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={6}>
-                                <TextField
-                                    label="CVV"
-                                    name="cvv"
-                                    value={formData.cvv}
-                                    onChange={handleChange}
-                                    fullWidth
-                                    required
-                                    margin="normal"
-                                    error={!!errors.cvv}
-                                    helperText={errors.cvv}
-                                    InputProps={{
-                                        inputComponent: CardCvvFormat,
-                                    }}
-                                />
-                            </Grid>
-                        </Grid>
-                        {serverError && <Alert severity="error" sx={{ mt: 2 }}>{serverError}</Alert>}
-                        <Button
-                            type="submit"
-                            variant="contained"
-                            fullWidth
-                            sx={{ mt: 3 }}
-                            disabled={isProcessing}
-                        >
-                            {isProcessing ? <CircularProgress size={24} /> : `Pagar ${formatCurrency(cart.total)}`}
-                        </Button>
-                    </Box>
-                </Grid>
-                <Grid item xs={12} md={5}>
-                    <Card>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom>
-                                Resumen de tu orden
-                            </Typography>
-                            {cart.items.map(item => (
-                                <Box key={item.productoID} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                    <Typography variant="body2">{item.nombreProducto} x {item.cantidad}</Typography>
-                                    <Typography variant="body2">{formatCurrency(item.precioUnitario * item.cantidad)}</Typography>
-                                </Box>
-                            ))}
-                            <hr />
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-                                <Typography variant="h6">Total</Typography>
-                                <Typography variant="h6">{formatCurrency(cart.total)}</Typography>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
-        </Container>
+      <EmptyState
+        icon={<ShoppingBagOutlinedIcon />}
+        title="Tu carrito está vacío"
+        description="Agrega productos antes de pagar."
+        action={
+          <Button component={Link} to="/productos" variant="contained" size="large">
+            Ver catálogo
+          </Button>
+        }
+      />
     );
+  }
+
+  const field = (name, label, extra = {}) => ({ name, label, value: form[name], onChange: handleChange, fullWidth: true, required: true, error: !!errors[name], helperText: errors[name] || ' ', ...extra });
+
+  return (
+    <Container maxWidth="lg" sx={{ pt: { xs: 3, md: 5 } }}>
+      <PageHeader
+        crumbs={[
+          { label: 'Inicio', to: '/' },
+          { label: 'Carrito', to: '/carrito' },
+        ]}
+        current="Pago"
+        title="Finalizar compra"
+      />
+
+      <Box sx={{ display: 'grid', gap: { xs: 4, md: 7 }, gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 380px' }, alignItems: 'start' }}>
+        <Box component="form" onSubmit={handleSubmit} noValidate>
+          <Typography variant="h4" component="h2" sx={{ mb: 2 }}>
+            Envío
+          </Typography>
+          <TextField {...field('direccionEnvio', 'Dirección de envío')} autoComplete="street-address" placeholder="Calle, número, distrito y referencia" />
+
+          <Typography variant="h4" component="h2" sx={{ mt: 2, mb: 2 }}>
+            Tarjeta de crédito o débito
+          </Typography>
+          <Box sx={{ display: 'grid', gap: 0.5 }}>
+            <TextField {...field('nombreTitular', 'Nombre del titular')} autoComplete="cc-name" />
+            <TextField {...field('numeroTarjeta', 'Número de tarjeta')} slotProps={{ input: { inputComponent: CardNumberInput }, htmlInput: { inputMode: 'numeric', autoComplete: 'cc-number' } }} />
+            <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: '1fr 1fr' }}>
+              <TextField {...field('fechaExpiracion', 'Vencimiento')} slotProps={{ input: { inputComponent: CardExpiryInput }, htmlInput: { inputMode: 'numeric', autoComplete: 'cc-exp' } }} />
+              <TextField {...field('cvv', 'CVV')} slotProps={{ input: { inputComponent: CardCvvInput }, htmlInput: { inputMode: 'numeric', autoComplete: 'cc-csc' } }} />
+            </Box>
+          </Box>
+
+          {serverError && (
+            <Alert severity="error" role="alert" sx={{ mb: 2 }}>
+              {serverError}
+            </Alert>
+          )}
+
+          <Button type="submit" variant="contained" size="large" fullWidth disabled={processing} startIcon={processing ? <CircularProgress size={18} color="inherit" /> : <LockOutlinedIcon />}>
+            {processing ? 'Procesando pago…' : `Pagar ${formatCurrency(total)}`}
+          </Button>
+        </Box>
+
+        <Box component="aside" aria-label="Resumen de tu orden" sx={{ position: { md: 'sticky' }, top: { md: 'calc(var(--nav-h) + 24px)' }, p: { xs: 3, md: 3.5 }, borderRadius: `${radius.lg}px`, bgcolor: color.surface, border: `1px solid ${color.line}` }}>
+          <Typography variant="h4" component="h2" sx={{ mb: 2 }}>
+            Tu orden
+          </Typography>
+          <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gap: 1.25 }}>
+            {items.map((item) => (
+              <Box key={item.productoID} component="li" sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                <Typography variant="body2">
+                  {splitNombre(item.nombreProducto).titulo}{' '}
+                  <Box component="span" sx={{ color: color.inkMuted }}>
+                    × {item.cantidad}
+                  </Box>
+                </Typography>
+                <Typography variant="body2" className="tabular" sx={{ fontWeight: 600 }}>
+                  {formatCurrency(item.precioUnitario * item.cantidad)}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+          <Box sx={{ my: 2, borderTop: `1px dashed ${color.lineStrong}` }} />
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <Typography sx={{ fontWeight: 650 }}>Total</Typography>
+            <Typography className="tabular" sx={{ fontWeight: 700, fontSize: '1.5rem', letterSpacing: '-0.02em' }}>
+              {formatCurrency(total)}
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+    </Container>
+  );
 };
 
 export default CheckoutPage;

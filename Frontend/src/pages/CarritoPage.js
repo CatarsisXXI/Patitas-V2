@@ -1,701 +1,272 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Box, Button, CircularProgress, Container, IconButton, Skeleton, Tooltip, Typography } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
-import { 
-  Container, 
-  Typography, 
-  Box, 
-  Grid, 
-  Card, 
-  CardContent, 
-  CardMedia, 
-  IconButton, 
-  Button, 
-  CircularProgress, 
-  TextField, 
-  Snackbar, 
-  Alert, 
-  Tooltip,
-  Fade,
-  Zoom,
-  Grow,
-  Paper,
-  Divider,
-  Chip,
-  Breadcrumbs
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
-import RemoveIcon from '@mui/icons-material/Remove';
-import ShoppingCartCheckoutIcon from '@mui/icons-material/ShoppingCartCheckout';
-import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
-import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-import PriceCheckIcon from '@mui/icons-material/PriceCheck';
+import { AnimatePresence, motion } from 'framer-motion';
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
-import HomeIcon from '@mui/icons-material/Home';
-import StoreIcon from '@mui/icons-material/Store';
-import { formatCurrency } from '../utils/formatCurrency';
+import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import { useCart } from '../context/CartContext';
+import { useToast } from '../context/ToastContext';
 import pedidoService from '../services/pedidoService';
-import productService from '../services/productService'; // Importamos el servicio de productos
-import { Link as RouterLink } from 'react-router-dom';
+import productService from '../services/productService';
+import { assetUrl, errorMessage } from '../config/api';
+import { site, whatsappUrl } from '../config/site';
+import { formatCurrency } from '../utils/formatCurrency';
+import { splitNombre } from '../lib/productCopy';
+import { color, ease, radius } from '../theme/tokens';
+import PageHeader from '../components/ui/PageHeader';
+import EmptyState from '../components/ui/EmptyState';
+import QuantityStepper from '../components/ui/QuantityStepper';
+import SmartImage from '../components/ui/SmartImage';
+
+/** Texto del pedido que se envía por WhatsApp para confirmarlo. */
+const buildWhatsAppMessage = (items, total) => {
+  const lines = items.map(
+    (item, index) => `${index + 1}. *${item.nombreProducto}*\n   Cantidad: ${item.cantidad}\n   Precio: ${formatCurrency(item.precioUnitario * item.cantidad)}`
+  );
+  return [
+    'Hola,',
+    '',
+    `Me gustaría realizar el siguiente pedido en *${site.name}*:`,
+    '',
+    '*DETALLE DEL PEDIDO*',
+    '',
+    lines.join('\n\n'),
+    '',
+    `*TOTAL A PAGAR: ${formatCurrency(total)}*`,
+    '',
+    'Por favor, confírmenme la disponibilidad de los productos y las opciones de pago y envío.',
+    '',
+    'Gracias.',
+  ].join('\n');
+};
+
+const SummaryRow = ({ label, value, strong }) => (
+  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 2, py: 0.75 }}>
+    <Typography color={strong ? 'text.primary' : 'text.secondary'} sx={{ fontWeight: strong ? 650 : 400 }}>
+      {label}
+    </Typography>
+    <Typography className="tabular" sx={{ fontWeight: strong ? 700 : 600, fontSize: strong ? '1.5rem' : '1rem', letterSpacing: strong ? '-0.02em' : 0 }}>
+      {value}
+    </Typography>
+  </Box>
+);
 
 const CarritoPage = () => {
-  const { cart, removeProductFromCart, updateProductQuantity, loading, clearCart } = useCart();
+  const { items, total, itemCount, loading, removeProductFromCart, updateProductQuantity, clearCart } = useCart();
+  const { notify } = useToast();
   const navigate = useNavigate();
+  const [stockById, setStockById] = useState({});
+  const [busyId, setBusyId] = useState(null);
+  const [processing, setProcessing] = useState(false);
 
-  const [errorMessage, setErrorMessage] = useState('');
-  const [openSnackbar, setOpenSnackbar] = useState(false);
-  const [processingOrder, setProcessingOrder] = useState(false);
-  const [productsStock, setProductsStock] = useState({}); // Estado para almacenar el stock de cada producto
-
-  // Efecto para cargar el stock de los productos en el carrito
+  // Stock actual de cada producto para limitar la cantidad antes de pedir.
+  const ids = useMemo(() => items.map((item) => item.productoID).join(','), [items]);
   useEffect(() => {
-    const fetchStockForProducts = async () => {
-      if (!cart || !cart.items) return;
-
-      const stockData = {};
-      // Por cada item en el carrito, obtenemos el producto para tener el stock actual
-      for (const item of cart.items) {
-        try {
-          const product = await productService.getProductoById(item.productoID);
-          stockData[item.productoID] = product.stock; // Asumimos que la API devuelve un campo `stock`
-        } catch (error) {
-          console.error(`Error al obtener el stock del producto ${item.productoID}:`, error);
-          stockData[item.productoID] = 0; // En caso de error, ponemos 0
-        }
-      }
-      setProductsStock(stockData);
+    if (!ids) return undefined;
+    let cancelled = false;
+    Promise.all(
+      ids.split(',').map((id) =>
+        productService
+          .getProductoById(id)
+          .then((product) => [id, product?.stock ?? 0])
+          .catch(() => [id, null])
+      )
+    ).then((entries) => !cancelled && setStockById(Object.fromEntries(entries)));
+    return () => {
+      cancelled = true;
     };
+  }, [ids]);
 
-    fetchStockForProducts();
-  }, [cart]); // Se ejecuta cuando el carrito cambia
-
-  // Función para obtener el stock de un producto
-  const getStockForProduct = (productoID) => {
-    return productsStock[productoID] !== undefined ? productsStock[productoID] : 0;
+  const run = async (productoID, action, fallback) => {
+    setBusyId(productoID);
+    try {
+      await action();
+    } catch (error) {
+      notify(errorMessage(error, fallback), { severity: 'error' });
+    } finally {
+      setBusyId(null);
+    }
   };
+
+  const overStock = items.filter((item) => stockById[item.productoID] != null && item.cantidad > stockById[item.productoID]);
 
   const handleComprar = async () => {
-    setProcessingOrder(true);
-    
+    // La pestaña se abre dentro del clic para que el navegador no la bloquee como ventana emergente.
+    const chat = window.open('', '_blank');
+    const url = whatsappUrl(buildWhatsAppMessage(items, total));
+    setProcessing(true);
     try {
-      // Generate WhatsApp message
-      const message = generateWhatsAppMessage();
-      const whatsappUrl = `https://wa.me/51956550376?text=${encodeURIComponent(message)}`;
-
-      // Create pending order and clear cart
-      await createPendingOrder();
-      clearCart(); // Clear cart after creating order
-      
-      // Redirect to WhatsApp
-      window.open(whatsappUrl, '_blank');
-      
-      // Navigate to home after a short delay
-      setTimeout(() => {
-        navigate('/');
-      }, 2000);
-      
+      await pedidoService.createPendingOrder();
+      clearCart();
+      if (chat) chat.location.href = url;
+      else window.location.href = url;
+      notify('Pedido registrado. Termina de confirmarlo en WhatsApp.');
+      navigate('/mis-compras');
     } catch (error) {
-      setErrorMessage('Error al procesar la compra. Por favor, intenta nuevamente.');
-      setOpenSnackbar(true);
+      if (chat) chat.close();
+      notify(errorMessage(error, 'No pudimos registrar el pedido. Inténtalo nuevamente.'), { severity: 'error' });
     } finally {
-      setProcessingOrder(false);
+      setProcessing(false);
     }
   };
 
-  const generateWhatsAppMessage = () => {
-    let message = '¡Hola! 👋\n\n';
-    message += 'Me gustaría realizar el siguiente pedido en *Patitas y Sabores*:\n\n';
-    message += '📦 *DETALLE DEL PEDIDO*\n';
-    
-    cart.items.forEach((item, index) => {
-      message += `\n${index + 1}. *${item.nombreProducto}*\n`;
-      message += `   Cantidad: ${item.cantidad}\n`;
-      message += `   Precio: ${formatCurrency(item.precioUnitario * item.cantidad)}\n`;
-    });
-    
-    message += `\n💰 *TOTAL A PAGAR: ${formatCurrency(cart.total)}*\n\n`;
-    message += 'Por favor, confírmenme la disponibilidad de los productos y las opciones de pago y envío.\n\n';
-    message += '¡Gracias! 🐾';
-    
-    return message;
-  };
-
-  const createPendingOrder = async () => {
-    await pedidoService.createPendingOrder();
-  };
-
-  const handleQuantityChange = async (productoID, newQuantity) => {
-    if (newQuantity < 1) {
-      setErrorMessage('La cantidad debe ser al menos 1.');
-      setOpenSnackbar(true);
-      return;
-    }
-    const item = cart.items.find(i => i.productoID === productoID);
-    if (!item) return;
-
-    // Usamos el stock actualizado
-    const currentStock = getStockForProduct(item.productoID);
-    if (newQuantity > currentStock) {
-      setErrorMessage(`Stock insuficiente. Solo quedan ${currentStock} unidades de ${item.nombreProducto}.`);
-      setOpenSnackbar(true);
-      return;
-    }
-
-    try {
-      await updateProductQuantity(productoID, newQuantity);
-    } catch (error) {
-      setErrorMessage('Error al actualizar la cantidad. Stock insuficiente.');
-      setOpenSnackbar(true);
-    }
-  };
-
-  const handleRemoveItem = async (productoID, productName) => {
-    try {
-      await removeProductFromCart(productoID);
-      setErrorMessage(`${productName} eliminado del carrito`);
-      setOpenSnackbar(true);
-    } catch (error) {
-      setErrorMessage('Error al eliminar el producto del carrito.');
-      setOpenSnackbar(true);
-    }
-  };
-
-  const handleCloseSnackbar = () => {
-    setOpenSnackbar(false);
-  };
-
-  if (loading && !cart) {
+  if (loading && items.length === 0) {
     return (
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          minHeight: '60vh',
-          flexDirection: 'column',
-          gap: 2
-        }}
-      >
-        <CircularProgress 
-          size={60} 
-          sx={{ 
-            color: '#5D4E37',
-            animation: 'pulse 1.5s ease-in-out infinite'
-          }} 
-        />
-        <Typography variant="h6" sx={{ color: '#5D4E37' }}>
-          Cargando tu carrito...
-        </Typography>
-      </Box>
+      <Container maxWidth="lg" sx={{ pt: { xs: 3, md: 5 } }}>
+        <Skeleton width={260} height={56} sx={{ mb: 4 }} />
+        <Box sx={{ display: 'grid', gap: 4, gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 380px' } }}>
+          <Box sx={{ display: 'grid', gap: 2 }}>
+            {[0, 1].map((i) => (
+              <Skeleton key={i} variant="rounded" height={132} />
+            ))}
+          </Box>
+          <Skeleton variant="rounded" height={280} />
+        </Box>
+      </Container>
     );
   }
 
-  if (!cart || cart.items.length === 0) {
+  if (items.length === 0) {
     return (
-      <Container sx={{ py: 4, textAlign: 'center' }}>
-        <Fade in={true} timeout={800}>
-          <Box sx={{ maxWidth: 500, mx: 'auto', py: 8 }}>
-            <ShoppingBagIcon 
-              sx={{ 
-                fontSize: 80, 
-                color: 'rgba(93, 78, 55, 0.3)',
-                mb: 2
-              }} 
-            />
-            <Typography 
-              variant="h3" 
-              sx={{ 
-                fontWeight: 700, 
-                color: '#5D4E37',
-                mb: 2
-              }}
-            >
-              Tu carrito está vacío
-            </Typography>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                color: '#7D6B5D', 
-                mb: 4,
-                lineHeight: 1.6
-              }}
-            >
-              ¡Descubre nuestros deliciosos snacks naturales para tu mascota! 
-              Tenemos opciones saludables que ellos adorarán.
-            </Typography>
-            <Button 
-              component={RouterLink} 
-              to="/productos" 
-              variant="contained"
-              sx={{
-                backgroundColor: '#5D4E37',
-                color: '#FFFFFF',
-                fontWeight: 600,
-                px: 4,
-                py: 1.5,
-                fontSize: '1.1rem',
-                borderRadius: '12px',
-                '&:hover': {
-                  backgroundColor: '#3D2E1F',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 6px 20px rgba(93, 78, 55, 0.3)',
-                }
-              }}
-              startIcon={<ShoppingBagIcon />}
-            >
-              Explorar Productos
-            </Button>
-          </Box>
-        </Fade>
-      </Container>
+      <EmptyState
+        icon={<ShoppingBagOutlinedIcon />}
+        title="Tu carrito está vacío"
+        description="Explora el catálogo y agrega los snacks que quieras probar."
+        action={
+          <Button component={Link} to="/productos" variant="contained" size="large">
+            Ver catálogo
+          </Button>
+        }
+      />
     );
   }
 
   return (
-    <Box sx={{ position: 'relative', minHeight: '100vh', background: 'linear-gradient(135deg, #F8F6F0 0%, #FAF9F6 50%, #FFFFFF 100%)' }}>
-      <Container sx={{ py: 3 }}>
+    <Container maxWidth="lg" sx={{ pt: { xs: 3, md: 5 } }}>
+      <PageHeader
+        crumbs={[
+          { label: 'Inicio', to: '/' },
+          { label: 'Catálogo', to: '/productos' },
+        ]}
+        current="Carrito"
+        title="Tu carrito"
+        description={itemCount === 1 ? '1 producto listo para pedir.' : `${itemCount} productos listos para pedir.`}
+      />
 
-        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
-          <Link
-            component={RouterLink}
-            to="/"
-            underline="hover"
-            sx={{ display: 'flex', alignItems: 'center', color: '#7D6B5D', textDecoration: 'none' }}
-          >
-            <HomeIcon sx={{ mr: 0.5, fontSize: 20 }} />
-            Inicio
-          </Link>
-          <Link
-            component={RouterLink}
-            to="/productos"
-            underline="hover"
-            sx={{ display: 'flex', alignItems: 'center', color: '#7D6B5D', textDecoration: 'none' }}
-          >
-            <StoreIcon sx={{ mr: 0.5, fontSize: 20 }} />
-            Productos
-          </Link>
-          <Typography
-            sx={{ display: 'flex', alignItems: 'center', color: '#5D4E37', fontWeight: 600 }}
-          >
-            <ShoppingBagIcon sx={{ mr: 0.5, fontSize: 20 }} />
-            Carrito de Compras
-          </Typography>
-        </Breadcrumbs>
-
-        {/* Header */}
-        <Fade in={true} timeout={800}>
-          <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <Typography 
-              variant="h2" 
-              component="h1" 
-              sx={{ 
-                fontWeight: 800, 
-                color: '#5D4E37',
-                mb: 1,
-                fontSize: { xs: '2.5rem', md: '3rem' }
-              }}
-            >
-              Tu Carrito
-            </Typography>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                color: '#7D6B5D',
-                maxWidth: '600px',
-                mx: 'auto'
-              }}
-            >
-              Revisa y confirma los productos seleccionados para tu mascota
-            </Typography>
-          </Box>
-        </Fade>
-
-        <Grid container spacing={4}>
-          {/* Products Column - IZQUIERDA */}
-          <Grid item xs={12} md={8} lg={8} sx={{ order: { xs: 2, md: 1 } }}>
-            <Fade in={true} timeout={1000}>
-              <Paper 
-                sx={{ 
-                  p: 3, 
-                  borderRadius: '20px',
-                  background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F6F0 100%)',
-                  boxShadow: '0 8px 32px rgba(93, 78, 55, 0.08)',
-                  border: '1px solid rgba(212, 165, 116, 0.2)'
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <ShoppingBagIcon sx={{ color: '#5D4E37', mr: 1.5, fontSize: 28 }} />
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#5D4E37' }}>
-                    Productos ({cart.items.length})
-                  </Typography>
-                </Box>
-
-                {cart.items.map((item, index) => {
-                  const currentStock = getStockForProduct(item.productoID);
-                  return (
-                    <Grow in={true} timeout={500 + index * 100} key={item.productoID}>
-                      <Card 
-                        sx={{ 
-                          display: 'flex', 
-                          mb: 3, 
-                          borderRadius: '16px',
-                          background: 'rgba(255, 255, 255, 0.8)',
-                          boxShadow: '0 4px 20px rgba(93, 78, 55, 0.06)',
-                          border: '1px solid rgba(212, 165, 116, 0.15)',
-                          transition: 'all 0.3s ease',
-                          '&:hover': {
-                            boxShadow: '0 6px 25px rgba(93, 78, 55, 0.12)',
-                            transform: 'translateY(-2px)',
-                          }
-                        }}
-                      >
-                        <CardMedia
-                          component="img"
-                          sx={{ 
-                            width: 140, 
-                            objectFit: 'cover',
-                            borderRadius: '16px 0 0 16px'
-                          }}
-                          image={`http://localhost:5288/${item.imagenURL}`}
-                          alt={item.nombreProducto}
-                        />
-
-                        <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, p: 2 }}>
-                          <CardContent sx={{ flex: '1 0 auto', p: 0, pb: 1 }}>
-                            <Typography 
-                              component="div" 
-                              variant="h6" 
-                              sx={{ 
-                                fontWeight: 700, 
-                                color: '#5D4E37',
-                                mb: 1
-                              }}
-                            >
-                              {item.nombreProducto}
-                            </Typography>
-
-                            {/* Quantity Controls */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                              <Typography 
-                                variant="body2" 
-                                sx={{ 
-                                  color: '#5D4E37', 
-                                  fontWeight: 600, 
-                                  mr: 2 
-                                }}
-                              >
-                                Cantidad:
-                              </Typography>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Tooltip title="Reducir cantidad">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleQuantityChange(item.productoID, item.cantidad - 1)}
-                                    disabled={item.cantidad <= 1}
-                                    sx={{
-                                      backgroundColor: 'rgba(93, 78, 55, 0.1)',
-                                      '&:hover': {
-                                        backgroundColor: 'rgba(93, 78, 55, 0.2)',
-                                      },
-                                      '&.Mui-disabled': {
-                                        backgroundColor: 'rgba(93, 78, 55, 0.05)',
-                                      }
-                                    }}
-                                  >
-                                    <RemoveIcon sx={{ fontSize: 18 }} />
-                                  </IconButton>
-                                </Tooltip>
-                                
-                                <TextField
-                                  type="number"
-                                  value={item.cantidad}
-                                  onChange={(e) => handleQuantityChange(item.productoID, parseInt(e.target.value, 10))}
-                                  inputProps={{ 
-                                    min: 1, 
-                                    max: currentStock,
-                                    style: { textAlign: 'center', fontWeight: 600 }
-                                  }}
-                                  sx={{ 
-                                    width: 70, 
-                                    '& .MuiOutlinedInput-root': {
-                                      borderRadius: '8px',
-                                      backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                    }
-                                  }}
-                                  size="small"
-                                />
-                                
-                                <Tooltip title="Aumentar cantidad">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleQuantityChange(item.productoID, item.cantidad + 1)}
-                                    disabled={item.cantidad >= currentStock}
-                                    sx={{
-                                      backgroundColor: 'rgba(93, 78, 55, 0.1)',
-                                      '&:hover': {
-                                        backgroundColor: 'rgba(93, 78, 55, 0.2)',
-                                      },
-                                      '&.Mui-disabled': {
-                                        backgroundColor: 'rgba(93, 78, 55, 0.05)',
-                                      }
-                                    }}
-                                  >
-                                    <AddIcon sx={{ fontSize: 18 }} />
-                                  </IconButton>
-                                </Tooltip>
-                              </Box>
-                            </Box>
-
-                            {/* Stock and Price - CORREGIDO: Mostrar stock real */}
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Box>
-                                <Chip
-                                  label={`Stock: ${currentStock}`}
-                                  size="small"
-                                  color={
-                                    currentStock > 10 ? "success" : 
-                                    currentStock > 0 ? "warning" : "error"
-                                  }
-                                  variant="outlined"
-                                  sx={{ fontWeight: 600 }}
-                                />
-                              </Box>
-                              <Typography 
-                                variant="h6" 
-                                sx={{ 
-                                  fontWeight: 800,
-                                  color: '#5D4E37',
-                                  background: 'linear-gradient(135deg, #5D4E37 0%, #8A7B5D 100%)',
-                                  WebkitBackgroundClip: 'text',
-                                  WebkitTextFillColor: 'transparent',
-                                  backgroundClip: 'text',
-                                }}
-                              >
-                                {formatCurrency(item.precioUnitario * item.cantidad)}
-                              </Typography>
-                            </Box>
-                          </CardContent>
-                          
-                          {/* Delete Button */}
-                          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                            <Tooltip title="Eliminar del carrito">
-                              <IconButton 
-                                onClick={() => handleRemoveItem(item.productoID, item.nombreProducto)}
-                                sx={{
-                                  color: '#F44336',
-                                  backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                                  '&:hover': {
-                                    backgroundColor: 'rgba(244, 67, 54, 0.2)',
-                                    transform: 'scale(1.1)',
-                                  }
-                                }}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </Box>
-                      </Card>
-                    </Grow>
-                  );
-                })}
-              </Paper>
-            </Fade>
-          </Grid>
-
-          {/* Order Summary Column - DERECHA - MEJORADO PARA STICKY */}
-          <Grid item xs={12} md={4} lg={4} sx={{ order: { xs: 1, md: 2 } }}>
-            <Box
-              sx={{
-                position: 'sticky',
-                top: 100, // Distancia desde la parte superior
-                zIndex: 10,
-              }}
-            >
-              <Zoom in={true} timeout={1200}>
-                <Card 
-                  sx={{ 
-                    borderRadius: '20px',
-                    background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F6F0 100%)',
-                    boxShadow: '0 8px 40px rgba(93, 78, 55, 0.12)',
-                    border: '1px solid rgba(212, 165, 116, 0.25)',
-                    overflow: 'hidden'
-                  }}
+      <Box sx={{ display: 'grid', gap: { xs: 4, md: 6 }, gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 380px' }, alignItems: 'start' }}>
+        <Box component="ul" aria-label="Productos en el carrito" sx={{ listStyle: 'none', m: 0, p: 0, borderTop: `1px solid ${color.line}` }}>
+          <AnimatePresence initial={false}>
+            {items.map((item) => {
+              const { titulo, detalle } = splitNombre(item.nombreProducto);
+              const stock = stockById[item.productoID];
+              const busy = busyId === item.productoID;
+              const exceeds = stock != null && item.cantidad > stock;
+              return (
+                <Box
+                  key={item.productoID}
+                  component={motion.li}
+                  layout
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -40, transition: { duration: 0.2, ease: 'easeIn' } }}
+                  transition={{ duration: 0.35, ease: ease.out }}
+                  sx={{ display: 'grid', gridTemplateColumns: { xs: '88px 1fr', sm: '116px 1fr auto' }, columnGap: { xs: 2, sm: 3 }, rowGap: 1.5, py: 3, borderBottom: `1px solid ${color.line}`, opacity: busy ? 0.6 : 1, transition: 'opacity 160ms ease' }}
                 >
-                  <CardContent sx={{ p: 4 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                      <PriceCheckIcon sx={{ color: '#5D4E37', mr: 1.5, fontSize: 28 }} />
-                      <Typography variant="h4" sx={{ fontWeight: 700, color: '#5D4E37' }}>
-                        Resumen del Pedido
-                      </Typography>
-                    </Box>
+                  <Box component={Link} to={`/productos/${item.productoID}`} aria-label={`Ver ${titulo}`} sx={{ gridRow: { xs: 'span 2', sm: 'auto' } }}>
+                    <SmartImage src={assetUrl(item.imagenURL)} alt="" ratio={1} fit="contain" blend radius={radius.md} imgSx={{ p: 1 }} />
+                  </Box>
 
-                    {/* Order Details */}
-                    <Box sx={{ mb: 3 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                        <Typography variant="body1" sx={{ color: '#7D6B5D' }}>
-                          Subtotal ({cart.items.length} productos)
-                        </Typography>
-                        <Typography variant="body1" sx={{ fontWeight: 600, color: '#5D4E37' }}>
-                          {formatCurrency(cart.total)}
-                        </Typography>
-                      </Box>
-                      
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <LocalShippingIcon sx={{ color: '#4CAF50', mr: 1, fontSize: 20 }} />
-                          <Typography variant="body1" sx={{ color: '#7D6B5D' }}>
-                            Envío
-                          </Typography>
-                        </Box>
-                        <Typography 
-                          variant="body1" 
-                          sx={{ 
-                            fontWeight: 600, 
-                            color: '#4CAF50',
-                            background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text',
-                          }}
-                        >
-                          Gratis
-                        </Typography>
-                      </Box>
-
-                      <Divider sx={{ my: 2 }} />
-
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-                        <Typography variant="h5" sx={{ fontWeight: 700, color: '#5D4E37' }}>
-                          Total
-                        </Typography>
-                        <Typography 
-                          variant="h4" 
-                          sx={{ 
-                            fontWeight: 800,
-                            color: '#5D4E37',
-                            background: 'linear-gradient(135deg, #5D4E37 0%, #8A7B5D 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text',
-                          }}
-                        >
-                          {formatCurrency(cart.total)}
-                        </Typography>
-                      </Box>
-                    </Box>
-
-                    {/* Checkout Button */}
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      onClick={handleComprar}
-                      disabled={processingOrder}
-                      startIcon={processingOrder ? <CircularProgress size={20} sx={{ color: '#FFFFFF' }} /> : <WhatsAppIcon />}
-                      sx={{
-                        backgroundColor: '#25D366',
-                        color: '#FFFFFF',
-                        fontWeight: 700,
-                        py: 1.5,
-                        fontSize: '1.1rem',
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 16px rgba(37, 211, 102, 0.3)',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          backgroundColor: '#128C7E',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 6px 20px rgba(37, 211, 102, 0.4)',
-                        },
-                        '&:disabled': {
-                          backgroundColor: 'rgba(37, 211, 102, 0.5)',
-                        }
-                      }}
-                    >
-                      {processingOrder ? 'Procesando...' : 'Completar Pedido por WhatsApp'}
-                    </Button>
-
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        textAlign: 'center', 
-                        mt: 2, 
-                        color: '#7D6B5D',
-                        fontStyle: 'italic'
-                      }}
-                    >
-                      Serás redirigido a WhatsApp para confirmar tu pedido
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography component={Link} to={`/productos/${item.productoID}`} variant="h5" sx={{ display: 'block', color: 'text.primary', '&:hover': { textDecoration: 'underline', textUnderlineOffset: 3 } }}>
+                      {titulo}
                     </Typography>
-                  </CardContent>
-                </Card>
-              </Zoom>
-            </Box>
-          </Grid>
-        </Grid>
+                    {detalle && (
+                      <Typography variant="body2" color="text.secondary">
+                        {detalle}
+                      </Typography>
+                    )}
+                    <Typography variant="body2" className="tabular" sx={{ mt: 0.5, color: color.inkMuted }}>
+                      {formatCurrency(item.precioUnitario)} c/u
+                    </Typography>
+                    {exceeds && (
+                      <Typography variant="body2" role="alert" sx={{ mt: 0.75, color: color.danger.main, fontWeight: 600 }}>
+                        {stock > 0 ? `Solo quedan ${stock}. Reduce la cantidad.` : 'Se agotó. Quítalo para continuar.'}
+                      </Typography>
+                    )}
+                  </Box>
 
-        {/* Continue Shopping */}
-        <Fade in={true} timeout={1600}>
-          <Box sx={{ textAlign: 'center', mt: 4 }}>
-            <Button
-              component={RouterLink}
-              to="/productos"
-              variant="outlined"
-              startIcon={<StoreIcon />}
-              sx={{
-                borderColor: '#5D4E37',
-                color: '#5D4E37',
-                fontWeight: 600,
-                px: 4,
-                py: 1.2,
-                borderRadius: '12px',
-                '&:hover': {
-                  borderColor: '#5D4E37',
-                  backgroundColor: 'rgba(93, 78, 55, 0.04)',
-                  transform: 'translateY(-2px)',
-                }
-              }}
-            >
-              Seguir Comprando
+                  <Box sx={{ gridColumn: { xs: '2', sm: 'auto' }, display: 'flex', alignItems: 'center', justifyContent: { xs: 'space-between', sm: 'flex-end' }, gap: { xs: 1, sm: 3 } }}>
+                    <QuantityStepper
+                      size="small"
+                      value={item.cantidad}
+                      max={stock != null ? Math.max(stock, 1) : 99}
+                      disabled={busy}
+                      label={`Cantidad de ${titulo}`}
+                      onChange={(next) => run(item.productoID, () => updateProductQuantity(item.productoID, next), 'No pudimos actualizar la cantidad.')}
+                    />
+                    <Typography className="tabular" sx={{ fontWeight: 700, minWidth: 84, textAlign: 'right' }}>
+                      {formatCurrency(item.precioUnitario * item.cantidad)}
+                    </Typography>
+                    <Tooltip title="Quitar del carrito">
+                      <IconButton
+                        aria-label={`Quitar ${titulo} del carrito`}
+                        disabled={busy}
+                        onClick={() => run(item.productoID, () => removeProductFromCart(item.productoID), 'No pudimos quitar el producto.')}
+                        sx={{ width: 44, height: 44, mr: -1, '&:hover': { color: color.danger.main, bgcolor: color.danger.tint } }}
+                      >
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Box>
+              );
+            })}
+          </AnimatePresence>
+
+          <Box component="li" sx={{ pt: 2.5 }}>
+            <Button component={Link} to="/productos" variant="text" startIcon={<ArrowBackRoundedIcon />} sx={{ ml: -1 }}>
+              Seguir comprando
             </Button>
           </Box>
-        </Fade>
-      </Container>
+        </Box>
 
-      {/* Snackbar for notifications */}
-      <Snackbar 
-        open={openSnackbar} 
-        autoHideDuration={4000} 
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          onClose={handleCloseSnackbar} 
-          severity="error" 
-          sx={{ 
-            width: '100%',
-            borderRadius: '12px',
-            fontWeight: 600,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-          }}
+        <Box
+          component={motion.aside}
+          aria-label="Resumen del pedido"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.1, ease: ease.out }}
+          sx={{ position: { md: 'sticky' }, top: { md: 'calc(var(--nav-h) + 24px)' }, p: { xs: 3, md: 3.5 }, borderRadius: `${radius.lg}px`, bgcolor: color.surface, border: `1px solid ${color.line}` }}
         >
-          {errorMessage}
-        </Alert>
-      </Snackbar>
+          <Typography variant="h4" component="h2" sx={{ mb: 2 }}>
+            Resumen
+          </Typography>
+          <SummaryRow label={itemCount === 1 ? 'Subtotal (1 producto)' : `Subtotal (${itemCount} productos)`} value={formatCurrency(total)} />
+          <SummaryRow label="Envío" value="Gratis" />
+          <Box sx={{ my: 1.5, borderTop: `1px dashed ${color.lineStrong}` }} />
+          <SummaryRow label="Total" value={formatCurrency(total)} strong />
+          <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 2.5 }}>
+            Precios con IGV incluido.
+          </Typography>
 
-      {/* Custom CSS for animations */}
-      <style>
-        {`
-          @keyframes pulse {
-            0%, 100% {
-              opacity: 1;
-            }
-            50% {
-              opacity: 0.7;
-            }
-          }
-        `}
-      </style>
-    </Box>
+          <Button
+            onClick={handleComprar}
+            disabled={processing || overStock.length > 0}
+            fullWidth
+            size="large"
+            startIcon={processing ? <CircularProgress size={18} color="inherit" /> : <WhatsAppIcon />}
+            sx={{ bgcolor: color.whatsapp, color: '#fff', '&:hover': { bgcolor: '#156A3E' }, '&.Mui-disabled': { bgcolor: 'rgba(27, 127, 75, 0.4)', color: '#fff' } }}
+          >
+            {processing ? 'Registrando pedido…' : 'Pedir por WhatsApp'}
+          </Button>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, textAlign: 'center' }}>
+            Registramos tu pedido y abrimos WhatsApp para coordinar el pago y la entrega.
+          </Typography>
+        </Box>
+      </Box>
+    </Container>
   );
 };
 

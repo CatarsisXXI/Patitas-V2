@@ -1,71 +1,68 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import { SESSION_EXPIRED_EVENT, TOKEN_KEY } from '../config/api';
+import { useToast } from './ToastContext';
 
 const AuthContext = createContext(null);
 
+const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+
+const userFromToken = (token) => {
+  if (!token) return null;
+  try {
+    const claims = jwtDecode(token);
+    if (!claims.exp || claims.exp * 1000 <= Date.now()) return null;
+    const name = claims.name || claims.unique_name || '';
+    return {
+      token,
+      name,
+      firstName: name.trim().split(/\s+/)[0] || '',
+      role: claims.role || claims[ROLE_CLAIM] || 'Cliente',
+    };
+  } catch {
+    return null;
+  }
+};
+
+const readStoredUser = () => {
+  const user = userFromToken(localStorage.getItem(TOKEN_KEY));
+  if (!user) localStorage.removeItem(TOKEN_KEY);
+  return user;
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  // Lectura síncrona: evita que las rutas protegidas redirijan al recargar la página.
+  const [user, setUser] = useState(readStoredUser);
+  const { notify } = useToast();
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-        // Check if token is expired
-        if (decodedToken.exp * 1000 > Date.now()) {
-          // The structure of your user object should be consistent
-          // In this case, we are reconstructing it from the token
-          const user_role = decodedToken.role; // Simplified claim name
-          const user_name = decodedToken.name; // Use the standard JWT claim name
-
-
-          setUser({
-            token: token,
-            name: user_name,
-            role: user_role
-          });
-        } else {
-          // Token is expired
-          localStorage.removeItem('token');
-        }
-      } catch (error) {
-        console.error("Error decoding token from localStorage", error);
-        localStorage.removeItem('token');
-      }
-    }
+  const login = useCallback((userData) => {
+    const next = userFromToken(userData?.token);
+    if (!next) throw new Error('Token inválido');
+    localStorage.setItem(TOKEN_KEY, next.token);
+    setUser(next);
+    return next;
   }, []);
 
-  const login = (userData) => {
-    const token = userData.token;
-    localStorage.setItem('token', token);
-    const decodedToken = jwtDecode(token);
-
-    // Extract claims - the names depend on what you configured in the backend's TokenService
-    const user_role = decodedToken.role; // Simplified claim name
-    const user_name = decodedToken.name; // Use the standard JWT claim name
-
-
-    setUser({
-      token: token,
-      name: user_name,
-      role: user_role
-    });
-  };
-
-  const logout = () => {
+  const logout = useCallback(() => {
+    localStorage.removeItem(TOKEN_KEY);
     setUser(null);
-    localStorage.removeItem('token');
-  };
+  }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, login, logout }}>
-      {children}
-    </AuthContext.Provider>
+  useEffect(() => {
+    const onExpired = () => {
+      logout();
+      notify('Tu sesión expiró. Vuelve a iniciar sesión.', { severity: 'info' });
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, [logout, notify]);
+
+  const value = useMemo(
+    () => ({ user, login, logout, isAdmin: user?.role === 'Admin', isCustomer: !!user && user.role !== 'Admin' }),
+    [user, login, logout]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-
-// Custom hook to use the auth context easily
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);

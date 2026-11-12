@@ -1,73 +1,100 @@
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { Box, CssBaseline, ThemeProvider } from '@mui/material';
+import React, { lazy } from 'react';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { CssBaseline, ThemeProvider } from '@mui/material';
+import { MotionConfig } from 'framer-motion';
+import theme from './theme/theme';
+import { ToastProvider } from './context/ToastContext';
+import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
-import theme from './theme';
-
-import Navbar from './components/Navbar';
-import AdminLayout from './components/AdminLayout';
-// import Footer from './components/Footer';
+import { FavoritesProvider } from './context/FavoritesContext';
+import StoreLayout from './components/layout/StoreLayout';
+import AuthLayout from './components/layout/AuthLayout';
+import ScrollToTop from './components/layout/ScrollToTop';
+import { RequireAdmin, RequireAuth } from './components/layout/RouteGuards';
 import HomePage from './pages/HomePage';
-import ProductsPage from './pages/ProductsPage';
-import ProductoDetallePage from './pages/ProductoDetallePage';
-import LoginPage from './pages/LoginPage';
-import RegistroPage from './pages/RegistroPage';
-import CarritoPage from './pages/CarritoPage';
-import CheckoutPage from './pages/CheckoutPage';
-import FavoritosPage from './pages/FavoritosPage';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import ProductManagementPage from './pages/admin/ProductManagementPage';
-import UserManagementPage from './pages/admin/UserManagementPage';
-import OrderManagementPage from './pages/admin/OrderManagementPage';
-import ReportsPage from './pages/admin/ReportsPage';
-import SettingsPage from './pages/admin/SettingsPage';
-import AdminRoute from './components/AdminRoute';
-import OrderConfirmationPage from './pages/OrderConfirmationPage';
-import BoletaPage from './pages/BoletaPage';
-import MisComprasPage from './pages/MisComprasPage';
-import MisBoletasPage from './pages/MisBoletasPage';
-import MascotasPage from './pages/MascotasPage';
-import Chatbot from './components/Chatbot';
+
+// La portada va en el paquete inicial; el resto se descarga al visitarlo.
+const ProductsPage = lazy(() => import('./pages/ProductsPage'));
+const ProductoDetallePage = lazy(() => import('./pages/ProductoDetallePage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegistroPage = lazy(() => import('./pages/RegistroPage'));
+const CarritoPage = lazy(() => import('./pages/CarritoPage'));
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
+const OrderConfirmationPage = lazy(() => import('./pages/OrderConfirmationPage'));
+const BoletaPage = lazy(() => import('./pages/BoletaPage'));
+const MisComprasPage = lazy(() => import('./pages/MisComprasPage'));
+const MisBoletasPage = lazy(() => import('./pages/MisBoletasPage'));
+const FavoritosPage = lazy(() => import('./pages/FavoritosPage'));
+const MascotasPage = lazy(() => import('./pages/MascotasPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+
+const AdminLayout = lazy(() => import('./components/layout/AdminLayout'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const ProductManagementPage = lazy(() => import('./pages/admin/ProductManagementPage'));
+const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage'));
+const OrderManagementPage = lazy(() => import('./pages/admin/OrderManagementPage'));
+const ReportsPage = lazy(() => import('./pages/admin/ReportsPage'));
+const SettingsPage = lazy(() => import('./pages/admin/SettingsPage'));
+
+const priv = (element) => <RequireAuth>{element}</RequireAuth>;
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <Router>
-        <CartProvider>
-          <CssBaseline />
-          <Navbar />
-          <Box component="main" sx={{ p: 3, mt: '64px' }}> {/* Add margin top to avoid content being hidden behind a fixed Navbar */}
-            <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/productos" element={<ProductsPage />} />
-          <Route path="/productos/:id" element={<ProductoDetallePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/registro" element={<RegistroPage />} />
-          <Route path="/carrito" element={<CarritoPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/pedido-confirmado/:pedidoId" element={<OrderConfirmationPage />} />
-          <Route path="/boleta/:id" element={<BoletaPage />} />
-          <Route path="/mis-compras" element={<MisComprasPage />} />
-          <Route path="/mis-boletas" element={<MisBoletasPage />} />
-          <Route path="/favoritos" element={<FavoritosPage />} />
-          <Route path="/mascotas" element={<MascotasPage />} />
+      <CssBaseline />
+      {/* reducedMotion="user": si el sistema pide menos movimiento, se omiten los desplazamientos. */}
+      <MotionConfig reducedMotion="user">
+        <BrowserRouter>
+          <ToastProvider>
+            <AuthProvider>
+              <CartProvider>
+                <FavoritesProvider>
+                  <ScrollToTop />
+                  <Routes>
+                    <Route element={<StoreLayout />}>
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/productos" element={<ProductsPage />} />
+                      <Route path="/productos/:id" element={<ProductoDetallePage />} />
+                      <Route path="/carrito" element={priv(<CarritoPage />)} />
+                      <Route path="/checkout" element={priv(<CheckoutPage />)} />
+                      <Route path="/pedido-confirmado/:pedidoId" element={priv(<OrderConfirmationPage />)} />
+                      <Route path="/boleta/:id" element={priv(<BoletaPage />)} />
+                      <Route path="/mis-compras" element={priv(<MisComprasPage />)} />
+                      <Route path="/mis-boletas" element={priv(<MisBoletasPage />)} />
+                      <Route path="/favoritos" element={priv(<FavoritosPage />)} />
+                      <Route path="/mascotas" element={priv(<MascotasPage />)} />
+                      <Route path="*" element={<NotFoundPage />} />
+                    </Route>
 
-          {/* Admin Routes with Admin Theme */}
-          <Route path="/admin" element={<AdminRoute><AdminLayout><AdminDashboard /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/productos" element={<AdminRoute><AdminLayout><ProductManagementPage /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/usuarios" element={<AdminRoute><AdminLayout><UserManagementPage /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/pedidos" element={<AdminRoute><AdminLayout><OrderManagementPage /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/reportes" element={<AdminRoute><AdminLayout><ReportsPage /></AdminLayout></AdminRoute>} />
-            <Route path="/admin/configuracion" element={<AdminRoute><AdminLayout><SettingsPage /></AdminLayout></AdminRoute>} />
+                    <Route element={<AuthLayout />}>
+                      <Route path="/login" element={<LoginPage />} />
+                      <Route path="/registro" element={<RegistroPage />} />
+                    </Route>
 
-
-            {/* Add other routes here */}
-          </Routes>
-        </Box>
-        <Chatbot />
-        {/* <Footer /> */}
-      </CartProvider>
-    </Router>
+                    <Route
+                      path="/admin"
+                      element={
+                        <RequireAdmin>
+                          <React.Suspense fallback={null}>
+                            <AdminLayout />
+                          </React.Suspense>
+                        </RequireAdmin>
+                      }
+                    >
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="productos" element={<ProductManagementPage />} />
+                      <Route path="pedidos" element={<OrderManagementPage />} />
+                      <Route path="usuarios" element={<UserManagementPage />} />
+                      <Route path="reportes" element={<ReportsPage />} />
+                      <Route path="configuracion" element={<SettingsPage />} />
+                    </Route>
+                  </Routes>
+                </FavoritesProvider>
+              </CartProvider>
+            </AuthProvider>
+          </ToastProvider>
+        </BrowserRouter>
+      </MotionConfig>
     </ThemeProvider>
   );
 }

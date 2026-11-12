@@ -1,474 +1,113 @@
 import React, { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { Alert, Box, Button, CircularProgress, TextField, Typography } from '@mui/material';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import authService from '../services/authService';
-import { 
-  Box, 
-  TextField, 
-  Button, 
-  Typography, 
-  Container, 
-  Alert, 
-  InputAdornment, 
-  IconButton,
-  Paper,
-  Fade,
-  Divider,
-  CircularProgress
-} from '@mui/material';
-import { 
-  Visibility, 
-  VisibilityOff, 
-  Email, 
-  Lock,
-  Person,
-  Pets,
-  HowToRegOutlined
-} from '@mui/icons-material';
+import { errorMessage } from '../config/api';
+import PasswordField from '../components/ui/PasswordField';
+import { color } from '../theme/tokens';
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD = 8; // mismo mínimo que valida el backend
+
+const validate = ({ nombre, apellido, email, password }) => ({
+  nombre: nombre.trim() ? '' : 'Escribe tu nombre.',
+  apellido: apellido.trim() ? '' : 'Escribe tu apellido.',
+  email: !email.trim() ? 'Escribe tu correo.' : EMAIL.test(email.trim()) ? '' : 'Ese correo no parece válido.',
+  password: password.length >= MIN_PASSWORD ? '' : `Usa al menos ${MIN_PASSWORD} caracteres.`,
+});
 
 const RegistroPage = () => {
-  const [nombre, setNombre] = useState('');
-  const [apellido, setApellido] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { user, login } = useAuth();
+  const { notify } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from;
 
-  const handleClickShowPassword = () => setShowPassword((show) => !show);
+  const [form, setForm] = useState({ nombre: '', apellido: '', email: '', password: '' });
+  const [touched, setTouched] = useState({});
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleMouseDownPassword = (event) => {
-    event.preventDefault();
-  };
+  if (user && !loading) return <Navigate to={from || '/'} replace />;
+
+  const errors = validate(form);
+  const field = (name) => ({
+    id: name,
+    name,
+    value: form[name],
+    fullWidth: true,
+    onChange: (event) => setForm((prev) => ({ ...prev, [name]: event.target.value })),
+    onBlur: () => setTouched((prev) => ({ ...prev, [name]: true })),
+    error: !!touched[name] && !!errors[name],
+  });
+  const hint = (name, fallback = ' ') => (touched[name] && errors[name] ? errors[name] : fallback);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setTouched({ nombre: true, apellido: true, email: true, password: true });
     setError('');
-    setSuccess('');
+    if (Object.values(errors).some(Boolean)) return;
+
     setLoading(true);
-
-    if (!nombre || !apellido || !email || !password) {
-      setError('Todos los campos son obligatorios.');
-      setLoading(false);
-      return;
-    }
-
     try {
-      await authService.register({ nombre, apellido, email, password });
-      setSuccess('¡Registro exitoso! Ahora puedes iniciar sesión.');
-      setTimeout(() => navigate('/login'), 2000);
-    } catch (err) {
-      setError('Error en el registro. Es posible que el correo ya esté en uso.');
-      console.error(err);
+      const session = await authService.register({ nombre: form.nombre.trim(), apellido: form.apellido.trim(), email: form.email.trim(), password: form.password });
+      if (session?.token) {
+        login(session);
+        notify('Cuenta creada. Registra a tu mascota para recibir recomendaciones.');
+        navigate(from || '/mascotas', { replace: true });
+      } else {
+        notify('Cuenta creada. Ya puedes iniciar sesión.');
+        navigate('/login', { replace: true });
+      }
+    } catch (registerError) {
+      setError(errorMessage(registerError, 'No pudimos crear la cuenta. Es posible que el correo ya esté en uso.'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#e6e5c9',
-        position: 'relative',
-        overflow: 'hidden',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: '-50%',
-          right: '-50%',
-          width: '100%',
-          height: '100%',
-          background: '#e6e5c9',
-          borderRadius: '50%'
-        },
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          bottom: '-50%',
-          left: '-50%',
-          width: '100%',
-          height: '100%',
-          background: '#e6e5c9',
-          borderRadius: '50%'
-        }
-      }}
-    >
-      <Container component="main" maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
-        <Fade in={true} timeout={800}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 4,
-              borderRadius: '24px',
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(20px)',
-              boxShadow: '0 8px 32px rgba(93, 78, 55, 0.12)',
-              border: '1px solid rgba(212, 165, 116, 0.2)'
-            }}
-          >
-            {/* Logo y título */}
-            <Box sx={{ textAlign: 'center', mb: 4 }}>
-              <Box
-                sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 80,
-                  height: 80,
-                  borderRadius: '20px',
-                  background: 'linear-gradient(135deg, #D4A574 0%, #A8B5A0 100%)',
-                  boxShadow: '0 8px 24px rgba(212, 165, 116, 0.3)',
-                  mb: 2,
-                  animation: 'float 3s ease-in-out infinite'
-                }}
-              >
-                <Pets sx={{ fontSize: 40, color: '#FFFFFF' }} />
-              </Box>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 700,
-                  color: '#5D4E37',
-                  mb: 1,
-                  background: 'linear-gradient(135deg, #D4A574 0%, #8A7B5D 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text'
-                }}
-              >
-                ¡Únete a nosotros!
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#7D6B5D' }}>
-                Crea tu cuenta en Patitas y Sabores
-              </Typography>
-            </Box>
+    <>
+      <Typography variant="h2" component="h1">
+        Crea tu cuenta en <em>un minuto</em>.
+      </Typography>
+      <Typography color="text.secondary" sx={{ mt: 1.5, mb: 4 }}>
+        Después podrás registrar a tu mascota y recibir recomendaciones a su medida.
+      </Typography>
 
-            {/* Formulario */}
-            <Box component="form" onSubmit={handleSubmit} noValidate>
-              {/* Nombre y Apellido en fila */}
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                <TextField
-                  required
-                  fullWidth
-                  id="nombre"
-                  label="Nombre"
-                  name="nombre"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Person sx={{ color: '#D4A574' }} />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '12px',
-                      backgroundColor: 'rgba(248, 246, 240, 0.5)',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        backgroundColor: 'rgba(248, 246, 240, 0.8)',
-                      },
-                      '&.Mui-focused': {
-                        backgroundColor: '#FFFFFF',
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#D4A574',
-                          borderWidth: '2px'
-                        }
-                      }
-                    },
-                    '& .MuiInputLabel-root.Mui-focused': {
-                      color: '#D4A574'
-                    }
-                  }}
-                />
-                <TextField
-                  required
-                  fullWidth
-                  id="apellido"
-                  label="Apellido"
-                  name="apellido"
-                  value={apellido}
-                  onChange={(e) => setApellido(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Person sx={{ color: '#D4A574' }} />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '12px',
-                      backgroundColor: 'rgba(248, 246, 240, 0.5)',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        backgroundColor: 'rgba(248, 246, 240, 0.8)',
-                      },
-                      '&.Mui-focused': {
-                        backgroundColor: '#FFFFFF',
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#D4A574',
-                          borderWidth: '2px'
-                        }
-                      }
-                    },
-                    '& .MuiInputLabel-root.Mui-focused': {
-                      color: '#D4A574'
-                    }
-                  }}
-                />
-              </Box>
-
-              {/* Email */}
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="email"
-                label="Correo Electrónico"
-                name="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Email sx={{ color: '#A8B5A0' }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
-                    backgroundColor: 'rgba(248, 246, 240, 0.5)',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      backgroundColor: 'rgba(248, 246, 240, 0.8)',
-                    },
-                    '&.Mui-focused': {
-                      backgroundColor: '#FFFFFF',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#A8B5A0',
-                        borderWidth: '2px'
-                      }
-                    }
-                  },
-                  '& .MuiInputLabel-root.Mui-focused': {
-                    color: '#A8B5A0'
-                  }
-                }}
-              />
-
-              {/* Password */}
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="Contraseña"
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Lock sx={{ color: '#7D6B5D' }} />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={handleClickShowPassword}
-                        onMouseDown={handleMouseDownPassword}
-                        edge="end"
-                        sx={{
-                          color: '#7D6B5D',
-                          '&:hover': {
-                            color: '#5D4E37',
-                            backgroundColor: 'rgba(212, 165, 116, 0.1)'
-                          }
-                        }}
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
-                    backgroundColor: 'rgba(248, 246, 240, 0.5)',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      backgroundColor: 'rgba(248, 246, 240, 0.8)',
-                    },
-                    '&.Mui-focused': {
-                      backgroundColor: '#FFFFFF',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#7D6B5D',
-                        borderWidth: '2px'
-                      }
-                    }
-                  },
-                  '& .MuiInputLabel-root.Mui-focused': {
-                    color: '#7D6B5D'
-                  }
-                }}
-              />
-
-              {/* Error Alert */}
-              {error && (
-                <Fade in={!!error}>
-                  <Alert 
-                    severity="error" 
-                    sx={{ 
-                      mt: 2,
-                      borderRadius: '12px',
-                      backgroundColor: 'rgba(211, 47, 47, 0.1)',
-                      border: '1px solid rgba(211, 47, 47, 0.3)',
-                      '& .MuiAlert-icon': {
-                        color: '#d32f2f'
-                      }
-                    }}
-                  >
-                    {error}
-                  </Alert>
-                </Fade>
-              )}
-
-              {/* Success Alert */}
-              {success && (
-                <Fade in={!!success}>
-                  <Alert 
-                    severity="success" 
-                    sx={{ 
-                      mt: 2,
-                      borderRadius: '12px',
-                      backgroundColor: 'rgba(46, 125, 50, 0.1)',
-                      border: '1px solid rgba(46, 125, 50, 0.3)',
-                      '& .MuiAlert-icon': {
-                        color: '#2e7d32'
-                      }
-                    }}
-                  >
-                    {success}
-                  </Alert>
-                </Fade>
-              )}
-
-              {/* Register Button */}
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                disabled={loading}
-                sx={{
-                  mt: 3,
-                  mb: 2,
-                  py: 1.5,
-                  borderRadius: '12px',
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  background: 'linear-gradient(135deg, #D4A574 0%, #A8B5A0 100%)',
-                  color: '#FFFFFF',
-                  boxShadow: '0 4px 16px rgba(212, 165, 116, 0.3)',
-                  textTransform: 'none',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 6px 24px rgba(212, 165, 116, 0.4)',
-                    background: 'linear-gradient(135deg, #B8955D 0%, #8A9683 100%)'
-                  },
-                  '&:active': {
-                    transform: 'translateY(0)'
-                  },
-                  '&:disabled': {
-                    background: 'linear-gradient(135deg, #D4A574 0%, #A8B5A0 100%)',
-                    opacity: 0.6
-                  }
-                }}
-                startIcon={loading ? <CircularProgress size={20} sx={{ color: '#FFFFFF' }} /> : <HowToRegOutlined />}
-              >
-                {loading ? 'Creando cuenta...' : 'Registrarse'}
-              </Button>
-
-              {/* Divider */}
-              <Divider sx={{ my: 3, color: '#7D6B5D' }}>
-                <Typography variant="body2" sx={{ color: '#7D6B5D', px: 2 }}>
-                  ¿Ya tienes cuenta?
-                </Typography>
-              </Divider>
-
-              {/* Login Link */}
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="body2" sx={{ color: '#7D6B5D' }}>
-                  ¿Ya tienes una cuenta?{' '}
-                  <Box
-                    component={RouterLink}
-                    to="/login"
-                    sx={{
-                      color: '#D4A574',
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        color: '#B8955D',
-                        textDecoration: 'underline'
-                      }
-                    }}
-                  >
-                    Inicia sesión aquí
-                  </Box>
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-        </Fade>
-
-        {/* Footer Text */}
-        <Box sx={{ mt: 3, textAlign: 'center' }}>
-          <Typography variant="caption" sx={{ color: '#7D6B5D' }}>
-            Al registrarte, aceptas nuestros{' '}
-            <Box
-              component={RouterLink}
-              to="/terminos"
-              sx={{
-                color: '#D4A574',
-                textDecoration: 'none',
-                '&:hover': {
-                  textDecoration: 'underline'
-                }
-              }}
-            >
-              Términos y Condiciones
-            </Box>
-          </Typography>
+      <Box component="form" onSubmit={handleSubmit} noValidate sx={{ display: 'grid', gap: 2 }}>
+        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
+          <TextField {...field('nombre')} label="Nombre" autoComplete="given-name" autoFocus helperText={hint('nombre')} />
+          <TextField {...field('apellido')} label="Apellido" autoComplete="family-name" helperText={hint('apellido')} />
         </Box>
-      </Container>
+        <TextField {...field('email')} label="Correo electrónico" type="email" autoComplete="email" helperText={hint('email')} />
+        <PasswordField {...field('password')} label="Contraseña" autoComplete="new-password" helperText={hint('password', `Mínimo ${MIN_PASSWORD} caracteres.`)} />
 
-      {/* Animación float para el logo */}
-      <style>
-        {`
-          @keyframes float {
-            0%, 100% {
-              transform: translateY(0);
-            }
-            50% {
-              transform: translateY(-10px);
-            }
-          }
-        `}
-      </style>
-    </Box>
+        <AnimatePresence>
+          {error && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.22 }}>
+              <Alert severity="error" role="alert">
+                {error}
+              </Alert>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <Button type="submit" variant="contained" size="large" fullWidth disabled={loading} sx={{ mt: 0.5 }} startIcon={loading ? <CircularProgress size={18} color="inherit" /> : null}>
+          {loading ? 'Creando cuenta…' : 'Crear cuenta'}
+        </Button>
+      </Box>
+
+      <Typography sx={{ mt: 4, color: 'text.secondary' }}>
+        ¿Ya tienes cuenta?{' '}
+        <Box component={Link} to="/login" state={location.state} sx={{ color: color.olive[700], fontWeight: 650, '&:hover': { textDecoration: 'underline', textUnderlineOffset: 3 } }}>
+          Iniciar sesión
+        </Box>
+      </Typography>
+    </>
   );
 };
 

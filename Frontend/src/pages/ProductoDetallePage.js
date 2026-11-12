@@ -1,605 +1,254 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import {
-  Container,
-  Card,
-  CardMedia,
-  Typography,
-  Button,
-  Box,
-  CircularProgress,
-  Alert,
-  Fade,
-  Zoom,
-  Grow,
-  Breadcrumbs,
-  Chip,
-  Divider,
-  IconButton,
-  Tooltip,
-  Paper,
-  Snackbar
-} from '@mui/material';
-import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
-import PetsIcon from '@mui/icons-material/Pets';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import HomeIcon from '@mui/icons-material/Home';
-import StoreIcon from '@mui/icons-material/Store';
-import InventoryIcon from '@mui/icons-material/Inventory';
-import LocalOfferIcon from '@mui/icons-material/LocalOffer';
-import CategoryIcon from '@mui/icons-material/Category';
-import NutritionIcon from '@mui/icons-material/Restaurant';
-import HealthIcon from '@mui/icons-material/Healing';
-import WarningIcon from '@mui/icons-material/Warning';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import React, { useEffect, useState } from 'react';
+import { Box, Button, Container, IconButton, Skeleton, Tooltip, Typography } from '@mui/material';
+import { Link, useParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
+import FavoriteRoundedIcon from '@mui/icons-material/FavoriteRounded';
+import FavoriteBorderRoundedIcon from '@mui/icons-material/FavoriteBorderRounded';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import productService from '../services/productService';
-import { useAuth } from '../context/AuthContext';
-import { useCart } from '../context/CartContext';
-import { useFavorites } from '../context/FavoritesContext';
+import { assetUrl } from '../config/api';
+import { whatsappUrl } from '../config/site';
 import { formatCurrency } from '../utils/formatCurrency';
-import { Link as RouterLink } from 'react-router-dom';
+import { parseDescripcion, splitNombre, stockStatus } from '../lib/productCopy';
+import { color, ease, radius } from '../theme/tokens';
+import PageHeader from '../components/ui/PageHeader';
+import EmptyState from '../components/ui/EmptyState';
+import SmartImage from '../components/ui/SmartImage';
+import StatusChip from '../components/ui/StatusChip';
+import QuantityStepper from '../components/ui/QuantityStepper';
+import SectionHeading from '../components/ui/SectionHeading';
+import { Stagger, StaggerItem } from '../components/ui/motion';
+import ProductCard, { ProductGrid } from '../components/product/ProductCard';
+import { CopyBlocks, CopySection } from '../components/product/ProductCopy';
+import { useProductActions } from '../components/product/useProductActions';
 
+const DetailSkeleton = () => (
+  <Container maxWidth="lg" sx={{ pt: { xs: 3, md: 5 } }}>
+    <Skeleton width={220} height={20} sx={{ mb: 4 }} />
+    <Box sx={{ display: 'grid', gap: { xs: 4, md: 8 }, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+      <Skeleton variant="rounded" sx={{ aspectRatio: '1', height: 'auto', borderRadius: `${radius.xl}px` }} />
+      <Box>
+        <Skeleton width={120} height={18} />
+        <Skeleton width="80%" height={56} />
+        <Skeleton width="50%" height={28} />
+        <Skeleton width={140} height={48} sx={{ mt: 3 }} />
+        <Skeleton variant="rounded" height={52} sx={{ mt: 3, borderRadius: 999 }} />
+        <Skeleton height={20} sx={{ mt: 4 }} />
+        <Skeleton height={20} />
+        <Skeleton width="70%" height={20} />
+      </Box>
+    </Box>
+  </Container>
+);
 
 const ProductoDetallePage = () => {
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
   const { id } = useParams();
-  const { user } = useAuth();
-  const { addProductToCart } = useCart();
-  const { isFavorite, toggleFavorite } = useFavorites();
-  const navigate = useNavigate();
+  const [product, setProduct] = useState(null);
+  const [related, setRelated] = useState([]);
+  const [status, setStatus] = useState('loading');
+  const [quantity, setQuantity] = useState(1);
+  const [attempt, setAttempt] = useState(0);
+  const { addToCart, adding, favorite, toggleFav } = useProductActions(product);
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        setLoading(true);
-        const data = await productService.getProductoById(id);
-        if (data) setProduct(data);
-        else setError('Producto no encontrado.');
-      } catch (err) {
-        console.error(err);
-        setError('Error al cargar el producto.');
-      } finally {
-        setLoading(false);
-      }
+    let cancelled = false;
+    setStatus('loading');
+    setQuantity(1);
+    productService
+      .getProductoById(id)
+      .then((data) => {
+        if (cancelled) return;
+        setProduct(data);
+        setStatus(data ? 'ready' : 'missing');
+      })
+      .catch(() => !cancelled && setStatus('error'));
+    return () => {
+      cancelled = true;
     };
-    fetchProduct();
-  }, [id]);
+  }, [id, attempt]);
 
-  const handleAddToCart = () => {
-    if (!user) {
-      setSnackbarMessage('Inicia sesión para agregar productos al carrito');
-      setSnackbarOpen(true);
-      return;
-    }
-    if (product.stock === 0) {
-      setSnackbarMessage('Producto agotado');
-      setSnackbarOpen(true);
-      return;
-    }
-    addProductToCart(product.productoID, 1);
-    setSnackbarMessage('¡Producto agregado al carrito!');
-    setSnackbarOpen(true);
-  };
+  useEffect(() => {
+    if (!product) return undefined;
+    let cancelled = false;
+    productService
+      .getProductos()
+      .then((all) => {
+        if (cancelled) return;
+        const others = all.filter((p) => p.productoID !== product.productoID);
+        const sameCategory = others.filter((p) => p.categoriaNombre === product.categoriaNombre);
+        setRelated([...sameCategory, ...others.filter((p) => !sameCategory.includes(p))].slice(0, 4));
+      })
+      .catch(() => setRelated([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [product]);
 
-  const handleFavoriteToggle = () => {
-    if (!user) {
-      setSnackbarMessage('Inicia sesión para guardar favoritos');
-      setSnackbarOpen(true);
-      return;
-    }
-    toggleFavorite(product.productoID);
-    setSnackbarMessage(isProdFavorite ? 'Eliminado de favoritos' : '¡Agregado a favoritos!');
-    setSnackbarOpen(true);
-  };
+  useEffect(() => {
+    if (product) document.title = `${splitNombre(product.nombre).titulo} · Patitas y Sabores`;
+    return () => {
+      document.title = 'Patitas y Sabores · Snacks naturales para perros y gatos';
+    };
+  }, [product]);
 
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
-  };
+  if (status === 'loading') return <DetailSkeleton />;
 
-  if (loading) {
+  if (status === 'missing' || status === 'error') {
     return (
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          minHeight: '60vh',
-          flexDirection: 'column',
-          gap: 2
-        }}
-      >
-        <CircularProgress 
-          size={60} 
-          sx={{ 
-            color: '#5D4E37',
-            animation: 'pulse 1.5s ease-in-out infinite'
-          }} 
-        />
-        <Typography variant="h6" sx={{ color: '#5D4E37' }}>
-          Cargando producto...
-        </Typography>
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container sx={{ py: 4 }}>
-        <Fade in={true} timeout={800}>
-          <Box sx={{ textAlign: 'center', maxWidth: 500, mx: 'auto', py: 8 }}>
-            <PetsIcon sx={{ fontSize: 80, color: 'rgba(93, 78, 55, 0.3)', mb: 2 }} />
-            <Alert 
-              severity="error" 
-              sx={{ 
-                mb: 3,
-                borderRadius: '12px',
-                '& .MuiAlert-message': {
-                  textAlign: 'center',
-                  width: '100%'
-                }
-              }}
-            >
-              {error}
-            </Alert>
-            <Button 
-              component={RouterLink} 
-              to="/productos" 
-              variant="contained"
-              sx={{
-                backgroundColor: '#5D4E37',
-                color: '#FFFFFF',
-                fontWeight: 600,
-                px: 4,
-                py: 1.2,
-                borderRadius: '12px',
-                '&:hover': {
-                  backgroundColor: '#3D2E1F',
-                  transform: 'translateY(-2px)',
-                }
-              }}
-            >
-              Volver al catálogo
+      <EmptyState
+        title={status === 'missing' ? 'No encontramos este producto' : 'No pudimos cargar el producto'}
+        description={status === 'missing' ? 'Puede que ya no esté disponible. Mira el resto del catálogo.' : 'Revisa tu conexión e inténtalo otra vez.'}
+        action={
+          status === 'error' ? (
+            <Button onClick={() => setAttempt((n) => n + 1)} variant="contained" startIcon={<RefreshRoundedIcon />}>
+              Reintentar
             </Button>
-          </Box>
-        </Fade>
-      </Container>
+          ) : (
+            <Button component={Link} to="/productos" variant="contained">
+              Ver catálogo
+            </Button>
+          )
+        }
+      />
     );
   }
 
-  if (!product) return null;
-
-  const isProdFavorite = isFavorite(product.productoID);
-
-  // 🧠 Función para separar las secciones
-  const parseDescripcion = (text) => {
-    const sections = [
-      'Perfil del producto',
-      'Composición funcional',
-      'Beneficios principales',
-      'Recomendado para',
-      'Evitar en',
-    ];
-
-    const parsed = {};
-    let current = null;
-    text.split('\n').forEach((line) => {
-      const trimmed = line.trim();
-      if (!trimmed) return;
-      const found = sections.find((s) =>
-        trimmed.toLowerCase().startsWith(s.toLowerCase())
-      );
-      if (found) {
-        current = found;
-        parsed[current] = '';
-      } else if (current) {
-        parsed[current] += trimmed + '\n';
-      }
-    });
-    return parsed;
-  };
-
-  const parsed = parseDescripcion(product.descripcion);
-
-  const renderSection = (title, content, icon, color = '#5D4E37') => (
-    content && (
-      <Grow in={true} timeout={800}>
-        <Paper 
-          sx={{ 
-            p: 3, 
-            mb: 3, 
-            borderRadius: '16px',
-            background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F6F0 100%)',
-            boxShadow: '0 4px 20px rgba(93, 78, 55, 0.06)',
-            border: '1px solid rgba(212, 165, 116, 0.15)',
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              boxShadow: '0 6px 25px rgba(93, 78, 55, 0.1)',
-              transform: 'translateY(-2px)',
-            }
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 40,
-                height: 40,
-                borderRadius: '10px',
-                backgroundColor: `${color}15`,
-                color: color,
-                mr: 2,
-                flexShrink: 0
-              }}
-            >
-              {icon}
-            </Box>
-            <Typography
-              variant="h5"
-              sx={{
-                color: color,
-                fontWeight: 700,
-                lineHeight: 1.2
-              }}
-            >
-              {title}
-            </Typography>
-          </Box>
-          <Typography
-            variant="body1"
-            sx={{
-              whiteSpace: 'pre-line',
-              lineHeight: 1.6,
-              color: '#7D6B5D',
-              pl: 6
-            }}
-          >
-            {content.trim()}
-          </Typography>
-        </Paper>
-      </Grow>
-    )
-  );
+  const { titulo, detalle } = splitNombre(product.nombre);
+  const { intro, sections } = parseDescripcion(product.descripcion);
+  const stock = stockStatus(product.stock);
+  const soldOut = stock.key === 'out';
+  const perfil = sections.find((s) => s.key === 'perfil');
+  const lead = perfil?.body || intro;
+  const rest = sections.filter((s) => s.key !== 'perfil');
 
   return (
-    <Box sx={{ 
-      position: 'relative', 
-      minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #F8F6F0 0%, #FAF9F6 50%, #FFFFFF 100%)',
-      py: 3
-    }}>
-      <Container>
-        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
-  <Link
-    component={RouterLink}
-    to="/"
-    underline="hover"
-    sx={{ display: 'flex', alignItems: 'center', color: '#7D6B5D', textDecoration: 'none' }}
-  >
-    <HomeIcon sx={{ mr: 0.5, fontSize: 20 }} />
-    Inicio
-  </Link>
-  <Link
-    component={RouterLink}
-    to="/productos"
-    underline="hover"
-    sx={{ display: 'flex', alignItems: 'center', color: '#7D6B5D', textDecoration: 'none' }}
-  >
-    <StoreIcon sx={{ mr: 0.5, fontSize: 20 }} />
-    Productos
-  </Link>
-  <Typography
-    sx={{ display: 'flex', alignItems: 'center', color: '#5D4E37', fontWeight: 600 }}
-  >
-    <PetsIcon sx={{ mr: 0.5, fontSize: 20 }} />
-    {product.nombre}
-  </Typography>
-</Breadcrumbs>
+    <>
+      <Container maxWidth="lg" sx={{ pt: { xs: 3, md: 5 } }}>
+        <PageHeader
+          sx={{ mb: { xs: 2.5, md: 4 } }}
+          crumbs={[
+            { label: 'Inicio', to: '/' },
+            { label: 'Catálogo', to: '/productos' },
+          ]}
+          current={titulo}
+          title=""
+        />
 
-        {/* Back Button */}
-        <Fade in={true} timeout={600}>
-          <Button
-            startIcon={<ArrowBackIcon />}
-            onClick={() => navigate(-1)}
-            sx={{
-              mb: 3,
-              color: '#5D4E37',
-              fontWeight: 600,
-              '&:hover': {
-                backgroundColor: 'rgba(93, 78, 55, 0.04)',
-              }
-            }}
+        <Box sx={{ display: 'grid', gap: { xs: 4, md: 8 }, gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(0, 1fr)' }, alignItems: 'start' }}>
+          <Box
+            component={motion.div}
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, ease: ease.out }}
+            sx={{ position: { md: 'sticky' }, top: { md: 'calc(var(--nav-h) + 24px)' } }}
           >
-            Volver
-          </Button>
-        </Fade>
-
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: { xs: 'column', lg: 'row' },
-            alignItems: 'flex-start',
-            justifyContent: 'center',
-            gap: 6,
-          }}
-        >
-          {/* IZQUIERDA - Imagen e información básica */}
-          <Box sx={{ flex: 1, maxWidth: 600 }}>
-            <Fade in={true} timeout={800}>
-              <Card 
-                sx={{ 
-                  borderRadius: '20px', 
-                  boxShadow: '0 8px 40px rgba(93, 78, 55, 0.12)',
-                  border: '1px solid rgba(212, 165, 116, 0.2)',
-                  overflow: 'hidden',
-                  mb: 4
-                }}
-              >
-                <Box sx={{ position: 'relative' }}>
-                  <CardMedia
-                    component="img"
-                    image={
-                      product.imagenURL
-                        ? `${process.env.REACT_APP_API_URL || 'http://localhost:5288'}${product.imagenURL}`
-                        : 'https://via.placeholder.com/400x300.png?text=Patitas+y+Sabores'
-                    }
-                    alt={product.nombre}
-                    onLoad={() => setImageLoaded(true)}
-                    sx={{
-                      width: '100%',
-                      height: 400,
-                      objectFit: 'contain',
-                      backgroundColor: '#f8f7f4',
-                      transition: 'transform 0.6s ease',
-                      transform: imageLoaded ? 'scale(1)' : 'scale(0.95)',
-                      opacity: imageLoaded ? 1 : 0.7,
-                      '&:hover': {
-                        transform: 'scale(1.02)',
-                      }
-                    }}
-                  />
-                  
-                  {/* Favorite Button */}
-                  {user && (
-                    <Tooltip title={isProdFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}>
-                      <IconButton
-                        onClick={handleFavoriteToggle}
-                        sx={{
-                          position: 'absolute',
-                          top: 16,
-                          right: 16,
-                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                          backdropFilter: 'blur(10px)',
-                          width: 48,
-                          height: 48,
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                          transition: 'all 0.3s ease',
-                          '&:hover': {
-                            backgroundColor: '#FFFFFF',
-                            transform: 'scale(1.1)',
-                            boxShadow: '0 6px 20px rgba(0,0,0,0.2)',
-                          },
-                        }}
-                      >
-                        {isProdFavorite ? (
-                          <FavoriteIcon sx={{ color: '#ff6b6b', fontSize: 24 }} />
-                        ) : (
-                          <FavoriteBorderIcon sx={{ color: '#5D4E37', fontSize: 24 }} />
-                        )}
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Box>
-
-                {/* Información básica */}
-                <Box sx={{ p: 4 }}>
-                  <Typography 
-                    variant="h3" 
-                    component="h1" 
-                    sx={{ 
-                      fontWeight: 800,
-                      color: '#5D4E37',
-                      mb: 2,
-                      lineHeight: 1.2
-                    }}
-                  >
-                    {product.nombre}
-                  </Typography>
-
-                  <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 3 }}>
-                    <Chip
-                      icon={<CategoryIcon />}
-                      label={product.categoriaNombre}
-                      variant="outlined"
-                      sx={{
-                        borderColor: '#A8B5A0',
-                        color: '#5D4E37',
-                        fontWeight: 600,
-                        backgroundColor: 'rgba(168, 181, 160, 0.1)'
-                      }}
-                    />
-                    
-                    <Chip
-                      icon={<InventoryIcon />}
-                      label={product.stock > 0 ? `Stock: ${product.stock}` : 'Agotado'}
-                      color={product.stock > 0 ? 'success' : 'error'}
-                      variant="outlined"
-                      sx={{ fontWeight: 600 }}
-                    />
-                  </Box>
-
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                    <LocalOfferIcon sx={{ fontSize: 32, color: '#D4A574', mr: 2 }} />
-                    <Typography 
-                      variant="h2" 
-                      sx={{ 
-                        fontWeight: 800,
-                        color: '#5D4E37',
-                        background: 'linear-gradient(135deg, #5D4E37 0%, #8A7B5D 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text',
-                      }}
-                    >
-                      {formatCurrency(product.precio)}
-                    </Typography>
-                  </Box>
-
-                  {/* Botones de acción */}
-                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                    <Button
-                      variant="contained"
-                      size="large"
-                      startIcon={<AddShoppingCartIcon />}
-                      onClick={handleAddToCart}
-                      disabled={!user || product.stock === 0}
-                      sx={{
-                        flex: 1,
-                        minWidth: 200,
-                        backgroundColor: '#5D4E37',
-                        color: '#FFFFFF',
-                        fontWeight: 700,
-                        py: 1.5,
-                        fontSize: '1.1rem',
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 16px rgba(93, 78, 55, 0.3)',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          backgroundColor: '#3D2E1F',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 6px 20px rgba(93, 78, 55, 0.4)',
-                        },
-                        '&.Mui-disabled': {
-                          backgroundColor: 'rgba(93, 78, 55, 0.3)',
-                        }
-                      }}
-                    >
-                      {!user ? 'Inicia sesión' : product.stock === 0 ? 'Agotado' : 'Agregar al Carrito'}
-                    </Button>
-
-                    <Tooltip title={!user ? "Inicia sesión para guardar favoritos" : ""}>
-                      <span>
-                        <Button
-                          variant="outlined"
-                          size="large"
-                          startIcon={isProdFavorite ? <FavoriteIcon /> : <FavoriteBorderIcon />}
-                          onClick={handleFavoriteToggle}
-                          disabled={!user}
-                          sx={{
-                            borderColor: '#D4A574',
-                            color: '#5D4E37',
-                            fontWeight: 600,
-                            py: 1.5,
-                            borderRadius: '12px',
-                            transition: 'all 0.3s ease',
-                            '&:hover': {
-                              borderColor: '#5D4E37',
-                              backgroundColor: 'rgba(93, 78, 55, 0.04)',
-                              transform: 'translateY(-2px)',
-                            },
-                            '&.Mui-disabled': {
-                              borderColor: 'rgba(212, 165, 116, 0.3)',
-                              color: 'rgba(93, 78, 55, 0.3)',
-                            }
-                          }}
-                        >
-                          Favorito
-                        </Button>
-                      </span>
-                    </Tooltip>
-                  </Box>
-                </Box>
-              </Card>
-            </Fade>
-
-            {/* Perfil del producto en la izquierda */}
-            {renderSection(
-              'Perfil del Producto', 
-              parsed['Perfil del producto'], 
-              <PetsIcon sx={{ fontSize: 20 }} />,
-              '#D4A574'
-            )}
+            <Box sx={{ position: 'relative', borderRadius: { xs: '28px', md: '40px 40px 40px 120px' }, bgcolor: color.sunken, overflow: 'hidden', '&:hover img': { transform: 'scale(1.05)' } }}>
+              <SmartImage src={assetUrl(product.imagenURL)} alt={product.nombre} ratio={1} fit="contain" blend eager sx={{ bgcolor: 'transparent' }} imgSx={{ p: { xs: 3, md: 6 } }} />
+              {stock.key !== 'ok' && <StatusChip label={stock.label} tone={stock.tone} sx={{ position: 'absolute', top: 20, left: 20 }} />}
+            </Box>
           </Box>
 
-          {/* DERECHA - Detalles del producto */}
-          <Box sx={{ flex: 1, maxWidth: 600 }}>
-            <Fade in={true} timeout={1000}>
-              <Box>
-                {renderSection(
-                  'Composición Funcional', 
-                  parsed['Composición funcional'], 
-                  <NutritionIcon sx={{ fontSize: 20 }} />,
-                  '#A8B5A0'
-                )}
-                
-                {renderSection(
-                  'Beneficios Principales', 
-                  parsed['Beneficios principales'], 
-                  <HealthIcon sx={{ fontSize: 20 }} />,
-                  '#4CAF50'
-                )}
-                
-                {renderSection(
-                  'Recomendado Para', 
-                  parsed['Recomendado para'], 
-                  <CheckCircleIcon sx={{ fontSize: 20 }} />,
-                  '#2196F3'
-                )}
-                
-                {renderSection(
-                  'Precauciones', 
-                  parsed['Evitar en'], 
-                  <WarningIcon sx={{ fontSize: 20 }} />,
-                  '#FF9800'
-                )}
+          <Stagger inView={false} stagger={0.06} delay={0.1}>
+            <StaggerItem>
+              {product.categoriaNombre && (
+                <Typography variant="overline" component="p" sx={{ color: color.olive[600], mb: 1 }}>
+                  {product.categoriaNombre}
+                </Typography>
+              )}
+              <Typography variant="h2" component="h1">
+                {titulo}
+              </Typography>
+              {detalle && (
+                <Typography sx={{ mt: 1, fontSize: '1.125rem', color: 'text.secondary' }}>{detalle}</Typography>
+              )}
+            </StaggerItem>
+
+            <StaggerItem>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 3 }}>
+                <Typography className="tabular" sx={{ fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1 }}>
+                  {formatCurrency(product.precio)}
+                </Typography>
+                <StatusChip label={soldOut ? 'Agotado' : stock.key === 'low' ? `Quedan ${product.stock}` : 'En stock'} tone={stock.tone} />
               </Box>
-            </Fade>
-          </Box>
+              <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.75 }}>
+                Precio con IGV incluido.
+              </Typography>
+            </StaggerItem>
+
+            <StaggerItem>
+              <Box sx={{ mt: 3.5, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5 }}>
+                <QuantityStepper value={quantity} onChange={setQuantity} max={Math.max(1, product.stock)} disabled={soldOut} />
+                <Button
+                  onClick={() => addToCart(quantity)}
+                  disabled={soldOut || adding}
+                  variant="contained"
+                  size="large"
+                  startIcon={<ShoppingBagOutlinedIcon />}
+                  sx={{ flex: { xs: '1 1 100%', sm: '1 1 220px' }, order: { xs: 3, sm: 0 } }}
+                >
+                  {soldOut ? 'Agotado' : adding ? 'Agregando…' : 'Agregar al carrito'}
+                </Button>
+                <Tooltip title={favorite ? 'Quitar de favoritos' : 'Guardar en favoritos'}>
+                  <IconButton
+                    onClick={toggleFav}
+                    aria-label={favorite ? 'Quitar de favoritos' : 'Guardar en favoritos'}
+                    aria-pressed={favorite}
+                    sx={{ width: 52, height: 52, ml: { xs: 'auto', sm: 0 }, border: `1px solid ${color.lineStrong}`, color: favorite ? color.danger.main : color.inkSoft, '&:hover': { color: color.danger.main } }}
+                  >
+                    <motion.span key={String(favorite)} initial={{ scale: 0.6 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 520, damping: 14 }} style={{ display: 'inline-flex' }}>
+                      {favorite ? <FavoriteRoundedIcon /> : <FavoriteBorderRoundedIcon />}
+                    </motion.span>
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Button
+                component="a"
+                href={whatsappUrl(`Hola, tengo una consulta sobre ${product.nombre}.`)}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="text"
+                size="small"
+                startIcon={<WhatsAppIcon fontSize="small" />}
+                sx={{ mt: 1.5, ml: -1, color: color.inkSoft }}
+              >
+                Consultar por WhatsApp
+              </Button>
+            </StaggerItem>
+
+            {lead && (
+              <StaggerItem>
+                <Box sx={{ mt: 4, pt: 4, borderTop: `1px solid ${color.line}`, fontSize: '1.0625rem', '& p': { fontSize: 'inherit' } }}>
+                  <CopyBlocks body={lead} />
+                </Box>
+              </StaggerItem>
+            )}
+
+            {rest.length > 0 && (
+              <StaggerItem>
+                <Box sx={{ mt: 4, display: 'grid', gap: 3.5 }}>
+                  {rest.map((section) => (
+                    <CopySection key={section.key} section={section} />
+                  ))}
+                </Box>
+              </StaggerItem>
+            )}
+          </Stagger>
         </Box>
       </Container>
 
-      {/* Snackbar para notificaciones */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          onClose={handleCloseSnackbar} 
-          severity="success"
-          sx={{ 
-            borderRadius: '12px',
-            fontWeight: 600,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-          }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-
-      {/* Custom CSS for animations */}
-      <style>
-        {`
-          @keyframes pulse {
-            0%, 100% {
-              opacity: 1;
-            }
-            50% {
-              opacity: 0.7;
-            }
-          }
-        `}
-      </style>
-    </Box>
+      {related.length > 0 && (
+        <Container maxWidth="lg" component="section" aria-labelledby="relacionados-titulo" sx={{ mt: { xs: 9, md: 14 } }}>
+          <SectionHeading id="relacionados-titulo" eyebrow="Sigue mirando" title="También le puede gustar" />
+          <ProductGrid>
+            {related.map((item) => (
+              <ProductCard key={item.productoID} product={item} />
+            ))}
+          </ProductGrid>
+        </Container>
+      )}
+    </>
   );
 };
 

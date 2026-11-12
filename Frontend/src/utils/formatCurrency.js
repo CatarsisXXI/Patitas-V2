@@ -1,17 +1,26 @@
-// /src/utils/formatCurrency.js
+const formatter = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' });
 
-/**
- * Formats a number as Peruvian Soles (S/.)
- * @param {number} amount - The amount to format.
- * @returns {string} - The formatted currency string, e.g., "S/ 120.50".
- */
+/** Formatea un monto en soles: 18.9 -> "S/ 18.90". */
 export const formatCurrency = (amount) => {
-  if (typeof amount !== 'number') {
-    return 'S/ 0.00';
-  }
-  // Intl.NumberFormat is the modern standard for currency formatting
-  return new Intl.NumberFormat('es-PE', {
-    style: 'currency',
-    currency: 'PEN',
-  }).format(amount);
+  const value = typeof amount === 'number' ? amount : Number(amount);
+  return formatter.format(Number.isFinite(value) ? value : 0);
+};
+
+const dateFormatter = new Intl.DateTimeFormat('es-PE', { day: 'numeric', month: 'long', year: 'numeric' });
+const dateTimeFormatter = new Intl.DateTimeFormat('es-PE', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+export const formatDate = (value) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : dateFormatter.format(date);
+};
+
+export const formatDateTime = (value) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : dateTimeFormatter.format(date);
 };

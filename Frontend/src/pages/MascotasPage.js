@@ -1,940 +1,300 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Container,
-  Typography,
-  Grid,
-  Box,
-  CircularProgress,
-  Button,
-  Card,
-  CardContent,
-  CardActions,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Avatar,
-  Chip,
-  IconButton,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
-  Divider,
-  Tooltip,
-  Alert,
-  Paper,
-  Stepper,
-  Step,
-  StepLabel,
-  useTheme,
-  useMediaQuery,
-  RadioGroup,
-  Radio,
-  InputAdornment,
-  Box as MuiBox
-} from '@mui/material';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Avatar, Box, Button, Container, IconButton, Skeleton, Tooltip, Typography } from '@mui/material';
+import { AnimatePresence, motion } from 'framer-motion';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import mascotaService from '../services/mascotaService';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
-import PetsIcon from '@mui/icons-material/Pets';
-import CakeIcon from '@mui/icons-material/Cake';
-import FemaleIcon from '@mui/icons-material/Female';
-import MaleIcon from '@mui/icons-material/Male';
+import { useToast } from '../context/ToastContext';
+import { errorMessage } from '../config/api';
+import { buildNotas, calculateAge, getAgeRange, parseNotas } from '../lib/pets';
+import { color, ease, radius, shadow } from '../theme/tokens';
+import PageHeader from '../components/ui/PageHeader';
+import EmptyState from '../components/ui/EmptyState';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import { PawPrint } from '../components/ui/PawPrint';
+import PetFormDialog from '../components/pets/PetFormDialog';
+import { openCoco } from '../components/chat/Chatbot';
 
-// Avatares mejorados con más opciones
-const petAvatars = {
-  Gato: [
-    { id: 'cat1', src: 'https://images.vexels.com/media/users/3/154255/isolated/preview/9afaf910583333c167e40ee094e12cfa-avatar-animal-gato.png', alt: 'Gato Animado 1' },
-    { id: 'cat2', src: 'https://images.vexels.com/media/users/3/155407/isolated/preview/84d636131360b843e427a4ff7061ae0a-gato-rayado-avatar.png', alt: 'Gato Animado 2' },
-    { id: 'cat3', src: 'https://images.vexels.com/media/users/3/154703/isolated/preview/ba8ca6661d159486337e8b3b6da0ae7b-avatar-de-gato-mascota.png', alt: 'Gato Animado 3' },
-    { id: 'cat4', src: 'https://images.vexels.com/media/users/3/155373/isolated/preview/0fc6a08bcea7d5dabd97ec5b156a3155-avatar-de-gato-sonoliento.png', alt: 'Gato Animado 4' },
-  ],
-  Perro: [
-    { id: 'dog1', src: 'https://images.vexels.com/media/users/3/144137/isolated/preview/ca748806d79d3d8d5721d3eb1e663672-ilustracion-de-rottweiler.png', alt: 'Perro Animado 1' },
-    { id: 'dog2', src: 'https://images.vexels.com/media/users/3/144928/isolated/lists/ebbccaf76f41f7d83e45a42974cfcd87-ilustracion-de-perro.png', alt: 'Perro Animado 2' },
-    { id: 'dog3', src: 'https://images.vexels.com/media/users/3/144116/isolated/preview/a0ade422aae6024947c80e14507b4b15-ilustracion-de-mucuchies.png', alt: 'Perro Animado 3' },
-    { id: 'dog4', src: 'https://images.vexels.com/media/users/3/144094/isolated/preview/e1aa7540a5644884d9275b6e95b5c254-ilustracion-de-pastor-aleman.png', alt: 'Perro Animado 4' },
-  ]
+const Tag = ({ children, tone = 'neutral' }) => {
+  const tones = {
+    neutral: { bg: color.sunken, fg: color.inkSoft },
+    olive: { bg: color.olive[100], fg: color.olive[700] },
+    danger: { bg: color.danger.tint, fg: color.danger.main },
+  };
+  return (
+    <Box component="li" sx={{ px: 1.25, py: 0.4, borderRadius: `${radius.xs}px`, bgcolor: tones[tone].bg, color: tones[tone].fg, fontSize: '0.8125rem', fontWeight: 600 }}>
+      {children}
+    </Box>
+  );
 };
 
-// Opciones predefinidas para formularios
-const FORM_OPTIONS = {
-  alergias: ['Pollo', 'Cereales', 'Soya', 'Papa', 'Camote', 'Legumbres', 'Aceite vegetal'],
-  objetivos: [
-    'Control de peso',
-    'Aumento de energía o masa muscular',
-    'Apoyo Digestivo (digestión sensible)',
-    'Piel y pelaje saludables',
-    'Soporte articular o movilidad',
-    'Soporte inmunológico',
-    'Vitalidad y longevidad',
-    'Control del nivel de azúcar',
-  ],
-  nivelesActividad: ['Sedentario', 'Moderadamente activo', 'Muy activo']
+const PetCard = ({ mascota, onEdit, onDelete }) => {
+  const notas = parseNotas(mascota.notasAdicionales);
+  const edad = calculateAge(mascota.fechaNacimiento);
+  const etapa = getAgeRange(mascota.fechaNacimiento);
+  const facts = [mascota.especie, mascota.sexo, mascota.tamaño].filter(Boolean).join(' · ');
+  const hasProfile = notas.alergias.length > 0 || notas.objetivos.length > 0 || notas.nivelActividad;
+
+  return (
+    <Box
+      component="article"
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        p: 3,
+        borderRadius: `${radius.lg}px`,
+        bgcolor: color.surface,
+        border: `1px solid ${color.line}`,
+        transition: `box-shadow 300ms ${ease.css.out}, transform 300ms ${ease.css.out}`,
+        '@media (hover: hover)': { '&:hover': { boxShadow: shadow.md, transform: 'translateY(-3px)' } },
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Avatar src={mascota.avatar || undefined} alt="" variant="rounded" sx={{ width: 76, height: 76, borderRadius: '26px 26px 26px 8px', bgcolor: color.olive[100], color: color.olive[600], '& img': { objectFit: 'contain', p: 0.75 } }}>
+          <PawPrint size={34} />
+        </Avatar>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="h3" component="h2" noWrap>
+            {mascota.nombre}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {facts}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Box component="dl" sx={{ m: 0, mt: 2.5, display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 2, rowGap: 0.75, fontSize: '0.9375rem' }}>
+        {mascota.raza && (
+          <>
+            <Box component="dt" sx={{ color: color.inkMuted }}>
+              Raza
+            </Box>
+            <Box component="dd" sx={{ m: 0, fontWeight: 600 }}>
+              {mascota.raza}
+            </Box>
+          </>
+        )}
+        {edad && (
+          <>
+            <Box component="dt" sx={{ color: color.inkMuted }}>
+              Edad
+            </Box>
+            <Box component="dd" sx={{ m: 0, fontWeight: 600 }}>
+              {edad}
+              {etapa ? ` (${etapa.toLowerCase()})` : ''}
+            </Box>
+          </>
+        )}
+        {notas.nivelActividad && (
+          <>
+            <Box component="dt" sx={{ color: color.inkMuted }}>
+              Actividad
+            </Box>
+            <Box component="dd" sx={{ m: 0, fontWeight: 600 }}>
+              {notas.nivelActividad}
+            </Box>
+          </>
+        )}
+      </Box>
+
+      {(notas.alergias.length > 0 || notas.objetivos.length > 0) && (
+        <Box component="ul" aria-label="Alergias y objetivos" sx={{ listStyle: 'none', m: 0, mt: 2, p: 0, display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+          {notas.alergias.map((item) => (
+            <Tag key={`a-${item}`} tone="danger">
+              Sin {item.toLowerCase()}
+            </Tag>
+          ))}
+          {notas.objetivos.map((item) => (
+            <Tag key={`o-${item}`} tone="olive">
+              {item.replace(/\s*\([^)]*\)/, '')}
+            </Tag>
+          ))}
+        </Box>
+      )}
+
+      {!hasProfile && (
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          Completa su perfil de salud para que Coco pueda recomendarle snacks.
+        </Typography>
+      )}
+
+      <Box sx={{ mt: 'auto', pt: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Button onClick={openCoco} variant="outlined" size="small" sx={{ mr: 'auto' }}>
+          Pedir recomendación
+        </Button>
+        <Tooltip title="Editar">
+          <IconButton onClick={() => onEdit(mascota)} aria-label={`Editar a ${mascota.nombre}`} sx={{ width: 44, height: 44 }}>
+            <EditOutlinedIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Eliminar">
+          <IconButton onClick={() => onDelete(mascota)} aria-label={`Eliminar a ${mascota.nombre}`} sx={{ width: 44, height: 44, '&:hover': { color: color.danger.main, bgcolor: color.danger.tint } }}>
+            <DeleteOutlineRoundedIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+    </Box>
+  );
 };
 
 const MascotasPage = () => {
+  const { notify } = useToast();
   const [mascotas, setMascotas] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [open, setOpen] = useState(false);
-  const [editingMascota, setEditingMascota] = useState(null);
-  const [activeStep, setActiveStep] = useState(0);
+  const [status, setStatus] = useState('loading');
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [toDelete, setToDelete] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
-  const [formData, setFormData] = useState({
-    nombre: '',
-    especie: '',
-    sexo: '',
-    raza: '',
-    fechaNacimiento: '',
-    tamaño: '',
-    notasAdicionales: '',
-    avatar: '',
-    alergias: [],
-    objetivo: [],
-    actividad: ''
-  });
-
-  const { user } = useAuth();
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setStatus('loading');
+    try {
+      setMascotas(await mascotaService.getMascotas());
+      setStatus('ready');
+    } catch {
+      if (!silent) setStatus('error');
+    }
+  }, []);
 
   useEffect(() => {
-    fetchMascotas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+    load();
+  }, [load]);
 
-  const fetchMascotas = async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      setError('');
-      const data = await mascotaService.getMascotas();
-      setMascotas(data);
-    } catch (err) {
-      console.error('Error fetching mascotas:', err);
-      setError('No se pudieron cargar las mascotas. Por favor, intenta nuevamente.');
-    } finally {
-      setLoading(false);
-    }
+  const openForm = (mascota = null) => {
+    setEditing(mascota);
+    setFormOpen(true);
   };
 
-  const showMessage = (message, type = 'success') => {
-    if (type === 'success') {
-      setSuccess(message);
-    } else {
-      setError(message);
-    }
-    setTimeout(() => {
-      setSuccess('');
-      setError('');
-    }, 4000);
-  };
-
-  const handleOpen = (mascota = null) => {
-    if (mascota) {
-      setEditingMascota(mascota);
-      setActiveStep(0); // iniciar en paso 0 al editar
-      const notas = mascota.notasAdicionales || '';
-
-      // intentar parseo JSON primero (si guardaste en ese formato), sino usar el parsing por regex
-      let parsed = null;
-      try {
-        parsed = JSON.parse(notas);
-      } catch {
-        parsed = null;
-      }
-
-      const getSectionFromNotes = (label) => {
-        if (parsed && parsed[label]) return parsed[label];
-        const regex = new RegExp(`${label}:([^|]+)`, 'i');
-        const match = notas.match(regex);
-        return match ? match[1].split(',').map(s => s.trim()).filter(Boolean) : [];
-      };
-
-      setFormData({
-        nombre: mascota.nombre,
-        especie: mascota.especie,
-        sexo: mascota.sexo || '',
-        raza: mascota.raza || '',
-        fechaNacimiento: mascota.fechaNacimiento ? mascota.fechaNacimiento.split('T')[0] : '',
-        tamaño: mascota.tamaño || '',
-        notasAdicionales: mascota.notasAdicionales || '',
-        avatar: mascota.avatar || '',
-        alergias: getSectionFromNotes('Alergias'),
-        objetivo: getSectionFromNotes('Objetivo nutricional'),
-        actividad: (parsed && parsed.actividad) || (notas.match(/Nivel de actividad:([^|]+)/i)?.[1]?.trim()) || ''
-      });
-    } else {
-      setEditingMascota(null);
-      setFormData({
-        nombre: '',
-        especie: '',
-        sexo: '',
-        raza: '',
-        fechaNacimiento: '',
-        tamaño: '',
-        notasAdicionales: '',
-        avatar: '',
-        alergias: [],
-        objetivo: [],
-        actividad: ''
-      });
-      // pequeño timeout para evitar issues con animaciones del Stepper
-      setTimeout(() => setActiveStep(0), 50);
-    }
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-    setEditingMascota(null);
-    setTimeout(() => setActiveStep(0), 50);
-  };
-
-  const handleNext = () => {
-    setActiveStep((prev) => Math.min(prev + 1, steps.length - 1));
-  };
-
-  const handleBack = () => {
-    setActiveStep((prev) => Math.max(prev - 1, 0));
-  };
-
-  // ahora recibe checked explícito
-  const handleCheckboxChange = (field, option, checked) => {
-    setFormData(prev => {
-      const current = Array.isArray(prev[field]) ? prev[field] : [];
-      const updated = checked
-        ? [...current, option]
-        : current.filter(o => o !== option);
-      return { ...prev, [field]: updated };
-    });
-  };
-
-  const calculateAge = (fechaNacimiento) => {
-    if (!fechaNacimiento) return null;
-    
-    const birthDate = new Date(fechaNacimiento);
-    const today = new Date();
-    let years = today.getFullYear() - birthDate.getFullYear();
-    let months = today.getMonth() - birthDate.getMonth();
-    
-    if (months < 0) {
-      years--;
-      months += 12;
-    }
-    
-    if (years === 0) {
-      return `${months} ${months === 1 ? 'mes' : 'meses'}`;
-    } else if (months === 0) {
-      return `${years} ${years === 1 ? 'año' : 'años'}`;
-    } else {
-      return `${years} ${years === 1 ? 'año' : 'años'} y ${months} ${months === 1 ? 'mes' : 'meses'}`;
-    }
-  };
-
-  const getAgeRange = (fechaNacimiento) => {
-    if (!fechaNacimiento) return '';
-    
-    const birthDate = new Date(fechaNacimiento);
-    const today = new Date();
-    const years = today.getFullYear() - birthDate.getFullYear();
-    
-    if (years >= 0 && years <= 1) return 'Cachorro';
-    if (years > 1 && years <= 3) return 'Joven Adulto';
-    if (years > 3 && years <= 6) return 'Adulto';
-    if (years > 6) return 'Senior';
-    return '';
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!formData.nombre || !formData.especie) {
-      showMessage('Por favor completa al menos el nombre y especie de tu mascota', 'error');
-      return;
-    }
-
-    const notasTexto = `
-Alergias: ${formData.alergias?.join(', ') || 'Ninguna'} | 
-Objetivo nutricional: ${formData.objetivo?.join(', ') || 'No especificado'} | 
-Nivel de actividad: ${formData.actividad || 'No especificado'} |
-Edad: ${getAgeRange(formData.fechaNacimiento) || 'No especificado'}
-`.trim();
-
-    const mascotaPayload = {
-      ...formData,
-      notasAdicionales: notasTexto
+  const handleSubmit = async (form) => {
+    // Los campos opcionales vacíos viajan como null para que el backend no rechace la fecha.
+    const payload = {
+      nombre: form.nombre.trim(),
+      especie: form.especie,
+      sexo: form.sexo || null,
+      raza: form.raza.trim() || null,
+      fechaNacimiento: form.fechaNacimiento || null,
+      tamaño: form.tamaño || null,
+      avatar: form.avatar || null,
+      notasAdicionales: buildNotas(form),
     };
 
+    setSaving(true);
     try {
-      if (editingMascota) {
-        await mascotaService.updateMascota(editingMascota.mascotaID, mascotaPayload);
-        showMessage('Mascota actualizada exitosamente');
+      if (editing) {
+        await mascotaService.updateMascota(editing.mascotaID, payload);
+        notify(`Actualizamos el perfil de ${payload.nombre}.`);
       } else {
-        await mascotaService.createMascota(mascotaPayload);
-        showMessage('Mascota agregada exitosamente');
+        await mascotaService.createMascota(payload);
+        notify(`${payload.nombre} ya tiene su perfil.`);
       }
-      await fetchMascotas();
-      handleClose();
-    } catch (err) {
-      console.error('Error saving mascota:', err);
-      showMessage('Error al guardar la mascota. Por favor, intenta nuevamente.', 'error');
+      setFormOpen(false);
+      await load(true);
+    } catch (error) {
+      notify(errorMessage(error, 'No pudimos guardar los datos. Inténtalo nuevamente.'), { severity: 'error' });
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar esta mascota? Esta acción no se puede deshacer.')) {
-      try {
-        await mascotaService.deleteMascota(id);
-        showMessage('Mascota eliminada exitosamente');
-        await fetchMascotas();
-      } catch (err) {
-        console.error('Error deleting mascota:', err);
-        showMessage('Error al eliminar la mascota', 'error');
-      }
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await mascotaService.deleteMascota(toDelete.mascotaID);
+      notify(`Eliminamos el perfil de ${toDelete.nombre}.`, { severity: 'info' });
+      setConfirmOpen(false);
+      await load(true);
+    } catch (error) {
+      notify(errorMessage(error, 'No pudimos eliminar el perfil.'), { severity: 'error' });
+    } finally {
+      setDeleting(false);
     }
   };
 
-  const getAvatarOptions = () => {
-    return formData.especie ? petAvatars[formData.especie] : [];
+  // El nombre se conserva mientras el diálogo se cierra, para que el título no cambie a mitad de la animación.
+  const askDelete = (mascota) => {
+    setToDelete(mascota);
+    setConfirmOpen(true);
   };
 
-  const steps = ['Información Básica', 'Avatar', 'Salud y Bienestar'];
-
-  const renderStepContent = (step) => {
-    switch (step) {
-      case 0:
-        return (
-          <Grid container spacing={2} alignItems="center">
-            {/* -------- Fila 1: Nombre | Especie | Sexo | Tamaño -------- */}
-            <Grid item xs={12} md={5}>
-              <TextField
-                fullWidth
-                label="Nombre de tu mascota"
-                name="nombre"
-                value={formData.nombre}
-                onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
-                required
-                helperText="Cómo llamas a tu compañero peludo"
-                variant="outlined"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <PetsIcon color="primary" />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ '& .MuiOutlinedInput-root': { minHeight: 56 } }}
-              />
-            </Grid>
-
-            <Grid item xs={6} md={2}>
-              <FormControl fullWidth variant="outlined" sx={{ minWidth: 120 }}>
-                <InputLabel>Especie</InputLabel>
-                <Select
-                  name="especie"
-                  value={formData.especie}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setFormData(prev => ({
-                      ...prev,
-                      especie: value,
-                      // solo limpiar avatar si estamos creando una nueva mascota
-                      avatar: editingMascota ? prev.avatar : ''
-                    }));
-                  }}
-                  label="Especie"
-                >
-                  <MenuItem value="Perro">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PetsIcon fontSize="small" /> Perro
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="Gato">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PetsIcon fontSize="small" /> Gato
-                    </Box>
-                  </MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={6} md={2}>
-              <FormControl fullWidth variant="outlined" sx={{ minWidth: 120 }}>
-                <InputLabel>Sexo</InputLabel>
-                <Select
-                  name="sexo"
-                  value={formData.sexo}
-                  onChange={(e) => setFormData(prev => ({ ...prev, sexo: e.target.value }))}
-                  label="Sexo"
-                >
-                  <MenuItem value="Hembra">Hembra</MenuItem>
-                  <MenuItem value="Macho">Macho</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Tamaño ahora ocupa su propia columna y es fullWidth y consistente */}
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth variant="outlined" sx={{ minWidth: 120 }}>
-                <InputLabel>Tamaño</InputLabel>
-                <Select
-                  name="tamaño"
-                  value={formData.tamaño}
-                  onChange={(e) => setFormData(prev => ({ ...prev, tamaño: e.target.value }))}
-                  label="Tamaño"
-                >
-                  <MenuItem value="Pequeño">Pequeño</MenuItem>
-                  <MenuItem value="Mediano">Mediano</MenuItem>
-                  <MenuItem value="Grande">Grande</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* -------- Fila 2: Raza | Fecha de Nacimiento -------- */}
-            <Grid item xs={12} md={5}>
-              <TextField
-                fullWidth
-                label="Raza o Tipo"
-                name="raza"
-                value={formData.raza}
-                onChange={(e) => setFormData(prev => ({ ...prev, raza: e.target.value }))}
-                helperText="Ej: Labrador, Siames, Mestizo..."
-                variant="outlined"
-                sx={{ '& .MuiOutlinedInput-root': { minHeight: 56 } }}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={7}>
-              <TextField
-                fullWidth
-                label="Fecha de Nacimiento"
-                name="fechaNacimiento"
-                type="date"
-                value={formData.fechaNacimiento}
-                onChange={(e) => setFormData(prev => ({ ...prev, fechaNacimiento: e.target.value }))}
-                InputLabelProps={{ shrink: true }}
-                helperText="Para calcular su edad y necesidades específicas"
-                variant="outlined"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <CakeIcon color="primary" />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ '& .MuiOutlinedInput-root': { minHeight: 56 } }}
-              />
-            </Grid>
-          </Grid>
-        );
-
-      case 1:
-        return (
-          <Box>
-            <Typography variant="body1" gutterBottom sx={{ mb: 3 }}>
-              Elige un avatar que se parezca a tu mascota
-            </Typography>
-            {formData.especie ? (
-              <Grid container spacing={2} justifyContent="center">
-                {getAvatarOptions().map(avatar => (
-                  <Grid item key={avatar.id}>
-                    <Box
-                      onClick={() => setFormData(prev => ({ ...prev, avatar: avatar.src }))}
-                      sx={{
-                        cursor: 'pointer',
-                        border: formData.avatar === avatar.src ? '3px solid' : '2px solid',
-                        borderColor: formData.avatar === avatar.src ? 'primary.main' : 'grey.300',
-                        borderRadius: 3,
-                        p: 2,
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          borderColor: 'primary.main',
-                          transform: 'scale(1.05)'
-                        }
-                      }}
-                    >
-                      <Avatar 
-                        src={avatar.src} 
-                        sx={{ 
-                          width: 80, 
-                          height: 80,
-                          mx: 'auto'
-                        }} 
-                      />
-                    </Box>
-                  </Grid>
-                ))}
-              </Grid>
-            ) : (
-              <Alert severity="info">
-                Primero selecciona la especie de tu mascota en el paso anterior
-              </Alert>
-            )}
-          </Box>
-        );
-
-      case 2:
-        return (
-          <Box>
-            <Typography variant="body1" sx={{ mb: 3 }}>
-              Esta información nos ayuda a recomendar la mejor alimentación para tu compañero
-            </Typography>
-
-            {/* ==== ALERGIAS 4–3 ==== */}
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                Alergias o Intolerancias
-              </Typography>
-
-              <Grid container spacing={2}>
-                {/* Columna izquierda = 4 opciones */}
-                <Grid item xs={12} sm={6}>
-                  <FormGroup>
-                    {FORM_OPTIONS.alergias.slice(0, 4).map(option => (
-                      <FormControlLabel
-                        key={option}
-                        control={
-                          <Checkbox
-                            checked={formData.alergias.includes(option)}
-                            onChange={(e) => handleCheckboxChange("alergias", option, e.target.checked)}
-                          />
-                        }
-                        label={option}
-                      />
-                    ))}
-                  </FormGroup>
-                </Grid>
-
-                {/* Columna derecha = resto (3 opciones) */}
-                <Grid item xs={12} sm={6}>
-                  <FormGroup>
-                    {FORM_OPTIONS.alergias.slice(4).map(option => (
-                      <FormControlLabel
-                        key={option}
-                        control={
-                          <Checkbox
-                            checked={formData.alergias.includes(option)}
-                            onChange={(e) => handleCheckboxChange("alergias", option, e.target.checked)}
-                          />
-                        }
-                        label={option}
-                      />
-                    ))}
-                  </FormGroup>
-                </Grid>
-              </Grid>
-            </Box>
-
-            <Divider sx={{ my: 2 }} />
-
-            {/* ==== OBJETIVO NUTRICIONAL 4–4 ==== */}
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                Objetivo Nutricional
-              </Typography>
-
-              <Grid container spacing={2}>
-                {/* Columna izquierda (4 opciones) */}
-                <Grid item xs={12} sm={6}>
-                  <FormGroup>
-                    {FORM_OPTIONS.objetivos.slice(0, 4).map(option => (
-                      <FormControlLabel
-                        key={option}
-                        control={
-                          <Checkbox
-                            checked={formData.objetivo.includes(option)}
-                            onChange={(e) => handleCheckboxChange("objetivo", option, e.target.checked)}
-                          />
-                        }
-                        label={option}
-                      />
-                    ))}
-                  </FormGroup>
-                </Grid>
-
-                {/* Columna derecha (4 opciones) */}
-                <Grid item xs={12} sm={6}>
-                  <FormGroup>
-                    {FORM_OPTIONS.objetivos.slice(4).map(option => (
-                      <FormControlLabel
-                        key={option}
-                        control={
-                          <Checkbox
-                            checked={formData.objetivo.includes(option)}
-                            onChange={(e) => handleCheckboxChange("objetivo", option, e.target.checked)}
-                          />
-                        }
-                        label={option}
-                      />
-                    ))}
-                  </FormGroup>
-                </Grid>
-              </Grid>
-            </Box>
-
-            <Divider sx={{ my: 2 }} />
-
-            {/* ==== ACTIVIDAD (ahora RadioGroup: selección única) ==== */}
-            <Box>
-              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                Nivel de Actividad
-              </Typography>
-
-              <RadioGroup
-                row={!isMobile}
-                value={formData.actividad}
-                onChange={(e) => setFormData(prev => ({ ...prev, actividad: e.target.value }))}
-              >
-                {FORM_OPTIONS.nivelesActividad.map(option => (
-                  <FormControlLabel
-                    key={option}
-                    value={option}
-                    control={<Radio />}
-                    label={option}
-                  />
-                ))}
-              </RadioGroup>
-            </Box>
-          </Box>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-        <Box sx={{ textAlign: 'center' }}>
-          <CircularProgress size={60} thickness={4} />
-          <Typography variant="h6" sx={{ mt: 2, color: 'text.secondary' }}>
-            Cargando tus mascotas...
-          </Typography>
-        </Box>
-      </Box>
-    );
-  }
-
-  if (!user) {
-    return (
-      <Container sx={{ py: 8, textAlign: 'center' }}>
-        <PetsIcon sx={{ fontSize: 80, color: 'grey.400', mb: 2 }} />
-        <Typography variant="h4" gutterBottom color="text.secondary">
-          Inicia sesión para gestionar tus mascotas
-        </Typography>
-        <Typography variant="body1" sx={{ mb: 4, color: 'text.secondary' }}>
-          Accede a tu cuenta para ver y administrar el perfil de tus compañeros peludos
-        </Typography>
-        <Button component={Link} to="/login" variant="contained" size="large" sx={{ px: 4 }}>
-          Iniciar Sesión
-        </Button>
-      </Container>
-    );
-  }
+  const addButton = (
+    <Button onClick={() => openForm()} variant="contained" startIcon={<AddRoundedIcon />}>
+      Agregar mascota
+    </Button>
+  );
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Alertas */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>
-          {success}
-        </Alert>
-      )}
-
-      {/* Header */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        mb: 4,
-        flexDirection: { xs: 'column', sm: 'row' },
-        gap: 2
-      }}>
-        <Box>
-          <Typography variant="h3" component="h1" fontWeight="bold" sx={{ color: '#3d210a', mb: 1 }}>
-            Mis Mascotas
-          </Typography>
-          <Typography variant="h6" color="#fff.secondary">
-            Gestiona el perfil de tus compañeros peludos
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpen()}
-          size="large"
-          sx={{
-            px: 4,
-            py: 1.5,
-            borderRadius: 3,
-            background: 'linear-gradient(45deg, #A8B5A0, #8FA68E)',
-            '&:hover': {
-              background: 'linear-gradient(45deg, #8FA68E, #7A957A)'
-            }
-          }}
-        >
-          Nueva Mascota
-        </Button>
-      </Box>
-
-      {/* Lista de Mascotas */}
-      {mascotas.length === 0 ? (
-        <Paper 
-          elevation={0} 
-          sx={{ 
-            textAlign: 'center', 
-            py: 8, 
-            px: 4,
-            borderRadius: 3,
-            background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'
-          }}
-        >
-          <PetsIcon sx={{ fontSize: 80, color: 'grey.400', mb: 3 }} />
-          <Typography variant="h5" gutterBottom sx={{ color: 'text.secondary', mb: 2 }}>
-            ¡Aún no tienes mascotas registradas!
-          </Typography>
-          <Typography variant="body1" sx={{ mb: 4, color: 'text.secondary', maxWidth: 400, mx: 'auto' }}>
-            Registra a tu primera mascota para comenzar a recibir recomendaciones personalizadas de alimentación y cuidado.
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpen()}
-            size="large"
-            sx={{
-              px: 4,
-              py: 1.5,
-              borderRadius: 3
-            }}
-          >
-            Registrar Primera Mascota
-          </Button>
-        </Paper>
-      ) : (
-        <Grid container spacing={3}>
-          {mascotas.map((mascota) => (
-            <Grid item key={mascota.mascotaID} xs={12} sm={6} lg={4}>
-              <Card
-  sx={{
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    backgroundColor: '#fffaf0', // ← fondo siempre blanco pastel
-    border: '1px solid rgba(0, 0, 0, 0.06)',
-    transition: 'all 0.3s ease',
-    boxShadow: 1,
-
-    '&:hover': {
-      transform: 'translateY(-4px)',
-      boxShadow: 4
-    }
-  }}
->
-                <CardContent sx={{ flexGrow: 1, textAlign: 'center', p: 3 }}>
-                  <Avatar 
-                    src={mascota.avatar} 
-                    sx={{ 
-                      width: 100, 
-                      height: 100, 
-                      mx: 'auto', 
-                      mb: 3,
-                      border: '3px solid',
-                      borderColor: 'primary.light'
-                    }} 
-                  />
-                  <Typography variant="h5" gutterBottom fontWeight="bold">
-                    {mascota.nombre}
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap', mb: 2 }}>
-                    <Chip 
-                      label={mascota.especie} 
-                      color="primary" 
-                      size="small" 
-                      variant="outlined" 
-                    />
-                    {mascota.sexo && (
-                      <Chip 
-                        label={mascota.sexo} 
-                        color="secondary" 
-                        size="small" 
-                        variant="outlined"
-                        icon={mascota.sexo === 'Hembra' ? <FemaleIcon /> : <MaleIcon />}
-                      />
-                    )}
-                    {mascota.tamaño && (
-                      <Chip 
-                        label={mascota.tamaño} 
-                        size="small" 
-                        variant="outlined"
-                      />
-                    )}
-                  </Box>
-                  
-                  <Box sx={{ textAlign: 'left' }}>
-                    {mascota.raza && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <PetsIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                        <Typography variant="body2">{mascota.raza}</Typography>
-                      </Box>
-                    )}
-                    {mascota.fechaNacimiento && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <CakeIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                        <Typography variant="body2">
-                          {calculateAge(mascota.fechaNacimiento)} • {getAgeRange(mascota.fechaNacimiento)}
-                        </Typography>
-                      </Box>
-                    )}
-                  </Box>
-                </CardContent>
-                <CardActions sx={{ justifyContent: 'center', pb: 2, gap: 1 }}>
-                  <Tooltip title="Editar mascota">
-                    <Button
-                      startIcon={<EditIcon />}
-                      onClick={() => handleOpen(mascota)}
-                      variant="outlined"
-                      size="small"
-                    >
-                      Editar
-                    </Button>
-                  </Tooltip>
-                  <Tooltip title="Eliminar mascota">
-                    <IconButton 
-                      onClick={() => handleDelete(mascota.mascotaID)} 
-                      color="error"
-                      size="small"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Tooltip>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+    <Container maxWidth="lg" sx={{ pt: { xs: 3, md: 5 } }}>
+      {status === 'error' && (
+        <EmptyState
+          title="No pudimos cargar tus mascotas"
+          description="Revisa tu conexión e inténtalo otra vez."
+          action={
+            <Button onClick={() => load()} variant="contained" startIcon={<RefreshRoundedIcon />}>
+              Reintentar
+            </Button>
+          }
+        />
       )}
 
-      {/* Diálogo de mascota */}
-      <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        maxWidth="md" 
-        fullWidth
-        fullScreen={isMobile}
-      >
-        <DialogTitle sx={{ 
-          borderBottom: 1, 
-          borderColor: 'divider',
-          backgroundColor: 'primary.main',
-          color: 'white'
-        }}>
-          <Typography variant="h5" component="div" fontWeight="bold" color='#ffffffff'>
-            {editingMascota ? `Editar ${formData.nombre}` : 'Nueva Mascota'}
-          </Typography>
-          <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5, color: '#ffffffff' }}>
-            {editingMascota ? 'Actualiza la información de tu mascota' : 'Completa el perfil de tu nuevo compañero'}
-          </Typography>
-        </DialogTitle>
+      {status === 'ready' && mascotas.length === 0 && (
+        <EmptyState
+          title="Preséntanos a tu mascota"
+          description="Con su edad, alergias y objetivos, Coco puede recomendarte los snacks que mejor le van."
+          action={
+            <Button onClick={() => openForm()} variant="contained" size="large" startIcon={<AddRoundedIcon />}>
+              Registrar mi primera mascota
+            </Button>
+          }
+        />
+      )}
 
-        <DialogContent sx={{ p: 0 }}>
-          {/* ahora mostramos siempre el Stepper para permitir editar todas las secciones */}
-          <Stepper activeStep={activeStep} sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-            {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-
-          <Box sx={{ p: 3 }}>
-            {renderStepContent(activeStep)}
+      {(status === 'loading' || (status === 'ready' && mascotas.length > 0)) && (
+        <>
+          <PageHeader
+            crumbs={[{ label: 'Inicio', to: '/' }]}
+            current="Mis mascotas"
+            eyebrow="Tu cuenta"
+            title="Mis mascotas"
+            description="Su perfil es la base de las recomendaciones de Coco. Mantenlo al día."
+            actions={addButton}
+          />
+          <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))' }}>
+            {status === 'loading' && [0, 1].map((i) => <Skeleton key={i} variant="rounded" height={300} sx={{ borderRadius: `${radius.lg}px` }} />)}
+            <AnimatePresence mode="popLayout">
+              {status === 'ready' &&
+                mascotas.map((mascota, index) => (
+                  <motion.div
+                    key={mascota.mascotaID}
+                    layout
+                    initial={{ opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0, transition: { duration: 0.45, delay: index * 0.06, ease: ease.out } }}
+                    exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.18 } }}
+                    style={{ height: '100%' }}
+                  >
+                    <PetCard mascota={mascota} onEdit={openForm} onDelete={askDelete} />
+                  </motion.div>
+                ))}
+            </AnimatePresence>
           </Box>
-        </DialogContent>
+        </>
+      )}
 
-        <DialogActions sx={{ p: 3, borderTop: 1, borderColor: 'divider', gap: 1 }}>
-          
-          {/* Botón ATRÁS */}
-          {activeStep > 0 && (
-            <Button 
-              onClick={handleBack} 
-              variant="contained"
-              sx={{ 
-                backgroundColor: '#5D4E37',
-                color: 'white',
-                borderColor: '#5D4E37',
-                '&:hover': { backgroundColor: '#4A3F2D' }
-              }}
-            >
-              Atrás
-            </Button>
-          )}
+      <PetFormDialog open={formOpen} mascota={editing} saving={saving} onClose={() => setFormOpen(false)} onSubmit={handleSubmit} />
 
-          <Box sx={{ flex: 1 }} />
-
-          {/* Botón CANCELAR */}
-          <Button 
-            onClick={handleClose} 
-            variant="contained"
-            sx={{
-              backgroundColor: '#5D4E37',
-              color: 'white',
-              borderColor: '#5D4E37',
-              '&:hover': { backgroundColor: '#4A3F2D' }
-            }}
-          >
-            Cancelar
-          </Button>
-
-          {/* BOTÓN SIGUIENTE o COMPLETAR */}
-          {activeStep < steps.length - 1 ? (
-            <Button 
-              onClick={handleNext} 
-              variant="contained"
-              sx={{
-                backgroundColor: '#5D4E37',
-                color: 'white',
-                '&:hover': { backgroundColor: '#4A3F2D' }
-              }}
-            >
-              Siguiente
-            </Button>
-          ) : (
-            <Button 
-              onClick={handleSubmit} 
-              variant="contained" 
-              size="large"
-              sx={{
-                backgroundColor: '#5D4E37',
-                color: 'white',
-                '&:hover': { backgroundColor: '#4A3F2D' }
-              }}
-            >
-              {editingMascota ? 'Actualizar Mascota' : 'Completar Registro'}
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`¿Eliminar a ${toDelete?.nombre || 'tu mascota'}?`}
+        description="Se borrará su perfil y Coco dejará de usarlo para recomendar. Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onClose={() => setConfirmOpen(false)}
+      />
     </Container>
   );
 };

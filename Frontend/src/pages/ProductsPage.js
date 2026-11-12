@@ -1,606 +1,372 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Grid,
-  Typography,
-  Container,
-  CircularProgress,
-  Box,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Paper,
-  Button,
-  Chip,
-  Slider,
-  InputAdornment,
-  Fade,
-  Zoom,
-  Grow,
-  Breadcrumbs,
-  Link,
-  Tooltip,
-  IconButton
-} from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import ClearIcon from '@mui/icons-material/Clear';
-import SortIcon from '@mui/icons-material/Sort';
-import HomeIcon from '@mui/icons-material/Home';
-import StoreIcon from '@mui/icons-material/Store';
-import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
-import ShareIcon from '@mui/icons-material/Share';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Badge, Box, Button, Chip, Container, Drawer, IconButton, InputAdornment, MenuItem, Slider, TextField, Typography } from '@mui/material';
+import { useSearchParams } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import SearchOffRoundedIcon from '@mui/icons-material/SearchOffRounded';
 import productService from '../services/productService';
-import ProductCard from '../components/ProductCard';
-import FloatingPaws from '../components/FloatingPaws';
+import ProductCard, { ProductCardSkeleton, ProductGrid } from '../components/product/ProductCard';
+import PageHeader from '../components/ui/PageHeader';
+import EmptyState from '../components/ui/EmptyState';
+import { formatCurrency } from '../utils/formatCurrency';
+import { color, ease, radius } from '../theme/tokens';
 
-const sideImages = [
-  'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-  'https://images.pexels.com/photos/4587959/pexels-photo-4587959.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-  'https://images.pexels.com/photos/4588048/pexels-photo-4588048.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-  'https://images.pexels.com/photos/3761597/pexels-photo-3761597.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+const SORTS = [
+  { value: '', label: 'Destacados' },
+  { value: 'precio:asc', label: 'Precio: menor a mayor' },
+  { value: 'precio:desc', label: 'Precio: mayor a menor' },
+  { value: 'nombre:asc', label: 'Nombre: A a Z' },
+  { value: 'nombre:desc', label: 'Nombre: Z a A' },
 ];
 
-const SideImageColumn = () => {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+const STOCK = [
+  { value: 'all', label: 'Todos' },
+  { value: 'inStock', label: 'En stock' },
+  { value: 'outOfStock', label: 'Agotados' },
+];
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % sideImages.length);
-    }, 5000);
+const includes = (text, term) => (text || '').toLowerCase().includes(term);
 
-    return () => clearInterval(interval);
-  }, []);
+const FilterGroup = ({ title, children }) => (
+  <Box component="fieldset" sx={{ border: 0, p: 0, m: 0, mb: 3.5, minWidth: 0 }}>
+    <Typography component="legend" variant="overline" sx={{ p: 0, mb: 1.25, color: color.inkMuted }}>
+      {title}
+    </Typography>
+    {children}
+  </Box>
+);
 
-  return (
-    <Box
-      sx={{
-        width: 200,
-        display: { xs: 'none', lg: 'block' },
-        position: 'relative',
-        mt: '100px',
-        mx: 2,
-        height: 250,
-      }}
-    >
-      {sideImages.map((image, index) => (
-        <Fade in={index === currentImageIndex} timeout={1000} key={image}>
-          <Box
-            component="img"
-            src={image}
-            alt="Mascotas felices"
-            sx={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              borderRadius: 2,
-              boxShadow: 3,
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              transition: 'transform 0.3s ease',
-              '&:hover': {
-                transform: 'scale(1.05)'
-              }
-            }}
-          />
-        </Fade>
-      ))}
-    </Box>
-  );
-};
+/** Opción de filtro tipo "radio" con apariencia de fila seleccionable. */
+const OptionRow = ({ selected, onClick, children, count }) => (
+  <Box
+    component="button"
+    type="button"
+    role="radio"
+    aria-checked={selected}
+    onClick={onClick}
+    sx={{
+      width: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 1,
+      minHeight: 40,
+      px: 1.5,
+      border: 0,
+      borderRadius: `${radius.sm}px`,
+      cursor: 'pointer',
+      font: 'inherit',
+      fontWeight: selected ? 650 : 500,
+      fontSize: '0.9375rem',
+      textAlign: 'left',
+      color: selected ? color.olive[700] : color.inkSoft,
+      bgcolor: selected ? color.olive[100] : 'transparent',
+      transition: 'background-color 160ms ease, color 160ms ease',
+      '&:hover': { bgcolor: selected ? color.olive[100] : 'rgba(61, 38, 20, 0.05)', color: selected ? color.olive[700] : color.ink },
+    }}
+  >
+    <span>{children}</span>
+    {count != null && (
+      <Box component="span" className="tabular" sx={{ fontSize: '0.8125rem', color: color.inkMuted, fontWeight: 500 }}>
+        {count}
+      </Box>
+    )}
+  </Box>
+);
 
 const ProductsPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [priceRange, setPriceRange] = useState([0, 1000]);
+  const [status, setStatus] = useState('loading');
   const [stockFilter, setStockFilter] = useState('all');
   const [sortOption, setSortOption] = useState('');
+  const [priceRange, setPriceRange] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [productsData, categoriesData] = await Promise.all([
-          productService.getProductos(),
-          productService.getCategorias()
-        ]);
+  // Búsqueda y categoría viven en la URL para poder compartir el enlace.
+  const searchTerm = searchParams.get('q') || '';
+  const selectedCategory = searchParams.get('categoria') || '';
 
-        setProducts(productsData);
-        setFilteredProducts(productsData);
-        setCategories(categoriesData);
+  const setParam = useCallback(
+    (key, value) => {
+      const next = new URLSearchParams(searchParams);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      setSearchParams(next, { replace: true });
+    },
+    [searchParams, setSearchParams]
+  );
 
-        if (productsData.length > 0) {
-          const prices = productsData.map(p => p.precio);
-          const minPrice = Math.floor(Math.min(...prices));
-          const maxPrice = Math.ceil(Math.max(...prices));
-          setPriceRange([minPrice, maxPrice]);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+  const load = useCallback(async () => {
+    setStatus('loading');
+    try {
+      const [productsData, categoriesData] = await Promise.all([productService.getProductos(), productService.getCategorias().catch(() => [])]);
+      setProducts(productsData);
+      setCategories(categoriesData);
+      setStatus('ready');
+    } catch {
+      setStatus('error');
+    }
   }, []);
 
   useEffect(() => {
-    let filtered = [...products];
+    load();
+  }, [load]);
 
-    if (searchTerm) {
-      filtered = filtered.filter(product =>
-        product.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+  const bounds = useMemo(() => {
+    if (products.length === 0) return [0, 0];
+    const prices = products.map((p) => p.precio);
+    return [Math.floor(Math.min(...prices)), Math.ceil(Math.max(...prices))];
+  }, [products]);
 
-    if (selectedCategory) {
-      filtered = filtered.filter(product => product.categoriaNombre === selectedCategory);
-    }
+  const range = priceRange || bounds;
+  const priceActive = range[0] !== bounds[0] || range[1] !== bounds[1];
 
-    filtered = filtered.filter(product =>
-      product.precio >= priceRange[0] && product.precio <= priceRange[1]
-    );
-
-    if (stockFilter === 'inStock') {
-      filtered = filtered.filter(product => product.stock > 0);
-    } else if (stockFilter === 'outOfStock') {
-      filtered = filtered.filter(product => product.stock === 0);
-    }
+  const filtered = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const list = products.filter((product) => {
+      if (term && !includes(product.nombre, term) && !includes(product.descripcion, term)) return false;
+      if (selectedCategory && product.categoriaNombre !== selectedCategory) return false;
+      if (product.precio < range[0] || product.precio > range[1]) return false;
+      if (stockFilter === 'inStock' && product.stock <= 0) return false;
+      if (stockFilter === 'outOfStock' && product.stock > 0) return false;
+      return true;
+    });
 
     if (sortOption) {
       const [key, order] = sortOption.split(':');
-      filtered.sort((a, b) => {
-        if (a[key] < b[key]) return order === 'asc' ? -1 : 1;
-        if (a[key] > b[key]) return order === 'asc' ? 1 : -1;
-        return 0;
-      });
+      const direction = order === 'asc' ? 1 : -1;
+      list.sort((a, b) => (key === 'nombre' ? a.nombre.localeCompare(b.nombre, 'es') : a.precio - b.precio) * direction);
     }
+    return list;
+  }, [products, searchTerm, selectedCategory, range, stockFilter, sortOption]);
 
-    setFilteredProducts(filtered);
-  }, [products, searchTerm, selectedCategory, priceRange, stockFilter, sortOption]);
+  const countByCategory = useMemo(() => {
+    const counts = {};
+    products.forEach((p) => {
+      counts[p.categoriaNombre] = (counts[p.categoriaNombre] || 0) + 1;
+    });
+    return counts;
+  }, [products]);
 
-  const handleClearFilters = () => {
-    setSearchTerm('');
-    setSelectedCategory('');
+  const clearFilters = () => {
+    setSearchParams({}, { replace: true });
     setStockFilter('all');
     setSortOption('');
-    if (products.length > 0) {
-      const prices = products.map(p => p.precio);
-      const minPrice = Math.floor(Math.min(...prices));
-      const maxPrice = Math.ceil(Math.max(...prices));
-      setPriceRange([minPrice, maxPrice]);
-    }
+    setPriceRange(null);
   };
 
-  const handlePriceChange = (event, newValue) => {
-    setPriceRange(newValue);
-  };
+  const activeChips = [
+    searchTerm && { key: 'q', label: `“${searchTerm}”`, onDelete: () => setParam('q', '') },
+    selectedCategory && { key: 'cat', label: selectedCategory, onDelete: () => setParam('categoria', '') },
+    stockFilter !== 'all' && { key: 'stock', label: STOCK.find((s) => s.value === stockFilter).label, onDelete: () => setStockFilter('all') },
+    priceActive && { key: 'price', label: `${formatCurrency(range[0])} a ${formatCurrency(range[1])}`, onDelete: () => setPriceRange(null) },
+  ].filter(Boolean);
 
-  if (loading) {
-    return (
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          minHeight: '60vh',
-          flexDirection: 'column',
-          gap: 2
-        }}
-      >
-        <CircularProgress 
-          size={60} 
-          sx={{ 
-            color: '#5D4E37',
-            animation: 'pulse 1.5s ease-in-out infinite'
-          }} 
-        />
-        <Typography variant="h6" sx={{ color: '#5D4E37' }}>
-          Cargando nuestro catálogo...
-        </Typography>
-      </Box>
-    );
-  }
+  const filters = (
+    <>
+      <FilterGroup title="Categoría">
+        <Box role="radiogroup" aria-label="Categoría" sx={{ display: 'grid', gap: 0.25 }}>
+          <OptionRow selected={!selectedCategory} onClick={() => setParam('categoria', '')} count={products.length}>
+            Todas
+          </OptionRow>
+          {categories.map((category) => (
+            <OptionRow key={category.categoriaID} selected={selectedCategory === category.nombre} onClick={() => setParam('categoria', category.nombre)} count={countByCategory[category.nombre] || 0}>
+              {category.nombre}
+            </OptionRow>
+          ))}
+        </Box>
+      </FilterGroup>
+
+      <FilterGroup title="Disponibilidad">
+        <Box role="radiogroup" aria-label="Disponibilidad" sx={{ display: 'grid', gap: 0.25 }}>
+          {STOCK.map((option) => (
+            <OptionRow key={option.value} selected={stockFilter === option.value} onClick={() => setStockFilter(option.value)}>
+              {option.label}
+            </OptionRow>
+          ))}
+        </Box>
+      </FilterGroup>
+
+      {bounds[1] > bounds[0] && (
+        <FilterGroup title="Precio">
+          <Box sx={{ px: 1.25 }}>
+            <Slider
+              value={range}
+              onChange={(_event, value) => setPriceRange(value)}
+              min={bounds[0]}
+              max={bounds[1]}
+              step={1}
+              disableSwap
+              valueLabelDisplay="auto"
+              valueLabelFormat={(value) => formatCurrency(value)}
+              getAriaLabel={(i) => (i === 0 ? 'Precio mínimo' : 'Precio máximo')}
+            />
+            <Box className="tabular" sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', fontWeight: 600, color: color.inkSoft }}>
+              <span>{formatCurrency(range[0])}</span>
+              <span>{formatCurrency(range[1])}</span>
+            </Box>
+          </Box>
+        </FilterGroup>
+      )}
+    </>
+  );
 
   return (
-    <Box sx={{ position: 'relative', minHeight: '100vh' }}>
-      <FloatingPaws />
-      
-      {/* Breadcrumb Navigation */}
-      <Container sx={{ py: 1 }}>
-        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 0 }}>
-          <Link
-            underline="hover"
-            color="inherit"
-            href="/"
-            sx={{ display: 'flex', alignItems: 'center', color: '#7D6B5D' }}
-          >
-            <HomeIcon sx={{ mr: 0.5, fontSize: 20 }} />
-            Inicio
-          </Link>
-          <Typography
-            sx={{ display: 'flex', alignItems: 'center', color: '#5D4E37', fontWeight: 600 }}
-          >
-            <StoreIcon sx={{ mr: 0.5, fontSize: 20 }} />
-            Productos
-          </Typography>
-        </Breadcrumbs>
-      </Container>
+    <Container maxWidth="lg" sx={{ pt: { xs: 3, md: 5 } }}>
+      <PageHeader
+        crumbs={[{ label: 'Inicio', to: '/' }]}
+        current="Catálogo"
+        eyebrow="Catálogo"
+        title="Snacks naturales para tu mascota"
+        description="Filtra por categoría o precio. Si no sabes cuál elegir, Coco te ayuda desde el botón de la esquina."
+      />
 
-      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-        <SideImageColumn />
-        <Container sx={{ py: 2, position: 'relative', flexGrow: 1, maxWidth: 'lg' }}>
-          {/* Header Section */}
-          <Fade in={!loading} timeout={1000}>
-            <Box sx={{ textAlign: 'center', mb: 3 }}>
-              <Typography 
-                variant="h2" 
-                component="h1" 
-                sx={{ 
-                  fontWeight: 'bold', 
-                  mb: 1, 
-                  color: '#5D4E37',
-                  fontSize: { xs: '2.2rem', sm: '2.5rem', md: '3rem' }
-                }}
-              >
-                Nuestro Catálogo
-              </Typography>
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  color: '#7D6B5D', 
-                  maxWidth: '600px', 
-                  mx: 'auto',
-                  lineHeight: 1.6
-                }}
-              >
-                Descubre los mejores snacks naturales para tu mascota
-              </Typography>
-            </Box>
-          </Fade>
-
-          {/* Filters Section - Manteniendo la estructura original */}
-          <Fade in={!loading} timeout={1200}>
-            <Paper sx={{ 
-              p: 2, 
-              mb: 4, 
-              borderRadius: 2, 
-              boxShadow: 2, 
-              border: '1px solid rgba(212, 165, 116, 0.2)', 
-              backgroundColor: 'rgba(255, 255, 255, 0.9)',
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                boxShadow: '0 4px 20px rgba(93, 78, 55, 0.15)',
-              }
-            }}>
-              <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', textAlign: 'center', mb: 3, color: '#5D4E37' }}>
-                Filtros
-              </Typography>
-              <Grid container spacing={3} alignItems="center" justifyContent="center">
-                <Grid item xs={12} sm={6} md={4}>
-                  <Tooltip title="Busca por nombre o descripción del producto">
-                    <TextField
-                      fullWidth
-                      label="Buscar productos"
-                      variant="outlined"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <SearchIcon sx={{ color: '#5D4E37' }} />
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                  </Tooltip>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <FormControl fullWidth sx={{ minWidth: 240 }}>
-                    <InputLabel id="category-select-label" sx={{ color: '#5D4E37' }}>Categorías</InputLabel>
-                    <Select
-                      labelId="category-select-label"
-                      value={selectedCategory}
-                      label="Categorías"
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      MenuProps={{
-                        PaperProps: {
-                          style: {
-                            maxHeight: 250,
-                          },
-                        },
-                      }}
-                      sx={{
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: 'rgba(93, 78, 55, 0.3)',
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#5D4E37',
-                        }
-                      }}
-                    >
-                      <MenuItem value="">
-                        <em>Todas las categorías</em>
-                      </MenuItem>
-                      {categories.map((category) => (
-                        <MenuItem key={category.categoriaID} value={category.nombre}>
-                          {category.nombre}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <FormControl fullWidth>
-                    <InputLabel sx={{ color: '#5D4E37' }}>Stock</InputLabel>
-                    <Select
-                      value={stockFilter}
-                      label="Stock"
-                      onChange={(e) => setStockFilter(e.target.value)}
-                      sx={{
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: 'rgba(93, 78, 55, 0.3)',
-                        }
-                      }}
-                    >
-                      <MenuItem value="all">Todos</MenuItem>
-                      <MenuItem value="inStock">En stock</MenuItem>
-                      <MenuItem value="outOfStock">Agotados</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <FormControl fullWidth>
-                    <InputLabel sx={{ color: '#5D4E37' }}>Ordenar por</InputLabel>
-                    <Select
-                      value={sortOption}
-                      label="Ordenar por"
-                      onChange={(e) => setSortOption(e.target.value)}
-                      startAdornment={
-                        <InputAdornment position="start">
-                          <SortIcon sx={{ color: '#5D4E37' }} />
-                        </InputAdornment>
-                      }
-                      sx={{
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: 'rgba(93, 78, 55, 0.3)',
-                        }
-                      }}
-                    >
-                      <MenuItem value="">
-                        <em>Por defecto</em>
-                      </MenuItem>
-                      <MenuItem value="precio:asc">Precio: Menor a Mayor</MenuItem>
-                      <MenuItem value="precio:desc">Precio: Mayor a Menor</MenuItem>
-                      <MenuItem value="nombre:asc">Nombre: A-Z</MenuItem>
-                      <MenuItem value="nombre:desc">Nombre: Z-A</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={8}>
-                  <Box sx={{ mt: 2 }}>
-                    <Typography gutterBottom sx={{ color: '#5D4E37', fontWeight: 600 }}>
-                      Rango de Precio
-                    </Typography>
-                    <Slider
-                      value={priceRange}
-                      onChange={handlePriceChange}
-                      valueLabelDisplay="auto"
-                      min={0}
-                      max={1000}
-                      step={10}
-                      marks={[
-                        { value: 0, label: 'S/0' },
-                        { value: 500, label: 'S/500' },
-                        { value: 1000, label: 'S/1000' },
-                      ]}
-                      sx={{
-                        color: '#5D4E37',
-                        '& .MuiSlider-thumb': {
-                          backgroundColor: '#FFFFFF',
-                          border: '2px solid #5D4E37',
-                        },
-                        '& .MuiSlider-valueLabel': {
-                          backgroundColor: '#5D4E37',
-                          borderRadius: '8px',
-                        }
-                      }}
-                    />
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                      <Typography variant="body2" sx={{ color: '#5D4E37', fontWeight: 600 }}>
-                        S/{priceRange[0]}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: '#5D4E37', fontWeight: 600 }}>
-                        S/{priceRange[1]}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sx={{ textAlign: 'center', mt: 2 }}>
-                  <Tooltip title="Restablecer todos los filtros">
-                    <Button
-                      variant="contained"
-                      startIcon={<ClearIcon />}
-                      onClick={handleClearFilters}
-                      sx={{
-                        backgroundColor: '#5D4E37',
-                        color: '#FFFFFF',
-                        fontWeight: 600,
-                        '&:hover': {
-                          backgroundColor: '#3D2E1F',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 4px 12px rgba(93, 78, 55, 0.4)'
-                        }
-                      }}
-                    >
-                      Limpiar Filtros
-                    </Button>
-                  </Tooltip>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Fade>
-
-          {/* Active Filters */}
-          <Fade in={!loading} timeout={1400}>
-            <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
-              {searchTerm && (
-                <Chip
-                  label={`Búsqueda: "${searchTerm}"`}
-                  onDelete={() => setSearchTerm('')}
-                  sx={{
-                    backgroundColor: 'rgba(93, 78, 55, 0.1)',
-                    color: '#5D4E37',
-                    border: '1px solid #5D4E37',
-                    fontWeight: 600
-                  }}
-                />
-              )}
-              {selectedCategory && (
-                <Chip
-                  label={`Categoría: ${selectedCategory}`}
-                  onDelete={() => setSelectedCategory('')}
-                  sx={{
-                    backgroundColor: 'rgba(93, 78, 55, 0.1)',
-                    color: '#5D4E37',
-                    border: '1px solid #5D4E37',
-                    fontWeight: 600
-                  }}
-                />
-              )}
-              {stockFilter !== 'all' && (
-                <Chip
-                  label={`Stock: ${stockFilter === 'inStock' ? 'En stock' : 'Agotados'}`}
-                  onDelete={() => setStockFilter('all')}
-                  sx={{
-                    backgroundColor: stockFilter === 'inStock' 
-                      ? 'rgba(76, 175, 80, 0.1)' 
-                      : 'rgba(244, 67, 54, 0.1)',
-                    color: '#5D4E37',
-                    border: stockFilter === 'inStock' 
-                      ? '1px solid #4CAF50' 
-                      : '1px solid #F44336',
-                    fontWeight: 600
-                  }}
-                />
-              )}
-              {sortOption && (
-                <Chip
-                  label={`Orden: ${sortOption.replace(':', ' ')}`}
-                  onDelete={() => setSortOption('')}
-                  sx={{
-                    backgroundColor: 'rgba(93, 78, 55, 0.1)',
-                    color: '#5D4E37',
-                    border: '1px solid #5D4E37',
-                    fontWeight: 600
-                  }}
-                />
-              )}
-            </Box>
-          </Fade>
-          
-          {/* Products Grid */}
-          {filteredProducts.length === 0 ? (
-            <Zoom in={true}>
-              <Box sx={{ 
-                textAlign: 'center', 
-                py: 8,
-                borderRadius: '16px',
-                background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F6F0 100%)',
-                boxShadow: '0 8px 32px rgba(93, 78, 55, 0.08)',
-                border: '1px solid rgba(93, 78, 55, 0.15)'
-              }}>
-                <Typography variant="h4" sx={{ color: '#5D4E37', mb: 2, fontWeight: 600 }}>
-                  No se encontraron productos
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#7D6B5D', mb: 3 }}>
-                  Lo sentimos, no hay productos que coincidan con tus criterios de búsqueda.
-                </Typography>
-                <Button 
-                  variant="contained" 
-                  onClick={handleClearFilters}
-                  sx={{
-                    backgroundColor: '#5D4E37',
-                    color: '#FFFFFF',
-                    fontWeight: 600,
-                    '&:hover': {
-                      backgroundColor: '#3D2E1F',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 4px 12px rgba(93, 78, 55, 0.4)'
-                    }
-                  }}
-                >
-                  Mostrar todos los productos
-                </Button>
-              </Box>
-            </Zoom>
-          ) : (
-            <Grid container spacing={4} justifyContent="center">
-              {filteredProducts.map((product, index) => (
-                <Grow in={true} timeout={500 + index * 100} key={product.productoID}>
-                  <Grid item xs={12} sm={6} md={4} lg={3}>
-                    <ProductCard 
-                      product={product} 
-                      buttonColor="#5D4E37"
-                    />
-                  </Grid>
-                </Grow>
-              ))}
-            </Grid>
+      <Box sx={{ display: 'grid', gap: { md: 6 }, gridTemplateColumns: { xs: '1fr', md: '248px minmax(0, 1fr)' }, alignItems: 'start' }}>
+        <Box component="aside" aria-label="Filtros" sx={{ display: { xs: 'none', md: 'block' }, position: 'sticky', top: 'calc(var(--nav-h) + 24px)' }}>
+          {filters}
+          {activeChips.length > 0 && (
+            <Button onClick={clearFilters} variant="text" size="small" startIcon={<CloseRoundedIcon />} sx={{ ml: 0.5 }}>
+              Limpiar filtros
+            </Button>
           )}
-        </Container>
-        <SideImageColumn />
-      </Box>
+        </Box>
 
-      {/* Floating Action Buttons */}
-      <Box
-        sx={{
-          position: 'fixed',
-          bottom: 24,
-          right: 24,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 1,
-          zIndex: 1000
-        }}
-      >
-        <Tooltip title="Ver favoritos">
-          <IconButton
-            sx={{
-              backgroundColor: '#FFFFFF',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-              '&:hover': {
-                backgroundColor: '#F8F6F0',
-                transform: 'scale(1.1)'
+        <Box sx={{ minWidth: 0 }}>
+          <Box sx={{ display: 'flex', gap: 1.5, mb: 2.5, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+            <TextField
+              value={searchTerm}
+              onChange={(event) => setParam('q', event.target.value)}
+              placeholder="Buscar por nombre o ingrediente"
+              size="small"
+              fullWidth
+              sx={{ flex: '1 1 260px' }}
+              slotProps={{
+                htmlInput: { 'aria-label': 'Buscar productos', type: 'search' },
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchRoundedIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchTerm ? (
+                    <InputAdornment position="end">
+                      <IconButton size="small" edge="end" aria-label="Borrar búsqueda" onClick={() => setParam('q', '')}>
+                        <CloseRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                },
+              }}
+            />
+            <TextField select size="small" value={sortOption} onChange={(event) => setSortOption(event.target.value)} sx={{ flex: { xs: '1 1 0', sm: '0 0 228px' }, minWidth: 0 }} slotProps={{ htmlInput: { 'aria-label': 'Ordenar productos' }, select: { displayEmpty: true } }}>
+              {SORTS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Button onClick={() => setDrawerOpen(true)} variant="outlined" sx={{ display: { xs: 'inline-flex', md: 'none' }, flexShrink: 0, minHeight: 40 }} startIcon={<Badge color="primary" variant="dot" invisible={activeChips.length === 0}><TuneRoundedIcon fontSize="small" /></Badge>}>
+              Filtros
+            </Button>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 3, minHeight: 32 }}>
+            <Typography variant="body2" color="text.secondary" aria-live="polite" sx={{ mr: 0.5 }}>
+              {status === 'ready' ? (filtered.length === 1 ? '1 producto' : `${filtered.length} productos`) : ' '}
+            </Typography>
+            <AnimatePresence initial={false}>
+              {activeChips.map((chip) => (
+                <motion.span key={chip.key} layout initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.85 }} transition={{ duration: 0.18 }}>
+                  <Chip label={chip.label} onDelete={chip.onDelete} size="small" sx={{ bgcolor: color.olive[100], color: color.olive[700], '& .MuiChip-deleteIcon': { color: color.olive[600], '&:hover': { color: color.olive[900] } } }} />
+                </motion.span>
+              ))}
+            </AnimatePresence>
+          </Box>
+
+          {status === 'loading' && (
+            <ProductGrid>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))}
+            </ProductGrid>
+          )}
+
+          {status === 'error' && (
+            <EmptyState
+              compact
+              title="No pudimos cargar el catálogo"
+              description="Puede ser un problema de conexión. Inténtalo otra vez en unos segundos."
+              action={
+                <Button onClick={load} variant="contained" startIcon={<RefreshRoundedIcon />}>
+                  Reintentar
+                </Button>
               }
-            }}
-          >
-            <FavoriteBorderIcon sx={{ color: '#5D4E37' }} />
-          </IconButton>
-        </Tooltip>
+            />
+          )}
+
+          {status === 'ready' && filtered.length === 0 && (
+            <EmptyState
+              compact
+              icon={<SearchOffRoundedIcon />}
+              title={products.length === 0 ? 'Aún no hay productos' : 'Sin resultados'}
+              description={products.length === 0 ? 'Estamos preparando el catálogo. Vuelve pronto.' : 'Ningún producto coincide con estos filtros. Prueba con otra búsqueda o quita alguno.'}
+              action={
+                products.length > 0 && (
+                  <Button onClick={clearFilters} variant="contained">
+                    Quitar filtros
+                  </Button>
+                )
+              }
+            />
+          )}
+
+          {status === 'ready' && filtered.length > 0 && (
+            <ProductGrid>
+              <AnimatePresence mode="popLayout" initial={false}>
+                {filtered.map((product, index) => (
+                  <motion.div
+                    key={product.productoID}
+                    layout
+                    initial={{ opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0, transition: { duration: 0.45, delay: Math.min(index, 8) * 0.045, ease: ease.out } }}
+                    exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.16 } }}
+                    transition={{ layout: { type: 'spring', stiffness: 380, damping: 34 } }}
+                    style={{ height: '100%' }}
+                  >
+                    <ProductCard product={product} />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </ProductGrid>
+          )}
+        </Box>
       </Box>
 
-      {/* Custom CSS for animations */}
-      <style>
-        {`
-          @keyframes pulse {
-            0%, 100% {
-              opacity: 1;
-            }
-            50% {
-              opacity: 0.7;
-            }
-          }
-        `}
-      </style>
-    </Box>
+      <Drawer anchor="bottom" open={drawerOpen} onClose={() => setDrawerOpen(false)} sx={{ display: { md: 'none' } }} slotProps={{ paper: { sx: { borderRadius: '24px 24px 0 0', maxHeight: '86dvh' } } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2.5, pt: 2, pb: 1 }}>
+          <Typography variant="h4" component="h2">
+            Filtros
+          </Typography>
+          <IconButton onClick={() => setDrawerOpen(false)} aria-label="Cerrar filtros" sx={{ width: 44, height: 44 }}>
+            <CloseRoundedIcon />
+          </IconButton>
+        </Box>
+        <Box sx={{ px: 2.5, pt: 1, overflowY: 'auto' }}>{filters}</Box>
+        <Box sx={{ display: 'flex', gap: 1.5, p: 2.5, borderTop: `1px solid ${color.line}`, bgcolor: color.surface }}>
+          <Button onClick={clearFilters} variant="outlined" sx={{ flex: 1 }} disabled={activeChips.length === 0}>
+            Limpiar
+          </Button>
+          <Button onClick={() => setDrawerOpen(false)} variant="contained" sx={{ flex: 2 }}>
+            Ver {filtered.length} {filtered.length === 1 ? 'producto' : 'productos'}
+          </Button>
+        </Box>
+      </Drawer>
+    </Container>
   );
 };
 
