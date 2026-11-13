@@ -25,7 +25,7 @@ const Receipt = forwardRef(function Receipt({ pedido }, ref) {
   const { subtotal, igv, total } = desglosarIgv(totalDeDetalles(detalles));
 
   return (
-    <Box ref={ref} sx={{ bgcolor: '#fff', color: color.ink, p: { xs: 3, sm: 6 }, '@media print': { p: 0 } }}>
+    <Box ref={ref} sx={{ bgcolor: color.white, color: color.ink, p: { xs: 3, sm: 6 }, '@media print': { p: 0 } }}>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 3, pb: 3, borderBottom: `2px solid ${color.ink}` }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Box component="img" src="/images/logo.webp" alt="" sx={{ width: 64, height: 64, objectFit: 'contain' }} />

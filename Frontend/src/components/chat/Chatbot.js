@@ -12,7 +12,7 @@ import { whatsappUrl } from '../../config/site';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { splitNombre } from '../../lib/productCopy';
 import { emparejarProductos, perfilDeMascota, recomendar } from '../../lib/recommendations';
-import { color, ease, radius, shadow, spring, z } from '../../theme/tokens';
+import { color, ease, radius, shadow, spring, whatsappButtonSx, z } from '../../theme/tokens';
 import SmartImage from '../ui/SmartImage';
 
 const OPEN_EVENT = 'pys:abrir-coco';
@@ -99,7 +99,7 @@ const ChatProduct = ({ product, onView }) => {
             target="_blank"
             rel="noopener noreferrer"
             startIcon={<WhatsAppIcon sx={{ fontSize: '16px !important' }} />}
-            sx={{ minHeight: 32, px: 1.5, bgcolor: color.whatsapp, color: '#fff', '&:hover': { bgcolor: '#156A3E' } }}
+            sx={{ minHeight: 32, px: 1.5, ...whatsappButtonSx }}
           >
             Pedir
           </Button>

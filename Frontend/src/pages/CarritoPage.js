@@ -14,7 +14,7 @@ import { assetUrl, errorMessage } from '../config/api';
 import { site, whatsappUrl } from '../config/site';
 import { formatCurrency } from '../utils/formatCurrency';
 import { splitNombre } from '../lib/productCopy';
-import { color, ease, radius } from '../theme/tokens';
+import { color, ease, radius, whatsappButtonSx } from '../theme/tokens';
 import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
 import QuantityStepper from '../components/ui/QuantityStepper';
@@ -257,7 +257,7 @@ const CarritoPage = () => {
             fullWidth
             size="large"
             startIcon={processing ? <CircularProgress size={18} color="inherit" /> : <WhatsAppIcon />}
-            sx={{ bgcolor: color.whatsapp, color: '#fff', '&:hover': { bgcolor: '#156A3E' }, '&.Mui-disabled': { bgcolor: 'rgba(27, 127, 75, 0.4)', color: '#fff' } }}
+            sx={whatsappButtonSx}
           >
             {processing ? 'Registrando pedido…' : 'Pedir por WhatsApp'}
           </Button>

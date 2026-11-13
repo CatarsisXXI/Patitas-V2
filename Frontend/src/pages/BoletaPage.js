@@ -64,7 +64,7 @@ const BoletaPage = () => {
 
       <Box sx={{ borderRadius: `${radius.lg}px`, overflow: 'hidden', border: `1px solid ${color.line}`, boxShadow: shadow.md, '@media print': { border: 0, boxShadow: 'none', borderRadius: 0 } }}>
         {status === 'loading' ? (
-          <Box sx={{ bgcolor: '#fff', p: { xs: 3, sm: 6 } }}>
+          <Box sx={{ bgcolor: color.white, p: { xs: 3, sm: 6 } }}>
             <Skeleton height={64} width="60%" />
             <Skeleton height={28} sx={{ mt: 4 }} />
             <Skeleton height={28} />

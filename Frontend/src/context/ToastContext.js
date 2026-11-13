@@ -10,8 +10,8 @@ const ToastContext = createContext({ notify: () => {} });
 
 const ICONS = {
   success: <CheckCircleRoundedIcon fontSize="small" sx={{ color: color.olive[300] }} />,
-  error: <ErrorOutlineRoundedIcon fontSize="small" sx={{ color: '#F0A58F' }} />,
-  info: <InfoOutlinedIcon fontSize="small" sx={{ color: '#D9CDB4' }} />,
+  error: <ErrorOutlineRoundedIcon fontSize="small" sx={{ color: color.onInk.error }} />,
+  info: <InfoOutlinedIcon fontSize="small" sx={{ color: color.onInk.info }} />,
 };
 
 /**

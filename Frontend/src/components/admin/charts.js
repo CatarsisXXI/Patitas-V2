@@ -135,7 +135,7 @@ export const SegmentedBar = ({ data, unit = '' }) => {
                 sx={{ flex: `${d.value} 0 0`, minWidth: 6, borderRadius: '4px', bgcolor: d.fill, display: 'flex', alignItems: 'center', px: 1, overflow: 'hidden', transition: 'filter 140ms ease', '&:hover, &:focus-visible': { filter: 'brightness(0.92)' } }}
               >
                 {share >= 0.14 && (
-                  <Box component="span" className="tabular" sx={{ fontSize: '0.75rem', fontWeight: 700, color: INSIDE_TEXT[d.key] || '#fff' }}>
+                  <Box component="span" className="tabular" sx={{ fontSize: '0.75rem', fontWeight: 700, color: INSIDE_TEXT[d.key] || color.white }}>
                     {Math.round(share * 100)}%
                   </Box>
                 )}

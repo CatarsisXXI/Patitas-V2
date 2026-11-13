@@ -29,7 +29,7 @@ const FinalCta = () => {
                 Descubre nuestra variedad de snacks premium naturales para perros y gatos.
               </Typography>
               <Box sx={{ mt: 4, display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-                <Button component={Link} to="/productos" size="large" endIcon={<ArrowForwardRoundedIcon />} sx={{ bgcolor: color.paper, color: color.olive[900], '&:hover': { bgcolor: '#fff' } }}>
+                <Button component={Link} to="/productos" size="large" endIcon={<ArrowForwardRoundedIcon />} sx={{ bgcolor: color.paper, color: color.olive[900], '&:hover': { bgcolor: color.white } }}>
                   Ver catálogo
                 </Button>
                 <Button

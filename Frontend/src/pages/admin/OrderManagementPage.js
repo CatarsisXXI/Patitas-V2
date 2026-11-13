@@ -200,7 +200,7 @@ const OrderManagementPage = () => {
     try {
       // Las librerías de PDF pesan; se descargan solo cuando se usan.
       const [{ default: html2canvas }, { default: JsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
-      const canvas = await html2canvas(receiptRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const canvas = await html2canvas(receiptRef.current, { scale: 2, useCORS: true, backgroundColor: color.white });
       const pdf = new JsPDF('p', 'mm', 'a4');
       const pageWidth = 210;
       const pageHeight = 297;

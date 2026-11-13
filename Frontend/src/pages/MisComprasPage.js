@@ -10,7 +10,7 @@ import { hasReceipt } from '../lib/orders';
 import { whatsappUrl } from '../config/site';
 import { formatCurrency, formatDate } from '../utils/formatCurrency';
 import { splitNombre } from '../lib/productCopy';
-import { color, radius } from '../theme/tokens';
+import { color, radius, whatsappButtonSx } from '../theme/tokens';
 import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
 import StatusChip from '../components/ui/StatusChip';
@@ -66,7 +66,7 @@ const OrderCard = ({ pedido }) => (
           target="_blank"
           rel="noopener noreferrer"
           startIcon={<WhatsAppIcon />}
-          sx={{ bgcolor: color.whatsapp, color: '#fff', '&:hover': { bgcolor: '#156A3E' } }}
+          sx={whatsappButtonSx}
         >
           Confirmar por WhatsApp
         </Button>

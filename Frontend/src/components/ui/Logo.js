@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box } from '@mui/material';
 import { Link } from 'react-router-dom';
-import { font } from '../../theme/tokens';
+import { color, font } from '../../theme/tokens';
 import { site } from '../../config/site';
 
 /** Sello de la marca con el nombre al lado. */
@@ -15,7 +15,7 @@ const Logo = ({ to = '/', size = 44, showName = true, light = false, onClick }) 
       display: 'inline-flex',
       alignItems: 'center',
       gap: 1.25,
-      color: light ? '#F6F2E7' : 'text.primary',
+      color: light ? color.paper : 'text.primary',
       '&:hover img': { transform: 'rotate(-8deg) scale(1.04)' },
     }}
   >

@@ -27,6 +27,18 @@ export const color = {
   danger: { main: '#A8452C', tint: '#F8E7E0' },
   info: { main: '#3F6274', tint: '#E1EAEE' },
   whatsapp: '#1B7F4B',
+  whatsappHover: '#156A3E',
+  white: '#FFFFFF',
+  // Iconos de aviso sobre fondo oscuro (notificaciones).
+  onInk: { error: '#F0A58F', info: '#D9CDB4' },
+};
+
+/** Estilo del botón de WhatsApp, igual en carrito, pedidos y chat. */
+export const whatsappButtonSx = {
+  bgcolor: color.whatsapp,
+  color: color.white,
+  '&:hover': { bgcolor: color.whatsappHover },
+  '&.Mui-disabled': { bgcolor: 'rgba(27, 127, 75, 0.4)', color: color.white },
 };
 
 // Colores de marcas en gráficos. Validados con simulación de daltonismo

@@ -67,8 +67,8 @@ const theme = createTheme({
         sizeSmall: { padding: '6px 14px', minHeight: 36, fontSize: '0.875rem' },
         sizeLarge: { padding: '14px 28px', minHeight: 52, fontSize: '1rem' },
         containedPrimary: {
-          boxShadow: `0 1px 0 ${alpha('#fff', 0.18)} inset, 0 6px 16px -8px ${alpha(color.olive[900], 0.7)}`,
-          '&:hover': { backgroundColor: color.olive[700], boxShadow: `0 1px 0 ${alpha('#fff', 0.18)} inset, 0 10px 22px -10px ${alpha(color.olive[900], 0.8)}` },
+          boxShadow: `0 1px 0 ${alpha(color.white, 0.18)} inset, 0 6px 16px -8px ${alpha(color.olive[900], 0.7)}`,
+          '&:hover': { backgroundColor: color.olive[700], boxShadow: `0 1px 0 ${alpha(color.white, 0.18)} inset, 0 10px 22px -10px ${alpha(color.olive[900], 0.8)}` },
         },
         containedSecondary: {
           '&:hover': { backgroundColor: color.ink },
