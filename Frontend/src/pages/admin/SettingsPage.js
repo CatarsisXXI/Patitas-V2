@@ -1,224 +1,83 @@
 import React from 'react';
-import { 
-  Container, 
-  Typography, 
-  Box, 
-  Paper, 
-  Grid,
-  Card,
-  CardContent,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Chip,
-  LinearProgress,
-  Alert
-} from '@mui/material';
-import {
-  Settings as SettingsIcon,
-  Build as BuildIcon,
-  Payment as PaymentIcon,
-  LocalShipping as ShippingIcon,
-  Receipt as TaxIcon,
-  Notifications as NotificationsIcon,
-  Security as SecurityIcon,
-  Palette as ThemeIcon
-} from '@mui/icons-material';
+import { Box, Typography } from '@mui/material';
+import { API_ORIGIN } from '../../config/api';
+import { site } from '../../config/site';
+import { color, radius } from '../../theme/tokens';
+import PageHeader from '../../components/ui/PageHeader';
+import Panel from '../../components/admin/Panel';
 
-const SettingsPage = () => {
-  // Datos de ejemplo para las funcionalidades próximas
-  const upcomingFeatures = [
-    { icon: <PaymentIcon />, name: 'Pasarelas de Pago', description: 'Configura métodos de pago como PayPal, Stripe y tarjetas de crédito', status: 'Próximamente' },
-    { icon: <ShippingIcon />, name: 'Gestión de Envíos', description: 'Define costos de envío, zonas y proveedores logísticos', status: 'Próximamente' },
-    { icon: <TaxIcon />, name: 'Impuestos', description: 'Configura tasas impositivas y reglas fiscales', status: 'Próximamente' },
-    { icon: <NotificationsIcon />, name: 'Notificaciones', description: 'Personaliza alertas y comunicaciones con clientes', status: 'Próximamente' },
-    { icon: <SecurityIcon />, name: 'Seguridad', description: 'Gestiona permisos y configuraciones de seguridad', status: 'Próximamente' },
-    { icon: <ThemeIcon />, name: 'Apariencia', description: 'Personaliza colores y diseño de tu tienda', status: 'Próximamente' },
-  ];
+const Item = ({ label, children }) => (
+  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '200px 1fr' }, gap: { xs: 0.25, sm: 2 }, py: 1.5, borderTop: `1px solid ${color.line}`, '&:first-of-type': { borderTop: 0 } }}>
+    <Typography component="dt" color="text.secondary">
+      {label}
+    </Typography>
+    <Typography component="dd" sx={{ m: 0, fontWeight: 600, overflowWrap: 'anywhere' }}>
+      {children}
+    </Typography>
+  </Box>
+);
 
-  return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Header mejorado */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 64,
-            height: 64,
-            borderRadius: 2,
-            bgcolor: 'primary.main',
-            color: 'white',
-            mr: 3,
-            boxShadow: 2
-          }}
-        >
-          <SettingsIcon sx={{ fontSize: 32 }} />
-        </Box>
-        <Box>
-          <Typography variant="h4" component="h1" fontWeight="600" gutterBottom>
-            Configuración del Sistema
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Gestiona todas las configuraciones de tu tienda en un solo lugar
-          </Typography>
-        </Box>
+const Code = ({ children }) => (
+  <Box component="code" sx={{ px: 0.75, py: 0.25, borderRadius: `${radius.xs}px`, bgcolor: color.sunken, fontSize: '0.875em' }}>
+    {children}
+  </Box>
+);
+
+const PENDING = [
+  ['Medios de pago', 'Cobro en línea con pasarela, además del pedido por WhatsApp.'],
+  ['Envíos', 'Costos por distrito y seguimiento de entregas.'],
+  ['Notificaciones', 'Avisos al cliente cuando cambia el estado de su pedido.'],
+];
+
+/** Muestra la configuración vigente. Hoy se edita en el código; no hay formulario todavía. */
+const SettingsPage = () => (
+  <>
+    <PageHeader title="Configuración" description="Datos con los que funciona la tienda. Por ahora se cambian en el código y requieren volver a publicar." />
+
+    <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', lg: '3fr 2fr' }, alignItems: 'start' }}>
+      <Box sx={{ display: 'grid', gap: 3 }}>
+        <Panel title="Datos de la tienda" description={<>Se editan en <Code>src/config/site.js</Code>.</>}>
+          <Box component="dl" sx={{ m: 0 }}>
+            <Item label="Nombre">{site.name}</Item>
+            <Item label="WhatsApp de pedidos">+{site.whatsapp}</Item>
+            {site.social.map((item) => (
+              <Item key={item.name} label={item.name}>
+                {item.url.replace(/^https?:\/\//, '')}
+              </Item>
+            ))}
+          </Box>
+        </Panel>
+
+        <Panel title="Datos de la boleta" description="Aparecen en el encabezado de cada comprobante. Verifica que sean los reales antes de publicar.">
+          <Box component="dl" sx={{ m: 0 }}>
+            <Item label="RUC">{site.legal.ruc}</Item>
+            <Item label="Dirección fiscal">{site.legal.address}</Item>
+            <Item label="Teléfono">{site.legal.phone}</Item>
+            <Item label="Serie">{site.legal.receiptSeries}</Item>
+          </Box>
+        </Panel>
+
+        <Panel title="Conexión con el backend" description={<>Se define con la variable <Code>REACT_APP_API_URL</Code> al compilar.</>}>
+          <Box component="dl" sx={{ m: 0 }}>
+            <Item label="URL de la API">{API_ORIGIN}</Item>
+          </Box>
+        </Panel>
       </Box>
 
-      <Grid container spacing={3}>
-        {/* Panel de estado */}
-        <Grid item xs={12}>
-          <Alert 
-            severity="info" 
-            sx={{ 
-              mb: 3,
-              '& .MuiAlert-message': {
-                width: '100%'
-              }
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body1">
-                <strong>Panel en desarrollo</strong> - Estamos trabajando para brindarte la mejor experiencia
-              </Typography>
-              <Chip 
-                label="Progreso: 25%" 
-                color="primary" 
-                variant="outlined"
-                size="small"
-              />
-            </Box>
-            <LinearProgress 
-              variant="determinate" 
-              value={25} 
-              sx={{ mt: 1, height: 6, borderRadius: 3 }}
-            />
-          </Alert>
-        </Grid>
-
-        {/* Funcionalidades actuales (placeholder) */}
-        <Grid item xs={12} md={4}>
-          <Card sx={{ height: '100%', boxShadow: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <BuildIcon color="primary" sx={{ mr: 2 }} />
-                <Typography variant="h6" fontWeight="600">
-                  Configuraciones Básicas
-                </Typography>
-              </Box>
-              <List dense>
-                <ListItem>
-                  <ListItemText 
-                    primary="Información de la Tienda" 
-                    secondary="Completa en un 100%" 
-                  />
-                  <Chip label="Activo" color="success" size="small" />
-                </ListItem>
-                <ListItem>
-                  <ListItemText 
-                    primary="Perfil de Negocio" 
-                    secondary="Completa en un 80%" 
-                  />
-                  <Chip label="Activo" color="success" size="small" />
-                </ListItem>
-              </List>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Panel principal de próximas características */}
-        <Grid item xs={12} md={8}>
-          <Paper 
-            sx={{ 
-              p: 4, 
-              background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-              boxShadow: 3
-            }}
-          >
-            <Typography 
-              variant="h5" 
-              gutterBottom 
-              fontWeight="600"
-              sx={{ mb: 3 }}
-            >
-              Próximas Funcionalidades
-            </Typography>
-            <Typography 
-              variant="body1" 
-              color="text.secondary" 
-              sx={{ mb: 4 }}
-            >
-              Estamos desarrollando herramientas poderosas para ayudarte a gestionar 
-              cada aspecto de tu negocio. Estas características estarán disponibles pronto.
-            </Typography>
-
-            <Grid container spacing={3}>
-              {upcomingFeatures.map((feature, index) => (
-                <Grid item xs={12} sm={6} key={index}>
-                  <Card 
-                    variant="outlined"
-                    sx={{ 
-                      height: '100%',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: 2
-                      }
-                    }}
-                  >
-                    <CardContent sx={{ p: 3 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <ListItemIcon sx={{ minWidth: 40 }}>
-                          {feature.icon}
-                        </ListItemIcon>
-                        <Typography variant="h6" fontSize="1rem" fontWeight="600">
-                          {feature.name}
-                        </Typography>
-                      </Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {feature.description}
-                      </Typography>
-                      <Chip 
-                        label={feature.status} 
-                        color="primary" 
-                        variant="filled"
-                        size="small"
-                        sx={{ borderRadius: 1 }}
-                      />
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-
-            <Box 
-              sx={{ 
-                mt: 4, 
-                p: 3, 
-                bgcolor: 'background.paper', 
-                borderRadius: 2,
-                textAlign: 'center'
-              }}
-            >
+      <Panel title="Aún no disponible" description="Funciones que este panel todavía no incluye.">
+        <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+          {PENDING.map(([title, text]) => (
+            <Box key={title} component="li" sx={{ py: 1.5, borderTop: `1px solid ${color.line}`, '&:first-of-type': { borderTop: 0 } }}>
+              <Typography sx={{ fontWeight: 600 }}>{title}</Typography>
               <Typography variant="body2" color="text.secondary">
-                ¿Tienes sugerencias para nuevas funcionalidades?{' '}
-                <Typography 
-                  component="span" 
-                  color="primary" 
-                  fontWeight="600"
-                  sx={{ cursor: 'pointer' }}
-                >
-                  Contáctanos
-                </Typography>
+                {text}
               </Typography>
             </Box>
-          </Paper>
-        </Grid>
-      </Grid>
-    </Container>
-  );
-};
+          ))}
+        </Box>
+      </Panel>
+    </Box>
+  </>
+);
 
 export default SettingsPage;

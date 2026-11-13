@@ -13,7 +13,16 @@ const dateTimeFormatter = new Intl.DateTimeFormat('es-PE', {
   year: 'numeric',
   hour: '2-digit',
   minute: '2-digit',
+  hour12: false,
 });
+
+const shortDateFormatter = new Intl.DateTimeFormat('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
+
+/** Fecha compacta para listas: "11 nov 2026". */
+export const formatShortDate = (value) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : shortDateFormatter.format(date).replace(/\./g, '');
+};
 
 export const formatDate = (value) => {
   const date = new Date(value);
@@ -22,5 +31,5 @@ export const formatDate = (value) => {
 
 export const formatDateTime = (value) => {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '' : dateTimeFormatter.format(date);
+  return Number.isNaN(date.getTime()) ? '' : dateTimeFormatter.format(date).replace(/\./g, '');
 };

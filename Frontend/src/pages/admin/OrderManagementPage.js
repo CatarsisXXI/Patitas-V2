@@ -1,821 +1,375 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Container,
-  Typography,
-  Box,
-  CircularProgress,
-  Alert,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Select,
-  MenuItem,
-  TextField,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Snackbar,
-  Chip,
-  Card,
-  CardContent,
-  Grid,
-  IconButton,
-  Tooltip,
-  Avatar,
-  alpha,
-  useTheme,
-  InputAdornment,
-  Tab,
-  Tabs
-} from '@mui/material';
-import {
-  ExpandMore as ExpandMoreIcon,
-  Edit as EditIcon,
-  Download as DownloadIcon,
-  Visibility as VisibilityIcon,
-  Search as SearchIcon,
-  LocalShipping as ShippingIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  Pending as PendingIcon,
-  Payment as PaymentIcon,
-  Person as PersonIcon,
-  CalendarToday as CalendarIcon,
-  AttachMoney as MoneyIcon,
-  LocationOn as LocationIcon
-} from '@mui/icons-material';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Box, Button, CircularProgress, Collapse, Dialog, IconButton, InputAdornment, MenuItem, Skeleton, TextField, Tooltip, Typography } from '@mui/material';
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import EditLocationAltOutlinedIcon from '@mui/icons-material/EditLocationAltOutlined';
+import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
+import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import adminService from '../../services/adminService';
-import { formatCurrency } from '../../utils/formatCurrency';
-import { format } from 'date-fns';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { useToast } from '../../context/ToastContext';
+import { errorMessage } from '../../config/api';
+import { formatCurrency, formatDateTime } from '../../utils/formatCurrency';
+import { EDITABLE_STATUSES, ORDER_STATUS } from '../../lib/orders';
+import { color } from '../../theme/tokens';
+import PageHeader from '../../components/ui/PageHeader';
+import EmptyState from '../../components/ui/EmptyState';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import StatusChip from '../../components/ui/StatusChip';
+import Receipt from '../../components/orders/Receipt';
+import Panel from '../../components/admin/Panel';
+import StatTile, { StatGrid } from '../../components/admin/StatTile';
+
+const COLUMNS = { xs: 'minmax(0, 1fr) auto', md: 'minmax(0, 1.6fr) 164px 110px 168px 132px' };
+
+const OrderRow = ({ order, busy, onStatus, onReceipt, onAddress }) => {
+  const [open, setOpen] = useState(false);
+  const items = order.detalles || [];
+  // Si el pedido tiene un estado que el panel no puede asignar, se muestra igual en el selector.
+  const options = EDITABLE_STATUSES.includes(order.estadoPedido) ? EDITABLE_STATUSES : [order.estadoPedido, ...EDITABLE_STATUSES];
+  const detailsId = `pedido-${order.pedidoID}-detalle`;
+
+  return (
+    <Box component="li" sx={{ borderTop: `1px solid ${color.line}`, opacity: busy ? 0.6 : 1, transition: 'opacity 160ms ease' }}>
+      <Box sx={{ display: 'grid', alignItems: 'center', columnGap: 2, rowGap: 1.5, gridTemplateColumns: COLUMNS, px: 3, py: 2 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography noWrap sx={{ fontWeight: 600 }}>
+            {order.nombreCliente}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" className="tabular" component="p" noWrap>
+            #{order.pedidoID}
+            <Box component="span" sx={{ display: { md: 'none' } }}>
+              {' '}
+              · {formatDateTime(order.fechaPedido)}
+            </Box>
+          </Typography>
+        </Box>
+
+        <Typography variant="body2" color="text.secondary" className="tabular" sx={{ display: { xs: 'none', md: 'block' } }}>
+          {formatDateTime(order.fechaPedido)}
+        </Typography>
+
+        <Typography className="tabular" sx={{ fontWeight: 650, textAlign: 'right' }}>
+          {formatCurrency(order.totalPedido)}
+        </Typography>
+
+        <TextField
+          select
+          size="small"
+          value={order.estadoPedido}
+          disabled={busy}
+          onChange={(event) => onStatus(order, event.target.value)}
+          sx={{ gridColumn: { xs: '1 / 2', md: 'auto' }, maxWidth: { xs: 190, md: 'none' } }}
+          slotProps={{ htmlInput: { 'aria-label': `Estado del pedido ${order.pedidoID}` }, select: { renderValue: (value) => <StatusChip status={value} size="small" /> } }}
+        >
+          {options.map((value) => (
+            <MenuItem key={value} value={value} disabled={!EDITABLE_STATUSES.includes(value)}>
+              <StatusChip status={value} size="small" />
+            </MenuItem>
+          ))}
+        </TextField>
+
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.25 }}>
+          <Tooltip title="Ver boleta">
+            <IconButton onClick={() => onReceipt(order)} aria-label={`Ver boleta del pedido ${order.pedidoID}`} sx={{ width: 40, height: 40 }}>
+              <ReceiptLongOutlinedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          {order.estadoPedido === 'Pagado' && (
+            <Tooltip title="Editar dirección de envío">
+              <IconButton onClick={() => onAddress(order)} aria-label={`Editar dirección del pedido ${order.pedidoID}`} sx={{ width: 40, height: 40 }}>
+                <EditLocationAltOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          <Tooltip title={open ? 'Ocultar productos' : 'Ver productos'}>
+            <IconButton onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls={detailsId} aria-label={`Productos del pedido ${order.pedidoID}`} sx={{ width: 40, height: 40 }}>
+              <ExpandMoreRoundedIcon fontSize="small" sx={{ transition: 'transform 220ms cubic-bezier(0.23, 1, 0.32, 1)', transform: open ? 'rotate(180deg)' : 'none' }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
+
+      <Collapse in={open} id={detailsId} unmountOnExit>
+        <Box sx={{ mx: 3, mb: 2.5, p: 2, borderRadius: '14px', bgcolor: 'rgba(238, 232, 216, 0.55)' }}>
+          <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
+            Envío a: {order.direccionEnvio || 'Sin dirección registrada'}
+          </Typography>
+          <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gap: 0.75 }}>
+            {items.map((item) => (
+              <Box key={item.productoID} component="li" sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, fontSize: '0.9375rem' }}>
+                <span>
+                  {item.nombreProducto}{' '}
+                  <Box component="span" className="tabular" sx={{ color: color.inkMuted }}>
+                    × {item.cantidad}
+                  </Box>
+                </span>
+                <Box component="span" className="tabular" sx={{ fontWeight: 600, flexShrink: 0 }}>
+                  {formatCurrency(item.cantidad * item.precioUnitario)}
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      </Collapse>
+    </Box>
+  );
+};
 
 const OrderManagementPage = () => {
+  const { notify } = useToast();
   const [orders, setOrders] = useState([]);
-  const [filteredOrders, setFilteredOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [editDialog, setEditDialog] = useState({ open: false, order: null, field: '' });
-  const [boletaDialog, setBoletaDialog] = useState({ open: false, order: null });
-  const [newValue, setNewValue] = useState('');
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [status, setStatus] = useState('loading');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [currentTab, setCurrentTab] = useState(0);
+  const [busyId, setBusyId] = useState(null);
 
-  const theme = useTheme();
-  const boletaRef = useRef();
+  const [pendingPay, setPendingPay] = useState({ open: false, order: null });
+  const [address, setAddress] = useState({ open: false, order: null, value: '' });
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [receipt, setReceipt] = useState({ open: false, order: null });
+  const [downloading, setDownloading] = useState(false);
+  const receiptRef = useRef(null);
 
-  // Paleta de colores profesional
-  const colors = {
-    primary: '#2563eb',
-    secondary: '#64748b',
-    success: '#16a34a',
-    warning: '#d97706',
-    error: '#dc2626',
-    background: '#f8fafc',
-    surface: '#ffffff',
-    text: '#1e293b',
-    textLight: '#64748b'
-  };
-
-  const statusConfig = {
-    Pendiente: {
-      color: colors.warning,
-      icon: <PendingIcon sx={{ fontSize: 16 }} />,
-      variant: 'filled'
-    },
-    Pagado: {
-      color: colors.success,
-      icon: <PaymentIcon sx={{ fontSize: 16 }} />,
-      variant: 'filled'
-    },
-    Cancelado: {
-      color: colors.error,
-      icon: <CancelIcon sx={{ fontSize: 16 }} />,
-      variant: 'filled'
-    },
-    Enviado: {
-      color: colors.primary,
-      icon: <ShippingIcon sx={{ fontSize: 16 }} />,
-      variant: 'filled'
+  const load = useCallback(async () => {
+    setStatus('loading');
+    try {
+      setOrders(await adminService.getPedidos());
+      setStatus('ready');
+    } catch {
+      setStatus('error');
     }
-  };
-
-  useEffect(() => {
-    fetchOrders();
   }, []);
 
   useEffect(() => {
-    filterOrders();
+    load();
+  }, [load]);
+
+  const filtered = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    return orders.filter((order) => {
+      if (statusFilter !== 'all' && order.estadoPedido !== statusFilter) return false;
+      if (!term) return true;
+      return String(order.pedidoID).includes(term) || (order.nombreCliente || '').toLowerCase().includes(term) || (order.direccionEnvio || '').toLowerCase().includes(term);
+    });
   }, [orders, searchTerm, statusFilter]);
 
-  const fetchOrders = async () => {
+  const count = (estado) => orders.filter((order) => order.estadoPedido === estado).length;
+
+  const applyStatus = async (order, nextStatus) => {
+    setBusyId(order.pedidoID);
     try {
-      setLoading(true);
-      const data = await adminService.getPedidos();
-      setOrders(data);
-    } catch (err) {
-      setError('Error al cargar los pedidos. Por favor, intenta nuevamente.');
-      console.error(err);
+      await adminService.updateOrderStatus(order.pedidoID, nextStatus);
+      setOrders((prev) => prev.map((item) => (item.pedidoID === order.pedidoID ? { ...item, estadoPedido: nextStatus } : item)));
+      notify(`Pedido #${order.pedidoID} marcado como ${ORDER_STATUS[nextStatus]?.label.toLowerCase() || nextStatus}.`);
+    } catch (error) {
+      notify(errorMessage(error, 'No pudimos actualizar el estado.'), { severity: 'error' });
     } finally {
-      setLoading(false);
+      setBusyId(null);
     }
   };
 
-  const filterOrders = () => {
-    let filtered = orders;
-
-    // Filtrar por término de búsqueda
-    if (searchTerm) {
-      filtered = filtered.filter(order =>
-        order.pedidoID.toString().includes(searchTerm) ||
-        order.nombreCliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.direccionEnvio?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filtrar por estado
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.estadoPedido === statusFilter);
-    }
-
-    setFilteredOrders(filtered);
+  // Marcar como pagado descuenta stock en el backend, por eso pide confirmación.
+  const handleStatus = (order, nextStatus) => {
+    if (nextStatus === order.estadoPedido) return;
+    if (nextStatus === 'Pagado') setPendingPay({ open: true, order });
+    else applyStatus(order, nextStatus);
   };
 
-  const handleStatusChange = async (orderId, newStatus) => {
+  const saveAddress = async (event) => {
+    event.preventDefault();
+    const value = address.value.trim();
+    if (!value) return;
+    setSavingAddress(true);
     try {
-      await adminService.updateOrderStatus(orderId, newStatus);
-      setOrders(orders.map(order =>
-        order.pedidoID === orderId ? { ...order, estadoPedido: newStatus } : order
-      ));
-      setSnackbar({ open: true, message: 'Estado actualizado exitosamente', severity: 'success' });
+      await adminService.updateOrderAddress(address.order.pedidoID, value);
+      setOrders((prev) => prev.map((item) => (item.pedidoID === address.order.pedidoID ? { ...item, direccionEnvio: value } : item)));
+      notify('Dirección actualizada.');
+      setAddress((prev) => ({ ...prev, open: false }));
     } catch (error) {
-      setSnackbar({ open: true, message: 'Error al actualizar estado', severity: 'error' });
+      notify(errorMessage(error, 'No pudimos actualizar la dirección.'), { severity: 'error' });
+    } finally {
+      setSavingAddress(false);
     }
   };
 
-  const handleEditAddress = (order) => {
-    setEditDialog({ open: true, order, field: 'direccion' });
-    setNewValue(order.direccionEnvio || '');
-  };
-
-  const handleEditReasons = (order) => {
-    setEditDialog({ open: true, order, field: 'motivos' });
-    setNewValue(order.motivosCancelacion || '');
-  };
-
-  const handleSaveEdit = async () => {
+  const downloadReceipt = async () => {
+    if (!receiptRef.current) return;
+    setDownloading(true);
     try {
-      if (editDialog.field === 'direccion') {
-        await adminService.updateOrderAddress(editDialog.order.pedidoID, newValue);
-        setOrders(orders.map(order =>
-          order.pedidoID === editDialog.order.pedidoID ? { ...order, direccionEnvio: newValue } : order
-        ));
-        setSnackbar({ open: true, message: 'Dirección actualizada exitosamente', severity: 'success' });
-      } else if (editDialog.field === 'motivos') {
-        await adminService.updateOrderReasons(editDialog.order.pedidoID, newValue);
-        setOrders(orders.map(order =>
-          order.pedidoID === editDialog.order.pedidoID ? { ...order, motivosCancelacion: newValue } : order
-        ));
-        setSnackbar({ open: true, message: 'Motivos actualizados exitosamente', severity: 'success' });
+      // Las librerías de PDF pesan; se descargan solo cuando se usan.
+      const [{ default: html2canvas }, { default: JsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
+      const canvas = await html2canvas(receiptRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const pdf = new JsPDF('p', 'mm', 'a4');
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const imageHeight = (canvas.height * pageWidth) / canvas.width;
+      const image = canvas.toDataURL('image/png');
+      let offset = 0;
+      pdf.addImage(image, 'PNG', 0, offset, pageWidth, imageHeight);
+      while (imageHeight + offset > pageHeight) {
+        offset -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(image, 'PNG', 0, offset, pageWidth, imageHeight);
       }
-      setEditDialog({ open: false, order: null, field: '' });
-    } catch (error) {
-      setSnackbar({ open: true, message: 'Error al actualizar', severity: 'error' });
+      pdf.save(`boleta_pedido_${receipt.order.pedidoID}.pdf`);
+      notify('Boleta descargada.');
+    } catch {
+      notify('No pudimos generar el PDF.', { severity: 'error' });
+    } finally {
+      setDownloading(false);
     }
   };
 
-  const handleViewBoleta = (order) => {
-    setBoletaDialog({ open: true, order });
-  };
-
-  const handleDownloadBoleta = async () => {
-    if (boletaRef.current) {
-      try {
-        const canvas = await html2canvas(boletaRef.current, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-        });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgWidth = 210;
-        const pageHeight = 295;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        let heightLeft = imgHeight;
-        let position = 0;
-
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-
-        while (heightLeft >= 0) {
-          position = heightLeft - imgHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pageHeight;
-        }
-
-        pdf.save(`boleta_pedido_${boletaDialog.order?.pedidoID}.pdf`);
-        setSnackbar({ open: true, message: 'Boleta descargada exitosamente', severity: 'success' });
-      } catch (error) {
-        console.error('Error al generar PDF:', error);
-        setSnackbar({ open: true, message: 'Error al descargar la boleta', severity: 'error' });
-      }
-    }
-  };
-
-  const handleCloseBoletaDialog = () => {
-    setBoletaDialog({ open: false, order: null });
-  };
-
-  const handleCloseDialog = () => {
-    setEditDialog({ open: false, order: null, field: '' });
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ open: false, message: '', severity: 'success' });
-  };
-
-  const getStatusCount = (status) => {
-    return orders.filter(order => order.estadoPedido === status).length;
-  };
-
-  const OrderCard = ({ order }) => (
-    <Card 
-      sx={{ 
-        mb: 2,
-        border: `1px solid ${alpha(colors.primary, 0.1)}`,
-        borderRadius: 3,
-        transition: 'all 0.3s ease',
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: '0 8px 25px rgba(0,0,0,0.1)'
-        }
-      }}
-    >
-      <CardContent sx={{ p: 3 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={6} md={3}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-              <Avatar sx={{ width: 32, height: 32, bgcolor: alpha(colors.primary, 0.1) }}>
-                <PersonIcon sx={{ color: colors.primary, fontSize: 18 }} />
-              </Avatar>
-              <Box>
-                <Typography variant="subtitle2" color={colors.textLight}>
-                  Cliente
-                </Typography>
-                <Typography variant="body2" fontWeight="600">
-                  {order.nombreCliente}
-                </Typography>
-              </Box>
-            </Box>
-            <Typography variant="caption" color={colors.textLight}>
-              ID: #{order.pedidoID}
-            </Typography>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={2}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-              <CalendarIcon sx={{ color: colors.textLight, fontSize: 18 }} />
-              <Typography variant="body2">
-                {format(new Date(order.fechaPedido), 'dd/MM/yyyy')}
-              </Typography>
-            </Box>
-            <Typography variant="caption" color={colors.textLight}>
-              {format(new Date(order.fechaPedido), 'HH:mm')}
-            </Typography>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={2}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <MoneyIcon sx={{ color: colors.textLight, fontSize: 18 }} />
-              <Typography variant="body1" fontWeight="600" color={colors.primary}>
-                {formatCurrency(order.totalPedido)}
-              </Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Select
-                value={order.estadoPedido}
-                onChange={(e) => handleStatusChange(order.pedidoID, e.target.value)}
-                size="small"
-                sx={{ 
-                  minWidth: 120,
-                  '& .MuiSelect-select': { 
-                    display: 'flex', 
-                    alignItems: 'center',
-                    gap: 1
-                  }
-                }}
-              >
-                <MenuItem value="Pendiente">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <PendingIcon sx={{ color: colors.warning, fontSize: 16 }} />
-                    Pendiente
-                  </Box>
-                </MenuItem>
-                <MenuItem value="Pagado">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <PaymentIcon sx={{ color: colors.success, fontSize: 16 }} />
-                    Pagado
-                  </Box>
-                </MenuItem>
-                <MenuItem value="Cancelado">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CancelIcon sx={{ color: colors.error, fontSize: 16 }} />
-                    Cancelado
-                  </Box>
-                </MenuItem>
-              </Select>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={2}>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Tooltip title="Ver boleta">
-                <IconButton
-                  size="small"
-                  onClick={() => handleViewBoleta(order)}
-                  sx={{ 
-                    border: `1px solid ${alpha(colors.primary, 0.2)}`,
-                    borderRadius: 2
-                  }}
-                >
-                  <VisibilityIcon sx={{ color: colors.primary, fontSize: 18 }} />
-                </IconButton>
-              </Tooltip>
-
-              {order.estadoPedido === 'Pagado' && (
-                <Tooltip title="Editar dirección">
-                  <IconButton
-                    size="small"
-                    onClick={() => handleEditAddress(order)}
-                    sx={{ 
-                      border: `1px solid ${alpha(colors.primary, 0.2)}`,
-                      borderRadius: 2
-                    }}
-                  >
-                    <LocationIcon sx={{ color: colors.primary, fontSize: 18 }} />
-                  </IconButton>
-                </Tooltip>
-              )}
-
-              {order.estadoPedido === 'Cancelado' && (
-                <Tooltip title="Editar motivos">
-                  <IconButton
-                    size="small"
-                    onClick={() => handleEditReasons(order)}
-                    sx={{ 
-                      border: `1px solid ${alpha(colors.primary, 0.2)}`,
-                      borderRadius: 2
-                    }}
-                  >
-                    <EditIcon sx={{ color: colors.primary, fontSize: 18 }} />
-                  </IconButton>
-                </Tooltip>
-              )}
-            </Box>
-          </Grid>
-        </Grid>
-
-        {/* Detalles del pedido */}
-        <Accordion 
-          sx={{ 
-            mt: 2,
-            borderRadius: 2,
-            boxShadow: 'none',
-            border: `1px solid ${alpha(colors.primary, 0.1)}`,
-            '&:before': { display: 'none' }
-          }}
-        >
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="body2" fontWeight="500">
-              Ver productos ({order.detalles?.length || 0})
-            </Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Grid container spacing={1}>
-              {order.detalles?.map((item) => (
-                <Grid item xs={12} key={item.productoID}>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    p: 1,
-                    borderRadius: 1,
-                    bgcolor: alpha(colors.primary, 0.03)
-                  }}>
-                    <Typography variant="body2" fontWeight="500">
-                      {item.nombreProducto}
-                    </Typography>
-                    <Typography variant="body2" color={colors.textLight}>
-                      {item.cantidad} x {formatCurrency(item.precioUnitario)}
-                    </Typography>
-                    <Typography variant="body2" fontWeight="600">
-                      {formatCurrency(item.cantidad * item.precioUnitario)}
-                    </Typography>
-                  </Box>
-                </Grid>
-              ))}
-            </Grid>
-          </AccordionDetails>
-        </Accordion>
-      </CardContent>
-    </Card>
-  );
-
-  if (loading) {
+  if (status === 'error') {
     return (
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '60vh',
-        flexDirection: 'column',
-        gap: 2
-      }}>
-        <CircularProgress size={60} thickness={4} />
-        <Typography variant="h6" color={colors.textLight}>
-          Cargando pedidos...
-        </Typography>
-      </Box>
+      <EmptyState
+        title="No pudimos cargar los pedidos"
+        description="Comprueba que el backend esté en marcha y vuelve a intentarlo."
+        action={
+          <Button onClick={load} variant="contained" startIcon={<RefreshRoundedIcon />}>
+            Reintentar
+          </Button>
+        }
+      />
     );
   }
 
-  if (error) {
-    return (
-      <Container sx={{ py: 4 }}>
-        <Alert 
-          severity="error" 
-          sx={{ 
-            borderRadius: 3,
-            border: `1px solid ${colors.error}`
-          }}
-        >
-          {error}
-        </Alert>
-      </Container>
-    );
-  }
+  const loading = status === 'loading';
+  const hasFilters = searchTerm || statusFilter !== 'all';
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography 
-          variant="h3" 
-          component="h1" 
-          fontWeight="800" 
-          gutterBottom
-          sx={{ color: colors.text }}
-        >
-          Gestión de Pedidos
-        </Typography>
-        <Typography variant="h6" color={colors.textLight}>
-          Administra y sigue el estado de todos los pedidos
-        </Typography>
-      </Box>
+    <>
+      <PageHeader
+        title="Pedidos"
+        description="Confirma pagos, corrige direcciones y descarga boletas."
+        actions={
+          <Button onClick={load} variant="outlined" startIcon={<RefreshRoundedIcon />} disabled={loading}>
+            Actualizar
+          </Button>
+        }
+      />
 
-      {/* Estadísticas rápidas */}
-      <Grid container spacing={2} sx={{ mb: 4 }}>
-        <Grid item xs={6} sm={3}>
-          <Card sx={{ borderRadius: 3, bgcolor: alpha(colors.primary, 0.05) }}>
-            <CardContent sx={{ textAlign: 'center', p: 2 }}>
-              <Typography variant="h4" fontWeight="bold" color={colors.primary}>
-                {orders.length}
-              </Typography>
-              <Typography variant="body2" color={colors.textLight}>
-                Total Pedidos
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <Card sx={{ borderRadius: 3, bgcolor: alpha(colors.warning, 0.05) }}>
-            <CardContent sx={{ textAlign: 'center', p: 2 }}>
-              <Typography variant="h4" fontWeight="bold" color={colors.warning}>
-                {getStatusCount('Pendiente')}
-              </Typography>
-              <Typography variant="body2" color={colors.textLight}>
-                Pendientes
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <Card sx={{ borderRadius: 3, bgcolor: alpha(colors.success, 0.05) }}>
-            <CardContent sx={{ textAlign: 'center', p: 2 }}>
-              <Typography variant="h4" fontWeight="bold" color={colors.success}>
-                {getStatusCount('Pagado')}
-              </Typography>
-              <Typography variant="body2" color={colors.textLight}>
-                Pagados
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <Card sx={{ borderRadius: 3, bgcolor: alpha(colors.error, 0.05) }}>
-            <CardContent sx={{ textAlign: 'center', p: 2 }}>
-              <Typography variant="h4" fontWeight="bold" color={colors.error}>
-                {getStatusCount('Cancelado')}
-              </Typography>
-              <Typography variant="body2" color={colors.textLight}>
-                Cancelados
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      <StatGrid>
+        <StatTile label="Pedidos" value={orders.length} loading={loading} />
+        <StatTile label="Pendientes" value={count('Pendiente')} hint="Esperan confirmación de pago" loading={loading} />
+        <StatTile label="Pagados" value={count('Pagado')} loading={loading} />
+        <StatTile label="Cancelados" value={count('Cancelado')} loading={loading} />
+      </StatGrid>
 
-      {/* Filtros y búsqueda */}
-      <Card sx={{ mb: 3, borderRadius: 3 }}>
-        <CardContent sx={{ p: 3 }}>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                fullWidth
-                placeholder="Buscar por ID, cliente o dirección..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon color="primary" />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 3
-                  }
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <Select
-                fullWidth
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                sx={{ borderRadius: 3 }}
-              >
-                <MenuItem value="all">Todos los estados</MenuItem>
-                <MenuItem value="Pendiente">Pendiente</MenuItem>
-                <MenuItem value="Pagado">Pagado</MenuItem>
-                <MenuItem value="Cancelado">Cancelado</MenuItem>
-              </Select>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={fetchOrders}
-                sx={{ borderRadius: 3, height: '56px' }}
-              >
-                Actualizar Lista
-              </Button>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-
-      {/* Lista de pedidos */}
-      {filteredOrders.length === 0 ? (
-        <Card sx={{ borderRadius: 3, textAlign: 'center', py: 8 }}>
-          <CardContent>
-            <Typography variant="h6" color={colors.textLight} gutterBottom>
-              No se encontraron pedidos
-            </Typography>
-            <Typography variant="body2" color={colors.textLight}>
-              {searchTerm || statusFilter !== 'all' 
-                ? 'Intenta con otros términos de búsqueda' 
-                : 'No hay pedidos registrados'
-              }
-            </Typography>
-          </CardContent>
-        </Card>
-      ) : (
-        <Box>
-          {filteredOrders.map((order) => (
-            <OrderCard key={order.pedidoID} order={order} />
-          ))}
-        </Box>
-      )}
-
-      {/* Diálogo de edición */}
-      <Dialog 
-        open={editDialog.open} 
-        onClose={handleCloseDialog}
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <DialogTitle sx={{ borderBottom: `1px solid ${alpha(colors.primary, 0.1)}` }}>
-          {editDialog.field === 'direccion' ? 'Editar Dirección de Envío' : 'Editar Motivos de Cancelación'}
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
+      <Panel padded={false}>
+        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1fr) 220px' }, p: 2.5 }}>
           <TextField
-            autoFocus
-            fullWidth
-            variant="outlined"
-            value={newValue}
-            onChange={(e) => setNewValue(e.target.value)}
-            multiline={editDialog.field === 'motivos'}
-            rows={editDialog.field === 'motivos' ? 4 : 2}
-            placeholder={
-              editDialog.field === 'direccion' 
-                ? 'Ingresa la dirección de envío...' 
-                : 'Describe los motivos de cancelación...'
-            }
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 2
-              }
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Buscar por cliente, número o dirección"
+            size="small"
+            slotProps={{
+              htmlInput: { 'aria-label': 'Buscar pedidos', type: 'search' },
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchRoundedIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              },
             }}
           />
-        </DialogContent>
-        <DialogActions sx={{ p: 3, gap: 1 }}>
-          <Button 
-            onClick={handleCloseDialog}
-            variant="outlined"
-            sx={{ borderRadius: 2 }}
-          >
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleSaveEdit}
-            variant="contained"
-            sx={{ 
-              borderRadius: 2,
-              background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`
-            }}
-          >
-            Guardar Cambios
-          </Button>
-        </DialogActions>
-      </Dialog>
+          <TextField select size="small" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} slotProps={{ htmlInput: { 'aria-label': 'Filtrar por estado' } }}>
+            <MenuItem value="all">Todos los estados</MenuItem>
+            {EDITABLE_STATUSES.map((value) => (
+              <MenuItem key={value} value={value}>
+                {ORDER_STATUS[value].label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Box>
 
-      {/* Diálogo de boleta */}
-      <Dialog 
-        open={boletaDialog.open} 
-        onClose={handleCloseBoletaDialog} 
-        maxWidth="md" 
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <DialogTitle sx={{ 
-          borderBottom: `1px solid ${alpha(colors.primary, 0.1)}`,
-          background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`,
-          color: 'white'
-        }}>
-          <Typography variant="h5" fontWeight="600">
-            Boleta de Venta - Pedido #{boletaDialog.order?.pedidoID}
-          </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ p: 0 }}>
-          <Box ref={boletaRef} sx={{ p: 4, backgroundColor: 'white' }}>
-            {/* Encabezado de la boleta */}
-            <Box sx={{ textAlign: 'center', mb: 4, borderBottom: `2px solid ${colors.primary}`, pb: 2 }}>
-              <Typography variant="h4" fontWeight="800" color={colors.primary} gutterBottom>
-                BOLETA DE VENTA
-              </Typography>
-              <Typography variant="h6" color={colors.textLight}>
-                Patitas y Sabores
-              </Typography>
-            </Box>
-
-            {/* Información del cliente */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={12} md={6}>
-                <Typography variant="h6" fontWeight="600" gutterBottom sx={{ color: colors.primary }}>
-                  Información del Cliente
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Typography><strong>Cliente:</strong> {boletaDialog.order?.nombreCliente}</Typography>
-                  <Typography><strong>Fecha:</strong> {boletaDialog.order ? format(new Date(boletaDialog.order.fechaPedido), 'dd/MM/yyyy HH:mm') : ''}</Typography>
-                  <Typography><strong>Estado:</strong> 
-                    <Chip 
-                      label={boletaDialog.order?.estadoPedido} 
-                      size="small"
-                      sx={{ 
-                        ml: 1,
-                        backgroundColor: statusConfig[boletaDialog.order?.estadoPedido]?.color || colors.secondary,
-                        color: 'white'
-                      }}
-                    />
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="h6" fontWeight="600" gutterBottom sx={{ color: colors.primary }}>
-                  Dirección de Envío
-                </Typography>
-                <Typography>
-                  {boletaDialog.order?.direccionEnvio || 'No especificada'}
-                </Typography>
-              </Grid>
-            </Grid>
-
-            {/* Productos */}
-            <Typography variant="h6" fontWeight="600" gutterBottom sx={{ color: colors.primary, mb: 2 }}>
-              Productos
-            </Typography>
-            <TableContainer 
-              component={Paper} 
-              sx={{ 
-                mb: 3,
-                border: `1px solid ${alpha(colors.primary, 0.1)}`,
-                borderRadius: 2
-              }}
-            >
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: alpha(colors.primary, 0.05) }}>
-                    <TableCell><strong>Producto</strong></TableCell>
-                    <TableCell align="right"><strong>Cantidad</strong></TableCell>
-                    <TableCell align="right"><strong>Precio Unitario</strong></TableCell>
-                    <TableCell align="right"><strong>Subtotal</strong></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {boletaDialog.order?.detalles?.map((item) => (
-                    <TableRow key={item.productoID}>
-                      <TableCell>{item.nombreProducto}</TableCell>
-                      <TableCell align="right">{item.cantidad}</TableCell>
-                      <TableCell align="right">{formatCurrency(item.precioUnitario)}</TableCell>
-                      <TableCell align="right">{formatCurrency(item.cantidad * item.precioUnitario)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            {/* Total */}
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'flex-end', 
-              mt: 3,
-              pt: 2,
-              borderTop: `2px solid ${colors.primary}`
-            }}>
-              <Typography variant="h5" fontWeight="800" color={colors.primary}>
-                Total: {formatCurrency(boletaDialog.order?.totalPedido || 0)}
-              </Typography>
-            </Box>
+        <Box aria-hidden="true" sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: COLUMNS.md, columnGap: 2, px: 3, py: 1.25, borderTop: `1px solid ${color.line}`, fontSize: '0.8125rem', fontWeight: 650, color: color.inkMuted }}>
+          <span>Cliente</span>
+          <span>Fecha</span>
+          <Box component="span" sx={{ textAlign: 'right' }}>
+            Total
           </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, gap: 1 }}>
-          <Button 
-            onClick={handleCloseBoletaDialog}
-            variant="outlined"
-            sx={{ borderRadius: 2 }}
-          >
-            Cerrar
-          </Button>
-          <Button
-            startIcon={<DownloadIcon />}
-            onClick={handleDownloadBoleta}
-            variant="contained"
-            sx={{ 
-              borderRadius: 2,
-              background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`
-            }}
-          >
-            Descargar PDF
-          </Button>
-        </DialogActions>
+          <span>Estado</span>
+          <span />
+        </Box>
+
+        {loading ? (
+          <Box sx={{ px: 3, pb: 2 }}>
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} height={64} />
+            ))}
+          </Box>
+        ) : filtered.length === 0 ? (
+          <EmptyState compact icon={<ReceiptLongOutlinedIcon />} title={hasFilters ? 'Sin resultados' : 'Aún no hay pedidos'} description={hasFilters ? 'Ningún pedido coincide con la búsqueda o el filtro.' : 'Los pedidos de la tienda aparecerán aquí.'} />
+        ) : (
+          <Box component="ul" aria-label="Pedidos" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+            {filtered.map((order) => (
+              <OrderRow
+                key={order.pedidoID}
+                order={order}
+                busy={busyId === order.pedidoID}
+                onStatus={handleStatus}
+                onReceipt={(item) => setReceipt({ open: true, order: item })}
+                onAddress={(item) => setAddress({ open: true, order: item, value: item.direccionEnvio || '' })}
+              />
+            ))}
+          </Box>
+        )}
+      </Panel>
+
+      <ConfirmDialog
+        open={pendingPay.open}
+        tone="primary"
+        title={`¿Marcar el pedido #${pendingPay.order?.pedidoID} como pagado?`}
+        description="Se descontará del stock la cantidad de cada producto del pedido."
+        confirmLabel="Marcar como pagado"
+        onConfirm={() => {
+          setPendingPay((prev) => ({ ...prev, open: false }));
+          applyStatus(pendingPay.order, 'Pagado');
+        }}
+        onClose={() => setPendingPay((prev) => ({ ...prev, open: false }))}
+      />
+
+      <Dialog open={address.open} onClose={savingAddress ? undefined : () => setAddress((prev) => ({ ...prev, open: false }))} maxWidth="sm" fullWidth aria-labelledby="direccion-titulo">
+        <Box component="form" onSubmit={saveAddress} sx={{ p: { xs: 2.5, sm: 4 } }}>
+          <Typography id="direccion-titulo" variant="h2" sx={{ mb: 0.5 }}>
+            Dirección de envío
+          </Typography>
+          <Typography color="text.secondary" sx={{ mb: 2.5 }}>
+            Pedido #{address.order?.pedidoID} de {address.order?.nombreCliente}
+          </Typography>
+          <TextField value={address.value} onChange={(event) => setAddress((prev) => ({ ...prev, value: event.target.value }))} label="Nueva dirección" fullWidth multiline minRows={2} autoFocus required />
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 3 }}>
+            <Button onClick={() => setAddress((prev) => ({ ...prev, open: false }))} disabled={savingAddress} variant="text">
+              Cancelar
+            </Button>
+            <Button type="submit" variant="contained" disabled={savingAddress || !address.value.trim()} startIcon={savingAddress ? <CircularProgress size={16} color="inherit" /> : null}>
+              Guardar
+            </Button>
+          </Box>
+        </Box>
       </Dialog>
 
-      {/* Snackbar para notificaciones */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          onClose={handleCloseSnackbar} 
-          severity={snackbar.severity} 
-          sx={{ 
-            width: '100%',
-            borderRadius: 3,
-            alignItems: 'center'
-          }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Container>
+      <Dialog open={receipt.open} onClose={() => setReceipt((prev) => ({ ...prev, open: false }))} maxWidth="md" fullWidth aria-label="Boleta de venta">
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, px: 3, py: 1.5, borderBottom: `1px solid ${color.line}` }}>
+          <Typography variant="h4" component="h2">
+            Boleta del pedido #{receipt.order?.pedidoID}
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Button onClick={downloadReceipt} disabled={downloading} variant="contained" size="small" startIcon={downloading ? <CircularProgress size={14} color="inherit" /> : <DownloadRoundedIcon />}>
+              {downloading ? 'Generando…' : 'Descargar PDF'}
+            </Button>
+            <IconButton onClick={() => setReceipt((prev) => ({ ...prev, open: false }))} aria-label="Cerrar" sx={{ width: 40, height: 40 }}>
+              <CloseRoundedIcon />
+            </IconButton>
+          </Box>
+        </Box>
+        <Box sx={{ overflowY: 'auto' }}>{receipt.order && <Receipt ref={receiptRef} pedido={receipt.order} />}</Box>
+      </Dialog>
+    </>
   );
 };
 

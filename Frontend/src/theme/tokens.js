@@ -29,6 +29,21 @@ export const color = {
   whatsapp: '#1B7F4B',
 };
 
+// Colores de marcas en gráficos. Validados con simulación de daltonismo
+// (separación entre vecinos y contraste contra el fondo); no reordenar.
+export const chart = {
+  series: '#6C7F25',
+  seriesMuted: '#C9CFA3',
+  grid: 'rgba(61, 38, 20, 0.10)',
+  status: {
+    Pagado: '#337D4E',
+    Pendiente: '#E3A82B',
+    Cancelado: '#C04F2F',
+    Enviado: '#3A6FB0',
+    Entregado: '#3A6FB0',
+  },
+};
+
 export const radius = {
   xs: 8,
   sm: 12,
