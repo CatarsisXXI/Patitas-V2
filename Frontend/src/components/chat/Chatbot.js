@@ -71,20 +71,22 @@ const ChatProduct = ({ product, onView }) => {
 
   return (
     <Box sx={{ display: 'flex', gap: 1.5, p: 1.25, bgcolor: color.surface, border: `1px solid ${color.line}`, borderRadius: `${radius.md}px` }}>
-      <SmartImage src={assetUrl(product.imagenURL)} alt="" fit="contain" blend ratio={1} radius={radius.sm} sx={{ width: 64, flexShrink: 0 }} imgSx={{ p: 0.5 }} />
+      <SmartImage src={assetUrl(product.imagenURL)} alt="" fit="contain" blend ratio={1} radius={radius.sm} sx={{ width: 60, flexShrink: 0, alignSelf: 'flex-start' }} imgSx={{ p: 0.5 }} />
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ fontWeight: 650, fontSize: '0.9375rem', lineHeight: 1.3 }}>{titulo}</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 1 }}>
+          <Typography sx={{ fontWeight: 650, fontSize: '0.9375rem', lineHeight: 1.3 }}>{titulo}</Typography>
+          {product.precio != null && (
+            <Typography className="tabular" sx={{ fontWeight: 700, fontSize: '0.875rem', flexShrink: 0 }}>
+              {formatCurrency(product.precio)}
+            </Typography>
+          )}
+        </Box>
         {detalle && (
           <Typography variant="caption" color="text.secondary" component="p" noWrap>
             {detalle}
           </Typography>
         )}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1, flexWrap: 'wrap' }}>
-          {product.precio != null && (
-            <Typography className="tabular" sx={{ fontWeight: 700, fontSize: '0.9375rem', mr: 'auto' }}>
-              {formatCurrency(product.precio)}
-            </Typography>
-          )}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1 }}>
           {product.productoID && (
             <Button size="small" variant="outlined" onClick={() => onView(product)} sx={{ minHeight: 32, px: 1.5 }}>
               Ver
@@ -118,7 +120,8 @@ const Chatbot = () => {
   const [products, setProducts] = useState([]);
 
   const timers = useRef([]);
-  const endRef = useRef(null);
+  const logRef = useRef(null);
+  const contentRef = useRef(null);
   const panelRef = useRef(null);
   const fabRef = useRef(null);
 
@@ -165,9 +168,21 @@ const Chatbot = () => {
     }
   }, [open, messages.length, user, say]);
 
+  // El chat sigue al último mensaje. Además de reaccionar a mensajes nuevos, se
+  // observa el alto del contenido: el texto se revela por palabras y las
+  // opciones aparecen después, así que la lista crece sin que cambie `messages`.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, typing]);
+
+  useEffect(() => {
+    if (!open || !contentRef.current || typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(() => {
+      if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+    });
+    observer.observe(contentRef.current);
+    return () => observer.disconnect();
+  }, [open]);
 
   useEffect(() => {
     const onOpen = () => setOpen(true);
@@ -195,6 +210,16 @@ const Chatbot = () => {
   }, [open, dismissNudge]);
 
   const close = () => setOpen(false);
+
+  // Escape cierra el chat desde cualquier parte, salvo que haya un diálogo abierto encima.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (event) => {
+      if (event.key === 'Escape' && !document.querySelector('.MuiModal-root')) setOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
 
   // Al cerrar, el foco vuelve al botón que abrió el chat.
   const wasOpen = useRef(false);
@@ -304,6 +329,8 @@ const Chatbot = () => {
   const handleOption = (option) => {
     if (typing) return;
     setMessages((prev) => [...prev, { id: nextId(), from: 'user', text: option.display || option.label }]);
+    // El botón pulsado desaparece; el foco se queda en el panel para seguir con el teclado.
+    panelRef.current?.focus();
 
     switch (option.action) {
       case 'recomendaciones':
@@ -343,7 +370,6 @@ const Chatbot = () => {
             tabIndex={-1}
             role="dialog"
             aria-label="Coco, asistente de recomendaciones"
-            onKeyDown={(event) => event.key === 'Escape' && close()}
             component={motion.div}
             initial={{ opacity: 0, y: 24, scale: 0.94 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -379,7 +405,8 @@ const Chatbot = () => {
               </IconButton>
             </Box>
 
-            <Box role="log" aria-live="polite" sx={{ flex: 1, overflowY: 'auto', px: 2, pt: 2.5, pb: 1, overscrollBehavior: 'contain' }}>
+            <Box ref={logRef} role="log" aria-live="polite" sx={{ flex: 1, overflowY: 'auto', px: 2, pt: 2.5, pb: 1, overscrollBehavior: 'contain' }}>
+              <div ref={contentRef}>
               {messages.map((message) => {
                 const fromUser = message.from === 'user';
                 return (
@@ -448,7 +475,7 @@ const Chatbot = () => {
                 );
               })}
               {typing && <TypingDots />}
-              <div ref={endRef} />
+              </div>
             </Box>
 
             <Box sx={{ display: 'flex', gap: 1, px: 2, py: 1.5, borderTop: `1px solid ${color.line}`, bgcolor: color.surface }}>

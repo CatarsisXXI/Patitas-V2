@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, startTransition, useEffect, useState } from 'react';
 import { Avatar, Box, Drawer, IconButton, Tooltip, Typography } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -33,8 +33,9 @@ const Sidebar = ({ onNavigate }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout();
+    // Misma transición para salir y navegar; ver la nota en Navbar.
     navigate('/');
+    startTransition(() => logout());
   };
 
   return (

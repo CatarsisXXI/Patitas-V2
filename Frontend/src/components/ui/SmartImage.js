@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Box, Skeleton } from '@mui/material';
 import { color } from '../../theme/tokens';
 import { PawPrint } from './PawPrint';
@@ -9,11 +9,14 @@ import { PawPrint } from './PawPrint';
  * `blend` funde el fondo blanco de las fotos de producto con el color del contenedor.
  */
 const SmartImage = ({ src, alt, ratio, fit = 'cover', position = 'center', radius = 0, eager = false, blend = false, className, sx, imgSx }) => {
-  const [status, setStatus] = useState(src ? 'loading' : 'error');
-
-  useEffect(() => {
-    setStatus(src ? 'loading' : 'error');
-  }, [src]);
+  // El estado se guarda junto al `src` al que pertenece y se reinicia durante el
+  // render cuando la imagen cambia. Hacerlo en un efecto pisaba el "loaded" de
+  // las imágenes ya cacheadas, que terminan de cargar antes de que corra el efecto.
+  const initial = src ? 'loading' : 'error';
+  const [state, setState] = useState({ src, status: initial });
+  if (state.src !== src) setState({ src, status: initial });
+  const status = state.src === src ? state.status : initial;
+  const setStatus = (next) => setState({ src, status: next });
 
   return (
     <Box

@@ -263,7 +263,7 @@ const ProductsPage = () => {
                 },
               }}
             />
-            <TextField select size="small" value={sortOption} onChange={(event) => setSortOption(event.target.value)} sx={{ flex: { xs: '1 1 0', sm: '0 0 228px' }, minWidth: 0 }} slotProps={{ htmlInput: { 'aria-label': 'Ordenar productos' }, select: { displayEmpty: true } }}>
+            <TextField select size="small" value={sortOption} onChange={(event) => setSortOption(event.target.value)} sx={{ flex: { xs: '1 1 0', sm: '0 0 228px' }, minWidth: 0 }} slotProps={{ select: { displayEmpty: true, SelectDisplayProps: { 'aria-label': 'Ordenar productos' } } }}>
               {SORTS.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}

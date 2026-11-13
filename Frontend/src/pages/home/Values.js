@@ -30,7 +30,8 @@ const VALUES = [
 
 /** Valores en zig-zag: la imagen alterna de lado en cada fila. */
 const Values = () => (
-  <Box component="section" id="valores" aria-labelledby="valores-titulo" sx={{ py: { xs: 8, md: 12 } }}>
+  // overflow hidden: las imágenes entran desplazadas desde un lado y no deben ensanchar la página.
+  <Box component="section" id="valores" aria-labelledby="valores-titulo" sx={{ py: { xs: 8, md: 12 }, overflow: 'hidden' }}>
     <Container maxWidth="lg">
       <SectionHeading id="valores-titulo" eyebrow="Nuestros valores" title="Tres ideas detrás de cada receta" />
 

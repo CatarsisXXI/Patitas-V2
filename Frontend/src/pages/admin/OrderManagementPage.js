@@ -61,7 +61,7 @@ const OrderRow = ({ order, busy, onStatus, onReceipt, onAddress }) => {
           disabled={busy}
           onChange={(event) => onStatus(order, event.target.value)}
           sx={{ gridColumn: { xs: '1 / 2', md: 'auto' }, maxWidth: { xs: 190, md: 'none' } }}
-          slotProps={{ htmlInput: { 'aria-label': `Estado del pedido ${order.pedidoID}` }, select: { renderValue: (value) => <StatusChip status={value} size="small" /> } }}
+          slotProps={{ select: { renderValue: (value) => <StatusChip status={value} size="small" />, SelectDisplayProps: { 'aria-label': `Estado del pedido ${order.pedidoID}` } } }}
         >
           {options.map((value) => (
             <MenuItem key={value} value={value} disabled={!EDITABLE_STATUSES.includes(value)}>
@@ -276,7 +276,7 @@ const OrderManagementPage = () => {
               },
             }}
           />
-          <TextField select size="small" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} slotProps={{ htmlInput: { 'aria-label': 'Filtrar por estado' } }}>
+          <TextField select size="small" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} slotProps={{ select: { SelectDisplayProps: { 'aria-label': 'Filtrar por estado' } } }}>
             <MenuItem value="all">Todos los estados</MenuItem>
             {EDITABLE_STATUSES.map((value) => (
               <MenuItem key={value} value={value}>

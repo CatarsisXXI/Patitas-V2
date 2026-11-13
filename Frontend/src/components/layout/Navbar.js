@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { startTransition, useEffect, useState } from 'react';
 import { Avatar, Badge, Box, Button, Container, Divider, Drawer, IconButton, ListItemIcon, Menu, MenuItem, Tooltip, Typography } from '@mui/material';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -73,8 +73,10 @@ const Navbar = () => {
   const handleLogout = () => {
     setMenuAnchor(null);
     setMobileOpen(false);
-    logout();
+    // Salida y navegación van en la misma transición: así la ruta privada actual
+    // no llega a renderizarse sin sesión (lo que redirigiría al login).
     navigate('/');
+    startTransition(() => logout());
     notify('Cerraste sesión. Hasta pronto.', { severity: 'info' });
   };
 

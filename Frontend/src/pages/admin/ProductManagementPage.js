@@ -353,12 +353,12 @@ const ProductManagementPage = () => {
               },
             }}
           />
-          <TextField select size="small" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} slotProps={{ htmlInput: { 'aria-label': 'Filtrar por estado' } }}>
+          <TextField select size="small" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} slotProps={{ select: { SelectDisplayProps: { 'aria-label': 'Filtrar por estado' } } }}>
             <MenuItem value="all">Todos los estados</MenuItem>
             <MenuItem value="active">Activos</MenuItem>
             <MenuItem value="inactive">Inactivos</MenuItem>
           </TextField>
-          <TextField select size="small" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} slotProps={{ htmlInput: { 'aria-label': 'Filtrar por categoría' } }}>
+          <TextField select size="small" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} slotProps={{ select: { SelectDisplayProps: { 'aria-label': 'Filtrar por categoría' } } }}>
             <MenuItem value="all">Todas las categorías</MenuItem>
             {categories.map((category) => (
               <MenuItem key={category.categoriaID} value={category.nombre}>
