@@ -1,104 +1,82 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Box, Button, Container, Skeleton } from '@mui/material';
+import { Link, useParams } from 'react-router-dom';
+import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import pedidoService from '../services/pedidoService';
-import { useAuth } from '../context/AuthContext';
-import './BoletaPage.css';
+import { color, radius, shadow } from '../theme/tokens';
+import EmptyState from '../components/ui/EmptyState';
+import Receipt from '../components/orders/Receipt';
 
 const BoletaPage = () => {
-    const [pedido, setPedido] = useState(null);
-    const [error, setError] = useState(null);
-    const { id } = useParams();
-    const { user } = useAuth();
-    const navigate = useNavigate();
+  const { id } = useParams();
+  const [pedido, setPedido] = useState(null);
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
 
-    useEffect(() => {
-        if (!user) {
-            navigate('/login');
-            return;
-        }
+  useEffect(() => {
+    let cancelled = false;
+    setStatus('loading');
+    pedidoService
+      .getPedidoById(id)
+      .then((data) => {
+        if (cancelled) return;
+        setPedido(data);
+        setStatus('ready');
+      })
+      .catch((error) => !cancelled && setStatus([403, 404].includes(error.response?.status) ? 'missing' : 'error'));
+    return () => {
+      cancelled = true;
+    };
+  }, [id, attempt]);
 
-        const fetchPedido = async () => {
-            try {
-                const data = await pedidoService.getPedidoById(id);
-                setPedido(data);
-            } catch (err) {
-                setError('No se pudo cargar la boleta. Por favor, inténtelo de nuevo más tarde.');
-                console.error(err);
-            }
-        };
-
-        fetchPedido();
-    }, [id, user, navigate]);
-
-    if (error) {
-        return <div className="boleta-container"><h2>{error}</h2></div>;
-    }
-
-    if (!pedido) {
-        return <div className="boleta-container"><h2>Cargando boleta...</h2></div>;
-    }
-
-    // Since the product price already includes IGV, the total is just the sum of item totals
-    const total = pedido.detalles.reduce((sum, item) => sum + item.precioUnitario * item.cantidad, 0);
-    const subtotal = total / 1.18;
-    const igv = total - subtotal;
-
+  if (status === 'missing' || status === 'error') {
     return (
-        <div className="boleta-container">
-            <div className="boleta">
-                <div className="boleta-header">
-                    <div className="empresa-info">
-                        <h2>Patitas y Sabores</h2>
-                        <p>Dirección: Calle Ficticia 123, Lima, Perú</p>
-                        <p>Teléfono: (01) 123-4567</p>
-                    </div>
-                    <div className="boleta-info">
-                        <p><strong>RUC:</strong> 20123456789</p>
-                        <p><strong>Nro. Boleta:</strong> B001-{String(pedido.pedidoID).padStart(6, '0')}</p>
-                    </div>
-                </div>
-
-                <div className="cliente-info">
-                    <h3>Datos del Cliente</h3>
-                    <p><strong>Cliente:</strong> {pedido.nombreCliente}</p>
-                    <p><strong>Dirección de Envío:</strong> {pedido.direccionEnvio}</p>
-                    <p><strong>Fecha de Emisión:</strong> {new Date(pedido.fechaPedido).toLocaleDateString()}</p>
-                </div>
-
-                <table className="productos-table">
-                    <thead>
-                        <tr>
-                            <th>Descripción del Producto</th>
-                            <th>Cantidad</th>
-                            <th>Precio Unit.</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {pedido.detalles.map(item => (
-                            <tr key={item.productoID}>
-                                <td>{item.nombreProducto}</td>
-                                <td>{item.cantidad}</td>
-                                <td>S/ {item.precioUnitario.toFixed(2)}</td>
-                                <td>S/ {(item.cantidad * item.precioUnitario).toFixed(2)}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-
-                <div className="boleta-totales">
-                    <p><strong>Subtotal:</strong> S/ {subtotal.toFixed(2)}</p>
-                    <p><strong>IGV (18%):</strong> S/ {igv.toFixed(2)}</p>
-                    <p><strong>Total a Pagar:</strong> S/ {total.toFixed(2)}</p>
-                </div>
-
-                <div className="boleta-footer">
-                    <p>Gracias por su compra en Patitas y Sabores</p>
-                    <button onClick={() => window.print()} className="print-button">Imprimir Boleta</button>
-                </div>
-            </div>
-        </div>
+      <EmptyState
+        title={status === 'missing' ? 'No encontramos esta boleta' : 'No pudimos cargar la boleta'}
+        description={status === 'missing' ? 'Puede que el enlace sea incorrecto o que el pedido pertenezca a otra cuenta.' : 'Revisa tu conexión e inténtalo otra vez.'}
+        action={
+          status === 'error' ? (
+            <Button onClick={() => setAttempt((n) => n + 1)} variant="contained" startIcon={<RefreshRoundedIcon />}>
+              Reintentar
+            </Button>
+          ) : (
+            <Button component={Link} to="/mis-compras" variant="contained">
+              Ver mis compras
+            </Button>
+          )
+        }
+      />
     );
+  }
+
+  return (
+    <Container maxWidth="md" sx={{ pt: { xs: 3, md: 5 }, '@media print': { pt: 0, maxWidth: '100% !important' } }}>
+      <Box className="no-print" sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 1.5, mb: 3 }}>
+        <Button component={Link} to="/mis-boletas" variant="text" startIcon={<ArrowBackRoundedIcon />} sx={{ ml: -1 }}>
+          Mis boletas
+        </Button>
+        <Button onClick={() => window.print()} variant="contained" startIcon={<PrintOutlinedIcon />} disabled={status !== 'ready'}>
+          Imprimir o guardar PDF
+        </Button>
+      </Box>
+
+      <Box sx={{ borderRadius: `${radius.lg}px`, overflow: 'hidden', border: `1px solid ${color.line}`, boxShadow: shadow.md, '@media print': { border: 0, boxShadow: 'none', borderRadius: 0 } }}>
+        {status === 'loading' ? (
+          <Box sx={{ bgcolor: color.white, p: { xs: 3, sm: 6 } }}>
+            <Skeleton height={64} width="60%" />
+            <Skeleton height={28} sx={{ mt: 4 }} />
+            <Skeleton height={28} />
+            <Skeleton height={28} />
+            <Skeleton height={48} width={240} sx={{ mt: 4, ml: 'auto' }} />
+          </Box>
+        ) : (
+          <Receipt pedido={pedido} />
+        )}
+      </Box>
+    </Container>
+  );
 };
 
 export default BoletaPage;

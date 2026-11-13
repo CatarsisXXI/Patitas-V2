@@ -1,54 +1,12 @@
-import axios from 'axios';
+import api from '../config/api';
 
-const API_URL = 'http://localhost:5288/api/carrito';
+export const getCart = async () => (await api.get('/carrito')).data;
 
-const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        }
-    };
-};
+export const addToCart = async (productoId, cantidad) =>
+  (await api.post('/carrito/items', { productoId, cantidad })).data;
 
-export const getCart = async () => {
-    try {
-        const response = await axios.get(API_URL, getAuthHeaders());
-        return response.data;
-    } catch (error) {
-        console.error("Error fetching cart:", error.response?.data?.message || error.message);
-        throw error;
-    }
-};
+// El endpoint espera el número como cuerpo JSON plano, no un objeto.
+export const updateCartItem = async (productoId, cantidad) =>
+  (await api.put(`/carrito/items/${productoId}`, cantidad, { headers: { 'Content-Type': 'application/json' } })).data;
 
-export const addToCart = async (productoId, cantidad) => {
-    try {
-        const response = await axios.post(`${API_URL}/items`, { productoId, cantidad }, getAuthHeaders());
-        return response.data;
-    } catch (error) {
-        console.error("Error adding to cart:", error.response?.data?.message || error.message);
-        throw error;
-    }
-};
-
-
-export const updateCartItem = async (productoId, cantidad) => {
-    try {
-        const response = await axios.put(`${API_URL}/items/${productoId}`, cantidad, getAuthHeaders());
-        return response.data;
-    } catch (error) {
-        console.error("Error updating cart item:", error.response?.data?.message || error.message);
-        throw error;
-    }
-};
-
-export const removeFromCart = async (productoId) => {
-    try {
-        const response = await axios.delete(`${API_URL}/items/${productoId}`, getAuthHeaders());
-        return response.data;
-    } catch (error) {
-        console.error("Error removing from cart:", error.response?.data?.message || error.message);
-        throw error;
-    }
-};
+export const removeFromCart = async (productoId) => (await api.delete(`/carrito/items/${productoId}`)).data;

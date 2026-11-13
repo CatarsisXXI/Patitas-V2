@@ -1,55 +1,11 @@
-import axios from 'axios';
+import api from '../config/api';
 
-const API_URL = 'http://localhost:5288/api/mascotas';
+const getMascotas = async () => (await api.get('/mascotas')).data;
+const getMascota = async (id) => (await api.get(`/mascotas/${id}`)).data;
+const createMascota = async (mascota) => (await api.post('/mascotas', mascota)).data;
+const updateMascota = async (id, mascota) => (await api.put(`/mascotas/${id}`, mascota)).data;
+const deleteMascota = async (id) => (await api.delete(`/mascotas/${id}`)).data;
 
-const getToken = () => localStorage.getItem('token');
-
-const getMascotas = async () => {
-  const token = getToken();
-  const response = await axios.get(API_URL, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return response.data;
-};
-
-const getMascota = async (id) => {
-  const token = getToken();
-  const response = await axios.get(`${API_URL}/${id}`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return response.data;
-};
-
-const createMascota = async (mascota) => {
-  const token = getToken();
-  const response = await axios.post(API_URL, mascota, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return response.data;
-};
-
-const updateMascota = async (id, mascota) => {
-  const token = getToken();
-  const response = await axios.put(`${API_URL}/${id}`, mascota, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return response.data;
-};
-
-const deleteMascota = async (id) => {
-  const token = getToken();
-  const response = await axios.delete(`${API_URL}/${id}`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return response.data;
-};
-
-const mascotaService = {
-  getMascotas,
-  getMascota,
-  createMascota,
-  updateMascota,
-  deleteMascota,
-};
+const mascotaService = { getMascotas, getMascota, createMascota, updateMascota, deleteMascota };
 
 export default mascotaService;
